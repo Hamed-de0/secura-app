@@ -1,0 +1,175 @@
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
+
+class AssetBase(BaseModel):
+    uuid: Optional[str]
+    name: str
+    type_id: Optional[int]
+    group_id: Optional[int]
+    description: Optional[str]
+
+class AssetCreate(AssetBase):
+    pass
+
+class AssetRead(AssetBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+
+class AssetTypeBase(BaseModel):
+    name: str
+    category: Optional[str]
+    description: Optional[str]
+    create_at: Optional[datetime]
+    enabled: Optional[bool] = True
+
+class AssetTypeCreate(AssetTypeBase):
+    pass
+
+class AssetTypeRead(AssetTypeBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+
+class AssetGroupBase(BaseModel):
+    name: str
+    parent_id: Optional[int]
+    description: Optional[str]
+
+class AssetGroupCreate(AssetGroupBase):
+    pass
+
+class AssetGroupRead(AssetGroupBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+
+class AssetOwnerBase(BaseModel):
+    asset_id: int
+    user_id: int
+    role: Optional[str]
+    valid_from: Optional[datetime]
+    valid_to: Optional[datetime]
+    description: Optional[str]
+
+class AssetOwnerCreate(AssetOwnerBase):
+    pass
+
+class AssetOwnerRead(AssetOwnerBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+
+class AssetRelationBase(BaseModel):
+    asset_id: int
+    related_asset_id: int
+    relation_type: Optional[str]
+    description: Optional[str]
+
+class AssetRelationCreate(AssetRelationBase):
+    pass
+
+class AssetRelationRead(AssetRelationBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+
+class AssetLifecycleEventBase(BaseModel):
+    asset_id: int
+    event_type: str
+    timestamp: Optional[datetime]
+    description: Optional[str]
+
+class AssetLifecycleEventCreate(AssetLifecycleEventBase):
+    pass
+
+class AssetLifecycleEventRead(AssetLifecycleEventBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+
+class AssetMaintenanceBase(BaseModel):
+    asset_id: int
+    maintenance_type: str
+    performed_by: str
+    timestamp: Optional[datetime]
+    description: Optional[str]
+
+class AssetMaintenanceCreate(AssetMaintenanceBase):
+    pass
+
+class AssetMaintenanceRead(AssetMaintenanceBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+
+class AssetScanBase(BaseModel):
+    asset_id: int
+    scanner: str
+    status: Optional[str]
+    scan_date: Optional[datetime]
+    vulns_found: Optional[int]
+    report_url: Optional[str]
+    description: Optional[str]
+
+class AssetScanCreate(AssetScanBase):
+    pass
+
+class AssetScanRead(AssetScanBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+
+class AssetSecurityProfileBase(BaseModel):
+    asset_id: int
+    confidentiality: Optional[int]
+    integrity: Optional[int]
+    availability: Optional[int]
+    classification: Optional[str]
+    description: Optional[str]
+
+class AssetSecurityProfileCreate(AssetSecurityProfileBase):
+    pass
+
+class AssetSecurityProfileRead(AssetSecurityProfileBase):
+    id: int
+
+    class Config:
+        from_attributes  = True
+
+# from pydantic import BaseModel
+# from typing import Optional
+#
+# class AssetBase(BaseModel):
+#     name: str
+#     type: Optional[str] = None
+#     location: Optional[str] = None
+#     owner: Optional[str] = None
+#     criticality: Optional[str] = None
+#     notes: Optional[str] = None
+#
+# class AssetCreate(AssetBase):
+#     pass
+#
+# class AssetRead(AssetBase):
+#     id: int
+#
+#     class Config:
+#         orm_mode = True

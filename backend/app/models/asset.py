@@ -1,15 +1,132 @@
-from sqlalchemy import Column, Integer, String, Text
-from ..database import Base
-from ..config import DB_SCHEMA
+from sqlalchemy import ForeignKey, Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy.orm import relationship
+from app.database import Base
+from app.config import DB_SCHEMA
+from datetime import datetime, timezone
+
 
 class Asset(Base):
     __tablename__ = "assets"
     __table_args__ = {"schema": DB_SCHEMA}
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True)
+    uuid = Column(String(36), unique=True)
     name = Column(String(255), nullable=False)
-    type = Column(String(100))
-    location = Column(String(255))
-    owner = Column(String(100))
-    criticality = Column(String(50))
-    notes = Column(Text)
+    type_id = Column(Integer, ForeignKey(f"{DB_SCHEMA}.asset_types.id"))
+    group_id = Column(Integer, ForeignKey(f"{DB_SCHEMA}.asset_groups.id"))
+    description = Column(Text)
+
+    type = relationship("AssetType", back_populates="assets")
+    group = relationship("AssetGroup", back_populates="assets")
+    owners = relationship("AssetOwner", back_populates="asset", cascade="all, delete-orphan")
+    relations = relationship("AssetRelation", back_populates="asset", cascade="all, delete-orphan")
+    events = relationship("AssetLifecycleEvent", back_populates="asset", cascade="all, delete-orphan")
+    maintenance = relationship("AssetMaintenance", back_populates="asset", cascade="all, delete-orphan")
+    scans = relationship("AssetScan", back_populates="asset", cascade="all, delete-orphan")
+    profile = relationship("AssetSecurityProfile", uselist=False, back_populates="asset")
+
+
+class AssetType(Base):
+    __tablename__ = 'asset_types'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    category = Column(String(100))
+    description = Column(Text)
+    create_at = Column(DateTime, default=datetime.now(timezone.utc))
+    enabled = Column(Boolean, default=True)
+    assets = relationship("Asset", back_populates="type")
+
+class AssetGroup(Base):
+    __tablename__ = 'asset_groups'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    parent_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.asset_groups.id'))
+    description = Column(Text)
+
+    parent = relationship("AssetGroup", remote_side=[id])
+    assets = relationship("Asset", back_populates="group")
+
+class AssetOwner(Base):
+    __tablename__ = 'asset_owners'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    id = Column(Integer, primary_key=True)
+    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    user_id = Column(Integer)
+    role = Column(String(100))
+    valid_from = Column(DateTime, default=datetime.now(timezone.utc))
+    valid_to = Column(DateTime, nullable=True)
+    description = Column(Text)
+
+    asset = relationship("Asset", back_populates="owners")
+
+class AssetRelation(Base):
+    __tablename__ = 'asset_relations'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    id = Column(Integer, primary_key=True)
+    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    related_asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    relation_type = Column(String(100))
+    description = Column(Text)
+
+    asset = relationship("Asset", foreign_keys=[asset_id], back_populates="relations")
+
+class AssetLifecycleEvent(Base):
+    __tablename__ = 'asset_lifecycle_events'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    id = Column(Integer, primary_key=True)
+    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    event_type = Column(String(100))
+    timestamp = Column(DateTime, default=datetime.now(timezone.utc))
+    description = Column(Text)
+
+    asset = relationship("Asset", back_populates="events")
+
+class AssetMaintenance(Base):
+    __tablename__ = 'asset_maintenance'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    id = Column(Integer, primary_key=True)
+    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    maintenance_type = Column(String(100))
+    performed_by = Column(String(100))
+    timestamp = Column(DateTime, default=datetime.now(timezone.utc))
+    description = Column(Text)
+
+    asset = relationship("Asset", back_populates="maintenance")
+
+class AssetScan(Base):
+    __tablename__ = 'asset_scans'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    id = Column(Integer, primary_key=True)
+    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    scanner = Column(String(100))
+    status = Column(String(50))
+    scan_date = Column(DateTime, default=datetime.now(timezone.utc))
+    vulns_found = Column(Integer)
+    report_url = Column(String(255))
+    description = Column(Text)
+
+    asset = relationship("Asset", back_populates="scans")
+
+class AssetSecurityProfile(Base):
+    __tablename__ = 'asset_security_profiles'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    id = Column(Integer, primary_key=True)
+    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'), unique=True)
+    confidentiality = Column(Integer)
+    integrity = Column(Integer)
+    availability = Column(Integer)
+    classification = Column(String(50))
+    description = Column(Text)
+
+    asset = relationship("Asset", back_populates="profile")
+
