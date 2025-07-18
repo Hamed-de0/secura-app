@@ -9,6 +9,7 @@ from app.crud.asset_group import (
     get_asset_groups,
     update_asset_group,
     delete_asset_group,
+    get_asset_group_tree
 )
 from typing import List
 
@@ -52,3 +53,7 @@ def delete(group_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Asset group not found")
     return {"deleted": True}
+
+@router.get("/manage/tree", response_model=List[dict])
+def read_asset_group_tree(db: Session = Depends(get_db)):
+    return get_asset_group_tree(db)

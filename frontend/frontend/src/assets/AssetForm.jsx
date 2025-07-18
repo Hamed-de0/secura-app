@@ -1,10 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { TextField, Button, MenuItem, Box, Typography } from '@mui/material';
+import {
+  TextField,
+  Button,
+  MenuItem,
+  Box,
+  Typography
+} from '@mui/material';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import configs from '../configs';
 
 const AssetForm = ({ onSuccess }) => {
+  const [types, setTypes] = useState([]);
+  const [groups, setGroups] = useState([]);
+
   const [form, setForm] = useState({
     uuid: uuidv4(),
     name: '',
@@ -13,16 +22,39 @@ const AssetForm = ({ onSuccess }) => {
     description: ''
   });
 
-  const [types, setTypes] = useState([]);
-  const [groups, setGroups] = useState([]);
-
   useEffect(() => {
-    axios.get(`${configs.API_BASE_URL}/asset-types`).then(res => setTypes(res.data));
-    axios.get(`${configs.API_BASE_URL}/asset-groups`).then(res => setGroups(res.data));
+    const fetchDropdowns = async () => {
+      try {
+        const [typeRes, groupRes] = await Promise.all([
+          axios.get(`${configs.API_BASE_URL}/asset-types`),
+          axios.get(`${configs.API_BASE_URL}/asset-groups`)
+        ]);
+
+        const types = typeRes.data || [];
+        const groups = groupRes.data || [];
+
+        setTypes(types);
+        setGroups(groups);
+
+        // Set default values
+        setForm(prev => ({
+          ...prev,
+          type_id: types[0]?.id || '',
+          group_id: groups[0]?.id || ''
+        }));
+      } catch (error) {
+        console.error("Error loading dropdown data", error);
+      }
+    };
+
+    fetchDropdowns();
   }, []);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
   const handleSubmit = (e) => {
@@ -30,7 +62,7 @@ const AssetForm = ({ onSuccess }) => {
     axios.post(`${configs.API_BASE_URL}/assets`, form)
       .then(() => {
         alert('Asset created!');
-        onSuccess?.(); // Optional: callback to refresh list
+        onSuccess?.();
       })
       .catch(err => {
         console.error(err);
@@ -39,11 +71,11 @@ const AssetForm = ({ onSuccess }) => {
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500 }}>
+    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 600 }}>
       <Typography variant="h6" gutterBottom>Create Asset</Typography>
 
       <TextField
-        label="Name"
+        label="Name *"
         name="name"
         fullWidth
         margin="normal"
@@ -53,11 +85,11 @@ const AssetForm = ({ onSuccess }) => {
       />
 
       <TextField
-        label="Asset Type"
+        label="Asset Type *"
         name="type_id"
+        select
         fullWidth
         margin="normal"
-        select
         required
         value={form.type_id}
         onChange={handleChange}
@@ -70,11 +102,11 @@ const AssetForm = ({ onSuccess }) => {
       </TextField>
 
       <TextField
-        label="Asset Group"
+        label="Asset Group *"
         name="group_id"
+        select
         fullWidth
         margin="normal"
-        select
         required
         value={form.group_id}
         onChange={handleChange}

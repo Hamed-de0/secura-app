@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List, ForwardRef
 from datetime import datetime
 
@@ -25,9 +25,9 @@ AssetRead.model_rebuild()
 
 class AssetTypeBase(BaseModel):
     name: str
-    category: Optional[str]
-    description: Optional[str]
-    create_at: Optional[datetime]
+    category: Optional[str] = None
+    description: Optional[str] = None
+    create_at: Optional[datetime] = None
     enabled: Optional[bool] = True
 
 class AssetTypeCreate(AssetTypeBase):
@@ -35,6 +35,7 @@ class AssetTypeCreate(AssetTypeBase):
 
 class AssetTypeRead(AssetTypeBase):
     id: int
+    # model_config = ConfigDict(from_attributes=True)
 
     class Config:
         from_attributes  = True

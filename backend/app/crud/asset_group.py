@@ -1,6 +1,6 @@
 
 from sqlalchemy.orm import Session
-from app.models.asset import AssetGroup
+from app.models.asset import AssetGroup, Asset
 from app.schemas.asset import AssetGroupCreate
 from typing import List, Optional
 
@@ -34,3 +34,24 @@ def delete_asset_group(db: Session, group_id: int) -> bool:
     db.delete(db_obj)
     db.commit()
     return True
+
+def build_group_tree(db: Session, parent_id=None) -> List[dict]:
+    groups = db.query(AssetGroup).filter(AssetGroup.parent_id == parent_id).all()
+    result = []
+
+    for group in groups:
+        children = build_group_tree(db, group.id)
+        assets = db.query(Asset).filter(Asset.group_id == group.id).all()
+        result.append({
+            "id": group.id,
+            "name": group.name,
+            "description": group.description,
+            "children": children,
+            "assets": [{"id": a.id, "name": a.name} for a in assets]
+        })
+
+    return result
+
+def get_asset_group_tree(db: Session) -> List[dict]:
+    print('test')
+    return build_group_tree(db)
