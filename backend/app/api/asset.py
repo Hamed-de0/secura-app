@@ -1,15 +1,19 @@
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.schemas.asset import AssetCreate, AssetRead
-from app.crud.asset import create_asset, get_asset, get_assets, update_asset, delete_asset
+from app.crud.asset import (create_asset, get_asset, get_assets, update_asset, delete_asset,
+                            get_assets_with_children, get_asset_with_children)
 from typing import List
-
+import logging
 router = APIRouter(
     prefix="/assets",
     tags=["Assets"]
 )
+
+logger = logging.getLogger(__name__)
+
 
 # Dependency to get DB session
 def get_db():
@@ -24,12 +28,29 @@ def create(asset: AssetCreate, db: Session = Depends(get_db)):
     return create_asset(db, asset)
 
 @router.get("/", response_model=List[AssetRead])
-def read_all(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_all(
+    skip: int = 0,
+    limit: int = 100,
+    include_children: bool = Query(False, description="Include related child assets"),
+    db: Session = Depends(get_db)
+):
+    print('test')
+    logger.info('test')
+    if include_children:
+        return get_assets_with_children(db)
     return get_assets(db, skip=skip, limit=limit)
 
 @router.get("/{asset_id}", response_model=AssetRead)
-def read(asset_id: int, db: Session = Depends(get_db)):
-    asset = get_asset(db, asset_id)
+def read(
+    asset_id: int,
+    include_children: bool = Query(False, description="Include children of this asset"),
+    db: Session = Depends(get_db)
+):
+    if include_children:
+        asset = get_asset_with_children(db, asset_id)
+    else:
+        asset = get_asset(db, asset_id)
+
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
     return asset

@@ -19,7 +19,7 @@ class Asset(Base):
     type = relationship("AssetType", back_populates="assets")
     group = relationship("AssetGroup", back_populates="assets")
     owners = relationship("AssetOwner", back_populates="asset", cascade="all, delete-orphan")
-    relations = relationship("AssetRelation", back_populates="asset", cascade="all, delete-orphan")
+    relations = relationship("AssetRelation", back_populates="asset", cascade="all, delete-orphan", foreign_keys="[AssetRelation.asset_id]")
     events = relationship("AssetLifecycleEvent", back_populates="asset", cascade="all, delete-orphan")
     maintenance = relationship("AssetMaintenance", back_populates="asset", cascade="all, delete-orphan")
     scans = relationship("AssetScan", back_populates="asset", cascade="all, delete-orphan")
@@ -75,6 +75,8 @@ class AssetRelation(Base):
     description = Column(Text)
 
     asset = relationship("Asset", foreign_keys=[asset_id], back_populates="relations")
+    related_asset = relationship("Asset", foreign_keys=[related_asset_id])
+    # asset = relationship("Asset", foreign_keys=[asset_id], back_populates="relations")
 
 class AssetLifecycleEvent(Base):
     __tablename__ = 'asset_lifecycle_events'

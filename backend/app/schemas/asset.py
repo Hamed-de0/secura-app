@@ -1,6 +1,8 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, ForwardRef
 from datetime import datetime
+
+AssetRead = ForwardRef("AssetRead")
 
 class AssetBase(BaseModel):
     uuid: Optional[str]
@@ -14,9 +16,11 @@ class AssetCreate(AssetBase):
 
 class AssetRead(AssetBase):
     id: int
+    children: Optional[List["AssetRead"]] = None  # ← Add this
 
     class Config:
         from_attributes  = True
+AssetRead.model_rebuild()
 
 
 class AssetTypeBase(BaseModel):
@@ -154,22 +158,4 @@ class AssetSecurityProfileRead(AssetSecurityProfileBase):
     class Config:
         from_attributes  = True
 
-# from pydantic import BaseModel
-# from typing import Optional
-#
-# class AssetBase(BaseModel):
-#     name: str
-#     type: Optional[str] = None
-#     location: Optional[str] = None
-#     owner: Optional[str] = None
-#     criticality: Optional[str] = None
-#     notes: Optional[str] = None
-#
-# class AssetCreate(AssetBase):
-#     pass
-#
-# class AssetRead(AssetBase):
-#     id: int
-#
-#     class Config:
-#         orm_mode = True
+

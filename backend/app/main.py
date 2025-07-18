@@ -2,8 +2,22 @@ from fastapi import FastAPI
 from app.api import (asset, asset_scan, asset_type,
                      asset_owner, asset_relation, asset_maintenance, asset_group,
                      asset_security_profile, asset_lifecycle_event)
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+origins = [
+    "http://localhost:5173",  # Vite dev server
+    # Add more if needed (e.g., production domain)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,            # or ["*"] for all
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(asset.router)
 app.include_router(asset_type.router)
