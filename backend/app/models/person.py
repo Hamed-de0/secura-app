@@ -1,8 +1,10 @@
 from sqlalchemy import Column, Integer, String, Boolean, Text
 from app.database import Base
+from app.config import DB_SCHEMA
 
 class Person(Base):
     __tablename__ = "persons"
+    __table_args__ = {"schema": DB_SCHEMA}
 
     id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(100), nullable=False)

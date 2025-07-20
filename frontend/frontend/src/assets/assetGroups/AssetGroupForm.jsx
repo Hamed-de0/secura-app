@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import {
   TextField, Button, Box, MenuItem
 } from '@mui/material';
-import { createAssetGroup, updateAssetGroup, fetchAssetGroups } from '../api';
+import {
+  createAssetGroup,
+  updateAssetGroup,
+  fetchAssetGroups
+} from '../api';
 
 const AssetGroupForm = ({ initialData, onSuccess }) => {
   const [form, setForm] = useState({
@@ -35,11 +39,17 @@ const AssetGroupForm = ({ initialData, onSuccess }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const req = initialData
+
+    const isUpdate = !!initialData?.id;
+
+    const req = isUpdate
       ? updateAssetGroup(initialData.id, form)
       : createAssetGroup(form);
 
-    req.then(onSuccess).catch(err => alert('Error saving asset group'));
+    req.then(onSuccess).catch(err => {
+      alert('Error saving asset group');
+      console.error(err);
+    });
   };
 
   return (
@@ -65,7 +75,7 @@ const AssetGroupForm = ({ initialData, onSuccess }) => {
       >
         <MenuItem value="">None</MenuItem>
         {groupOptions
-          .filter(g => g.id !== initialData?.id) // prevent selecting self
+          .filter(g => g.id !== initialData?.id) // don’t let group be its own parent
           .map(group => (
             <MenuItem key={group.id} value={group.id}>
               {group.name}
@@ -85,7 +95,7 @@ const AssetGroupForm = ({ initialData, onSuccess }) => {
       />
 
       <Button type="submit" variant="contained">
-        {initialData ? 'Update' : 'Create'}
+        {initialData?.id ? 'Update' : 'Create'}
       </Button>
     </Box>
   );

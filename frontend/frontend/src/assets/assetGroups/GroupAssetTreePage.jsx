@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import GroupAssetTreeTable from './GroupAssetTreeTable';
-import axios from 'axios';
-import configs from '../../configs';
+import { getAssetGroupsTree } from '../api';
 
 const GroupAssetTreePage = () => {
   const [treeData, setTreeData] = useState([]);
-
+  const reloadTree = () => {
+    getAssetGroupsTree().then(res => setTreeData(res.data))
+        .catch(err => console.error('Failed to load tree', err));
+  };
   useEffect(() => {
-    axios.get(`${configs.API_BASE_URL}/asset-groups/manage/tree`)
-      .then(res => setTreeData(res.data))
-      .catch(err => console.error('Failed to load tree', err));
+    reloadTree();
   }, []);
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" gutterBottom>Asset Group Tree</Typography>
-      <GroupAssetTreeTable tree={treeData} />
+      <GroupAssetTreeTable tree={treeData} onRefresh={reloadTree} />
     </Box>
   );
 };

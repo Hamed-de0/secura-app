@@ -9,6 +9,18 @@ export const fetchAssets = () => {
   return axios.get(`${configs.API_BASE_URL}/assets`);
 };
 
+export const deleteAsset = (id) => {
+    return axios.delete(`${configs.API_BASE_URL}/assets/${id}`);
+};
+
+export const deleteAssetCascade = (id) => {
+    return axios.delete(`${configs.API_BASE_URL}/assets/${id}/cascade`);
+};
+
+export const getAssetGroupsTree = () => {
+    return axios.get(`${configs.API_BASE_URL}/asset-groups/manage/tree`);
+};
+
 
 
 // Asset Groups
@@ -22,6 +34,10 @@ export const createAssetGroup = (data) => {
 
 export const updateAssetGroup = (id, data) => {
   return axios.put(`${configs.API_BASE_URL}/asset-groups/${id}`, data);
+};
+
+export const deleteAssetGroup = (id) => {
+    return axios.delete(`${configs.API_BASE_URL}/asset-groups/${id}`);
 };
 
 

@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
   Divider
 } from '@mui/material';
 import AssetForm from './AssetForm';
+import { useSearchParams } from 'react-router-dom';
 
 const NewAssetBlock = ({ onSuccess }) => {
   const [open, setOpen] = useState(false);
 
+  const [params] = useSearchParams();
+  const groupId = params.get("group_id");
+  const parentId = params.get("parent_id");
+  console.log('parent_id', parentId, 'group_id', groupId);
+  
+  
   const handleSuccess = () => {
     setOpen(false);
     onSuccess?.(); // parent can refresh assets
   };
+
+  useEffect(() => {
+    if (groupId || parentId) {
+      setOpen(true);
+    }
+  }, [groupId, parentId]); // ✅ only runs once when params change
+
 
   return (
     <Box sx={{ mb: 2 }}>
@@ -24,7 +38,11 @@ const NewAssetBlock = ({ onSuccess }) => {
 
       {open && (
         <Box sx={{ mb: 2 }}>
-          <AssetForm onSuccess={handleSuccess} />
+          <AssetForm 
+            initialGroupId={groupId}
+            parentAssetId={parentId}
+            onSuccess={handleSuccess} 
+          />
           <Divider sx={{ mt: 2 }} />
         </Box>
       )}

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.schemas.asset import AssetCreate, AssetRead
 from app.crud.asset import (create_asset, get_asset, get_assets, update_asset, delete_asset,
-                            get_assets_with_children, get_asset_with_children)
+                            get_assets_with_children, get_asset_with_children, delete_asset_and_descendants)
 from typing import List
 import logging
 router = APIRouter(
@@ -67,6 +67,14 @@ def delete(asset_id: int, db: Session = Depends(get_db)):
     success = delete_asset(db, asset_id)
     if not success:
         raise HTTPException(status_code=404, detail="Asset not found")
+    return {"deleted": True}
+
+@router.delete("/{asset_id}/cascade")
+def delete_cascade(asset_id: int, db: Session = Depends(get_db)):
+    success = delete_asset_and_descendants(db, asset_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="internal error")
+
     return {"deleted": True}
 
 
