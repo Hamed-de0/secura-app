@@ -3,6 +3,7 @@ import {
   TableRow, TableCell, IconButton, Menu, MenuItem
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
+import SlideshowIcon from '@mui/icons-material/Slideshow';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRight from '@mui/icons-material/KeyboardArrowRight';
@@ -91,6 +92,9 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
             <IconButton size="small" onClick={() => handleDeleteAsset(asset.id)}>
               <DeleteIcon />
             </IconButton>
+            <IconButton size='small' onClick={() => navigate(`/assets/edit/${asset.id}`)}>
+            <SlideshowIcon />
+          </IconButton>
           </TableCell>
         </TableRow>
 
@@ -125,6 +129,7 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
           <IconButton size="small" onClick={() => handleDeleteGroup(group.id)}>
             <DeleteIcon />
           </IconButton>
+          
         </TableCell>
       </TableRow>
 

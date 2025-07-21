@@ -10,10 +10,11 @@ import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import configs from '../configs';
 
-const AssetForm = ({ onSuccess, parentAssetId, groupId }) => {
+const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
   const [types, setTypes] = useState([]);
   const [groups, setGroups] = useState([]);
   const [parentAsset, setParentAsset] = useState(null);
+  const [loading, setLoading] = useState(!!assetId);
 
   const [form, setForm] = useState({
     uuid: uuidv4(),
@@ -24,6 +25,25 @@ const AssetForm = ({ onSuccess, parentAssetId, groupId }) => {
     parent_id: ''
   });
 
+  const fetchAsset = async () => {
+    if (!assetId) return;
+    try {
+      const res = await axios.get(`${configs.API_BASE_URL}/assets/${assetId}`);
+      const asset = res.data;
+      setForm({
+        uuid: asset.uuid || '',
+        name: asset.name || '',
+        type_id: asset.type_id || '',
+        group_id: asset.group_id || '',
+        description: asset.description || ''
+      });
+    } catch (err) {
+      console.error('Failed to fetch asset', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (parentAssetId) {
       axios.get(`${configs.API_BASE_URL}/assets/${parentAssetId}`)
@@ -33,41 +53,42 @@ const AssetForm = ({ onSuccess, parentAssetId, groupId }) => {
   }, [parentAssetId]);
 
   useEffect(() => {
-  const fetchDropdowns = async () => {
-    try {
-      const [typeRes, groupRes] = await Promise.all([
-        axios.get(`${configs.API_BASE_URL}/asset-types`),
-        axios.get(`${configs.API_BASE_URL}/asset-groups`)
-      ]);
+    const fetchDropdowns = async () => {
+      try {
+        const [typeRes, groupRes] = await Promise.all([
+          axios.get(`${configs.API_BASE_URL}/asset-types`),
+          axios.get(`${configs.API_BASE_URL}/asset-groups`)
+        ]);
 
-      const types = typeRes.data || [];
-      const groups = groupRes.data || [];
+        const types = typeRes.data || [];
+        const groups = groupRes.data || [];
 
-      setTypes(types);
-      setGroups(groups);
+        setTypes(types);
+        setGroups(groups);
 
-      // Determine the correct group_id
-      let resolvedGroupId = '';
-      if (parentAsset?.group_id) {
-        resolvedGroupId = parentAsset.group_id;
-      } else if (groupId) {
-        resolvedGroupId = Number(groupId);
-      } else if (groups.length) {
-        resolvedGroupId = groups[0].id;
+        // Determine the correct group_id
+        let resolvedGroupId = '';
+        if (parentAsset?.group_id) {
+          resolvedGroupId = parentAsset.group_id;
+        } else if (groupId) {
+          resolvedGroupId = Number(groupId);
+        } else if (groups.length) {
+          resolvedGroupId = groups[0].id;
+        }
+
+        setForm(prev => ({
+          ...prev,
+          type_id: types[0]?.id || '',
+          group_id: resolvedGroupId
+        }));
+      } catch (error) {
+        console.error("Error loading dropdown data", error);
       }
-
-      setForm(prev => ({
-        ...prev,
-        type_id: types[0]?.id || '',
-        group_id: resolvedGroupId
-      }));
-    } catch (error) {
-      console.error("Error loading dropdown data", error);
-    }
-  };
+    };
 
   fetchDropdowns();
-}, [parentAsset, groupId]);
+  fetchAsset();
+}, [assetId, parentAsset, groupId]);
 
 
   const handleChange = (e) => {
@@ -77,31 +98,20 @@ const AssetForm = ({ onSuccess, parentAssetId, groupId }) => {
     }));
   };
 
-  // const handleSubmit = (e) => {
-  //   e.preventDefault();
-  //   axios.post(`${configs.API_BASE_URL}/assets`, form)
-  //     .then(() => {
-  //       //alert('Asset created!');
-  //       console.log('asset created', form)
-  //       onSuccess?.();
-  //     })
-  //     .catch(err => {
-  //       console.error(err);
-  //       alert('Error creating asset');
-  //     });
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const assetRes = await axios.post(`${configs.API_BASE_URL}/assets/`, form);
+      let assetRes;
+      if (assetId) {
+        assetRes = await axios.put(`${configs.API_BASE_URL}/assets/${assetId}`, form);
+      } else {
+        assetRes = await axios.post(`${configs.API_BASE_URL}/assets/`, form);
+      }
+      // const assetRes = await axios.post(`${configs.API_BASE_URL}/assets/`, form);
 
       const newAsset = assetRes.data;
-
-      // Optional: Show toast, reset form
       onSuccess?.();
 
-      // If parentAssetId exists → link them
       if (parentAssetId) {
         await axios.post(`${configs.API_BASE_URL}/asset_relations/`, {
           asset_id: parentAssetId,         // the parent
@@ -116,6 +126,7 @@ const AssetForm = ({ onSuccess, parentAssetId, groupId }) => {
     }
   };
 
+  if (loading) return <div>Loading...</div>;
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 600 }}>
