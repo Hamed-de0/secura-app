@@ -35,6 +35,9 @@ const Sidebar = () => {
         <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
           Asset Groups
         </Button>
+        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/persons')}>
+          Persons
+        </Button>
 
         {/* Settings toggle */}
         <Button
