@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, IconButton, Button, Dialog, DialogTitle,
-  DialogContent, MenuItem, TextField
+  DialogContent, MenuItem, TextField, Stack
 } from '@mui/material';
 import axios from 'axios';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -10,8 +10,15 @@ import configs from '../../configs';
 const OwnersTab = ({ assetId }) => {
   const [owners, setOwners] = useState([]);
   const [persons, setPersons] = useState([]);
-  const [selectedPersonId, setSelectedPersonId] = useState('');
   const [open, setOpen] = useState(false);
+
+  const [form, setForm] = useState({
+    person_id: '',
+    role: '',
+    valid_from: '',
+    valid_to: '',
+    description: ''
+  });
 
   const fetchOwners = async () => {
     const res = await axios.get(`${configs.API_BASE_URL}/asset-owners?asset_id=${assetId}`);
@@ -28,16 +35,20 @@ const OwnersTab = ({ assetId }) => {
     fetchPersons();
   }, [assetId]);
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleAssign = async () => {
     try {
-      await axios.post(`${configs.API_BASE_URL}/asset-owners/`, {
+      const payload = {
         asset_id: assetId,
-        person_id: parseInt(selectedPersonId),
-        ownership_type: 'assigned',
-        description: 'Assigned via frontend'
-      });
+        ...form
+      };
+      await axios.post(`${configs.API_BASE_URL}/asset-owners/`, payload);
       setOpen(false);
-      setSelectedPersonId('');
+      setForm({ person_id: '', role: '', valid_from: '', valid_to: '', description: '' });
       fetchOwners();
     } catch (err) {
       console.error('Assignment failed:', err);
@@ -58,33 +69,41 @@ const OwnersTab = ({ assetId }) => {
 
       {owners.map(owner => (
         <Box key={owner.id} display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1, p: 1, border: '1px solid #ddd', borderRadius: 1 }}>
-          <span>{owner.person?.first_name} {owner.person?.last_name}</span>
+          <span>{owner.person_full_name} ({owner.role})</span>
           <IconButton size="small" onClick={() => handleRemove(owner.id)}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
       ))}
 
-      <Dialog open={open} onClose={() => setOpen(false)}>
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Assign Person</DialogTitle>
         <DialogContent>
-          <TextField
-            select
-            fullWidth
-            label="Person"
-            value={selectedPersonId}
-            onChange={e => setSelectedPersonId(e.target.value)}
-            margin="normal"
-          >
-            {persons.map(p => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.first_name} {p.last_name} ({p.email})
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button fullWidth variant="contained" onClick={handleAssign}>
-            Assign
-          </Button>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              select
+              fullWidth
+              label="Person"
+              name="person_id"
+              value={form.person_id}
+              onChange={handleChange}
+            >
+              {persons.map(p => (
+                <MenuItem key={p.id} value={p.id}>
+                  {p.first_name} {p.last_name} ({p.email})
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField label="Role" name="role" value={form.role} onChange={handleChange} />
+            <TextField label="Valid From" name="valid_from" value={form.valid_from} onChange={handleChange} placeholder="YYYY-MM-DD" />
+            <TextField label="Valid To" name="valid_to" value={form.valid_to} onChange={handleChange} placeholder="YYYY-MM-DD" />
+            <TextField label="Description" name="description" value={form.description} onChange={handleChange} multiline rows={2} />
+
+            <Button variant="contained" onClick={handleAssign}>
+              Assign
+            </Button>
+          </Stack>
         </DialogContent>
       </Dialog>
     </Box>

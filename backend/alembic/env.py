@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'a
 from app.config import DATABASE_URL
 from app.database import Base
 from app.models.asset import (Asset, AssetRelation, AssetGroup, AssetScan, AssetType, AssetOwner, AssetMaintenance,
-                              AssetLifecycleEvent, AssetSecurityProfile)
+                              AssetLifecycleEvent, AssetSecurityProfile, AssetTag)
 from app.models.person import (Person)
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

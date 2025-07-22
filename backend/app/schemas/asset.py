@@ -58,11 +58,13 @@ class AssetGroupRead(AssetGroupBase):
 
 class AssetOwnerBase(BaseModel):
     asset_id: int
-    user_id: int
+    person_id: int
     role: Optional[str]
     valid_from: Optional[datetime]
     valid_to: Optional[datetime]
     description: Optional[str]
+    person_full_name: Optional[str]
+
 
 class AssetOwnerCreate(AssetOwnerBase):
     pass

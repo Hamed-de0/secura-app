@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.schemas.asset import AssetOwnerCreate, AssetOwnerRead
@@ -9,8 +9,9 @@ from app.crud.asset_owner import (
     get_asset_owners,
     update_asset_owner,
     delete_asset_owner,
+    get_asset_owners_name
 )
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(
     prefix="/asset-owners",
@@ -29,8 +30,12 @@ def create(obj: AssetOwnerCreate, db: Session = Depends(get_db)):
     return create_asset_owner(db, obj)
 
 @router.get("/", response_model=List[AssetOwnerRead])
-def read_all(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return get_asset_owners(db, skip=skip, limit=limit)
+def read_all(asset_id: Optional[int] = Query(None),
+            person_id: Optional[int] = Query(None),
+             skip: int = 0, limit: int = 100,
+             db: Session = Depends(get_db)):
+    # return get_asset_owners(db, skip=skip, limit=limit)
+    return  get_asset_owners_name(db,asset_id=asset_id, person_id=person_id)
 
 @router.get("/{owner_id}", response_model=AssetOwnerRead)
 def read(owner_id: int, db: Session = Depends(get_db)):

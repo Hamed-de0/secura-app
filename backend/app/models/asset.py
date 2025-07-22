@@ -1,9 +1,18 @@
-from sqlalchemy import ForeignKey, Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import ForeignKey, Column, Integer, String, Text, DateTime, Boolean, Table
 from sqlalchemy.orm import relationship
 from app.database import Base
 from app.config import DB_SCHEMA
 from datetime import datetime, timezone
 
+
+asset_tags = Table(
+    'asset_tags',
+    Base.metadata,
+    Column('asset_id', Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey(f'{DB_SCHEMA}.asset_tags.id'), primary_key=True),
+    schema=DB_SCHEMA,
+    extend_existing=True
+)
 
 class Asset(Base):
     __tablename__ = "assets"
@@ -24,6 +33,12 @@ class Asset(Base):
     maintenance = relationship("AssetMaintenance", back_populates="asset", cascade="all, delete-orphan")
     scans = relationship("AssetScan", back_populates="asset", cascade="all, delete-orphan")
     profile = relationship("AssetSecurityProfile", uselist=False, back_populates="asset")
+
+    tags = relationship(
+        "AssetTag",
+        secondary=asset_tags,
+        back_populates="assets"
+    )
 
 
 class AssetType(Base):
@@ -56,13 +71,14 @@ class AssetOwner(Base):
 
     id = Column(Integer, primary_key=True)
     asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
-    user_id = Column(Integer)
+    person_id = Column(Integer, ForeignKey("secura.persons.id"), nullable=False)
     role = Column(String(100))
     valid_from = Column(DateTime, default=datetime.now(timezone.utc))
     valid_to = Column(DateTime, nullable=True)
     description = Column(Text)
 
     asset = relationship("Asset", back_populates="owners")
+    person = relationship("Person", backref="asset_owners")
 
 class AssetRelation(Base):
     __tablename__ = 'asset_relations'
@@ -132,3 +148,24 @@ class AssetSecurityProfile(Base):
 
     asset = relationship("Asset", back_populates="profile")
 
+class AssetTag(Base):
+    __tablename__ = 'asset_tags'
+    __table_args__ = {'schema': DB_SCHEMA}
+
+    asset_tags = Table(
+        'asset_tags',
+        Base.metadata,
+        Column('asset_id', Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'), primary_key=True),
+        Column('tag_id', Integer, ForeignKey(f'{DB_SCHEMA}.asset_tags.id'), primary_key=True),
+        schema=DB_SCHEMA,
+        extend_existing=True
+    )
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(String(255), nullable=True)
+
+    assets = relationship(
+        'Asset',
+        secondary=asset_tags,
+        back_populates='tags'
+    )
