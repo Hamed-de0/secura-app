@@ -5,8 +5,8 @@ from app.config import DB_SCHEMA
 from datetime import datetime, timezone
 
 
-asset_tags = Table(
-    'asset_tags',
+asset_tags_links = Table(
+    'asset_tags_links',
     Base.metadata,
     Column('asset_id', Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'), primary_key=True),
     Column('tag_id', Integer, ForeignKey(f'{DB_SCHEMA}.asset_tags.id'), primary_key=True),
@@ -36,7 +36,7 @@ class Asset(Base):
 
     tags = relationship(
         "AssetTag",
-        secondary=asset_tags,
+        secondary=asset_tags_links,
         back_populates="assets"
     )
 
@@ -152,20 +152,12 @@ class AssetTag(Base):
     __tablename__ = 'asset_tags'
     __table_args__ = {'schema': DB_SCHEMA}
 
-    asset_tags = Table(
-        'asset_tags',
-        Base.metadata,
-        Column('asset_id', Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'), primary_key=True),
-        Column('tag_id', Integer, ForeignKey(f'{DB_SCHEMA}.asset_tags.id'), primary_key=True),
-        schema=DB_SCHEMA,
-        extend_existing=True
-    )
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(255), nullable=True)
 
     assets = relationship(
         'Asset',
-        secondary=asset_tags,
+        secondary=asset_tags_links,
         back_populates='tags'
     )

@@ -15,7 +15,8 @@ from typing import List, Optional
 
 router = APIRouter(
     prefix="/asset-owners",
-    tags=["Asset Owners"]
+    tags=["Asset Owners"],
+
 )
 
 def get_db():

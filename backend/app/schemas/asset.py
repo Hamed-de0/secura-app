@@ -3,6 +3,7 @@ from typing import Optional, List, ForwardRef
 from datetime import datetime
 
 AssetRead = ForwardRef("AssetRead")
+# AssetTagRead = ForwardRef("AssetTagRead")
 
 class AssetBase(BaseModel):
     uuid: Optional[str]
@@ -17,6 +18,7 @@ class AssetCreate(AssetBase):
 class AssetRead(AssetBase):
     id: int
     children: Optional[List["AssetRead"]] = None  # ← Add this
+    # tags: Optional[List[AssetTagRead]] = None  # ← Add this
 
     class Config:
         from_attributes  = True
@@ -160,5 +162,24 @@ class AssetSecurityProfileRead(AssetSecurityProfileBase):
 
     class Config:
         from_attributes  = True
+
+
+class AssetTagBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class AssetTagCreate(AssetTagBase):
+    pass
+
+class AssetTagRead(AssetTagBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class AssetTagUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
 
 
