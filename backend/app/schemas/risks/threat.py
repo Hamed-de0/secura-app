@@ -26,8 +26,9 @@ class ThreatUpdate(BaseModel):
 
 class ThreatRead(ThreatBase):
     id: int
-    create_at: Optional[datetime] = None
-    enabled: Optional[bool] = True
+    created_at: datetime
+    updated_at: datetime
+    enabled: bool
 
     class Config:
         from_attributes = True

@@ -6,6 +6,8 @@ AssetRead = ForwardRef("AssetRead")
 class AssetBase(BaseModel):
     name: str
     description: Optional[str] = None
+    type_id: int
+    group_id: int
 
 class AssetCreate(AssetBase):
     pass
