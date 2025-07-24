@@ -1,6 +1,6 @@
 
 from sqlalchemy.orm import Session
-from app.models.asset import AssetMaintenance
+from app.models.assets.asset import AssetMaintenance
 from app.schemas.asset import AssetMaintenanceCreate
 from typing import List, Optional
 

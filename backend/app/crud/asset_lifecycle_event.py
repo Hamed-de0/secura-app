@@ -1,6 +1,6 @@
 
 from sqlalchemy.orm import Session
-from app.models.asset import AssetLifecycleEvent
+from app.models.assets.asset import AssetLifecycleEvent
 from app.schemas.asset import AssetLifecycleEventCreate
 from typing import List, Optional
 

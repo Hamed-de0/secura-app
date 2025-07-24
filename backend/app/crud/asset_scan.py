@@ -1,6 +1,6 @@
 
 from sqlalchemy.orm import Session
-from app.models.asset import AssetScan
+from app.models.assets.asset import AssetScan
 from app.schemas.asset import AssetScanCreate
 from typing import List, Optional
 

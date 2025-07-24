@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.models.asset import AssetTag, Asset
-from app.schemas.asset import AssetTagCreate, AssetTagRead, AssetTagUpdate
+from app.models.assets.asset import AssetTag, Asset
+from app.schemas.asset import AssetTagCreate, AssetTagUpdate
 from typing import List, Optional
 
 

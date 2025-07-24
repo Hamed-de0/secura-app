@@ -3,7 +3,6 @@ import os
 
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
@@ -13,9 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'a
 
 from app.config import DATABASE_URL
 from app.database import Base
-from app.models.asset import (Asset, AssetRelation, AssetGroup, AssetScan, AssetType, AssetOwner, AssetMaintenance,
-                              AssetLifecycleEvent, AssetSecurityProfile, AssetTag)
-from app.models.person import (Person)
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -39,6 +36,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
+    print("OFFLINE MODE")
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL
@@ -51,11 +49,21 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
+
+    def include_name(name, type_, parent_names):
+        if type_ == "schema":
+            # note this will not include the default schema
+            return name in ["secura"]
+        else:
+            return True
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_schemas=False,
+        include_name=include_name,
     )
 
     with context.begin_transaction():
@@ -63,16 +71,14 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    print("ONLINE MODE")
+
     """Run migrations in 'online' mode.
 
     In this scenario we need to create an Engine
     and associate a connection with the context.
 
     """
-
-
-    # ↓ override the config and use your actual connection string
-    connectable = create_engine(DATABASE_URL, poolclass=pool.NullPool)
 
     # ↓ override the config and use your actual connection string
     connectable = create_engine(DATABASE_URL, poolclass=pool.NullPool)
@@ -82,10 +88,24 @@ def run_migrations_online() -> None:
     #     prefix="sqlalchemy.",
     #     poolclass=pool.NullPool,
     # )
+    def include_object(object, name, type_, reflected, compare_to):
+        excluded_tables = {
+            "assets", "asset_groups", "asset_relations", "asset_owners",
+            "asset_lifecycle_events", "asset_scans", "asset_maintenance",
+            "asset_security_profiles", "asset_types", "asset_tags", "asset_tags_links",
+            "persons","threats"
+        }
+        if type_ == "table" and name in excluded_tables:
+            return False
+        return True
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
+            compare_type=True,
+            compare_server_default=True
         )
 
         with context.begin_transaction():

@@ -1,6 +1,6 @@
 
 from sqlalchemy.orm import Session
-from app.models.asset import AssetSecurityProfile
+from app.models.assets.asset import AssetSecurityProfile
 from app.schemas.asset import AssetSecurityProfileCreate
 from typing import List, Optional
 

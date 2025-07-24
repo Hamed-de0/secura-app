@@ -1,6 +1,6 @@
 
 from sqlalchemy.orm import Session
-from app.models.asset import AssetType
+from app.models.assets.asset import AssetType
 from app.schemas.asset import AssetTypeCreate
 from typing import List, Optional
 

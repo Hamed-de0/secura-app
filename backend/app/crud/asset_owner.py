@@ -1,7 +1,6 @@
 
 from sqlalchemy.orm import Session, joinedload
-from app.models.asset import AssetOwner
-from app.models.person import Person
+from app.models.assets.asset import AssetOwner
 from app.schemas.asset import AssetOwnerCreate
 from typing import List, Optional
 

@@ -1,7 +1,7 @@
 
 from sqlalchemy.orm import Session
-from app.models.asset import Asset, AssetRelation
-from app.schemas.asset import AssetCreate, AssetRead
+from app.models.assets.asset import Asset, AssetRelation
+from app.schemas.asset import AssetCreate
 from typing import List, Optional
 
 def create_asset(db: Session, asset: AssetCreate) -> Asset:

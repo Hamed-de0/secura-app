@@ -1,1 +1,1 @@
-from app.models.asset import Asset, AssetGroup
+from app.models.assets.asset import Asset, AssetGroup
