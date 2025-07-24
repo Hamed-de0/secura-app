@@ -1,8 +1,8 @@
 from fastapi import FastAPI
-from app.api import (asset, asset_scan, asset_type,
-                     asset_owner, asset_relation, asset_maintenance,
-                     asset_group, asset_security_profile, asset_lifecycle_event,
-                     asset_tag, person, threat, vulnerability, threat_links)
+from app.api.risks import router as risk_router
+from app.api.users import person
+from app.api.assets import asset_lifecycle_event, asset_type, asset_relation, asset_group, asset_maintenance, \
+    asset_security_profile, asset_tag, asset_scan, asset_owner, asset
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -32,9 +32,8 @@ app.include_router(asset_security_profile.router)
 app.include_router(asset_tag.router)
 
 app.include_router(person.router)
-app.include_router(threat.router)
-app.include_router(vulnerability.router)
-app.include_router(threat_links.router)
+app.include_router(risk_router, prefix="/risks")
+
 
 @app.get("/")
 def read_root():

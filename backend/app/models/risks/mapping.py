@@ -1,11 +1,10 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.core.base import BaseModel
 
-class VulnerabilityThreatLink(Base):
+class VulnerabilityThreatLink(BaseModel):
     __tablename__ = 'vulnerability_threat_links'
 
-    id = Column(Integer, primary_key=True)
     threat_id = Column(Integer, ForeignKey('threats.id'), nullable=False)
     vulnerability_id = Column(Integer, ForeignKey('vulnerabilities.id'), nullable=False)
 

@@ -1,10 +1,9 @@
 from sqlalchemy import Column, Integer, String, Boolean, Text
-from app.database import Base
+from app.core.base import BaseModel
 
-class Person(Base):
+class Person(BaseModel):
     __tablename__ = "persons"
 
-    id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, nullable=True)

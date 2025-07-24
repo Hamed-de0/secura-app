@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'a
 
 from app.config import DATABASE_URL
 from app.models import *
-from app.database import Base
+from app.core.base import Base
 import logging
 logging.basicConfig()
 logger = logging.getLogger("alembic")
@@ -30,12 +30,12 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-print("Metadata tables:", Base.metadata.tables.keys())
+# print("Metadata tables:", Base.metadata.tables.keys())
 target_metadata = Base.metadata
-print("=== Tables in metadata ===")
-for table in target_metadata.tables:
-    print(table)
-print("==========================")
+# print("=== Tables in metadata ===")
+# for table in target_metadata.tables:
+#     print(table)
+# print("==========================")
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -86,7 +86,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    target_metadata.schema = "secura"
+    # target_metadata.schema = "secura"
 
     # ↓ override the config and use your actual connection string
     connectable = create_engine(DATABASE_URL, poolclass=pool.NullPool)
