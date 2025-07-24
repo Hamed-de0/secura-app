@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models.person import Person
+from app.models.users.person import Person
 from app.schemas.person import PersonCreate, PersonUpdate
 
 def get_person(db: Session, person_id: int) -> Person:

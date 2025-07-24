@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models.threat import Threat
+from app.models.risks.threat import Threat
 from app.schemas.threat import ThreatCreate, ThreatUpdate
 
 

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models.mapping import VulnerabilityThreatLink
+from app.models.risks.mapping import VulnerabilityThreatLink
 from app.schemas.threat_links import VulnerabilityThreatLinkCreate
 
 def create_link(db: Session, data: VulnerabilityThreatLinkCreate):

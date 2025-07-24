@@ -3,7 +3,7 @@ import os
 
 from logging.config import fileConfig
 
-from sqlalchemy import pool
+from sqlalchemy import pool, MetaData
 
 from alembic import context
 
@@ -11,8 +11,12 @@ from sqlalchemy import create_engine
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'app')))
 
 from app.config import DATABASE_URL
+from app.models import *
 from app.database import Base
-
+import logging
+logging.basicConfig()
+logger = logging.getLogger("alembic")
+logger.setLevel(logging.INFO)
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -28,7 +32,10 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 print("Metadata tables:", Base.metadata.tables.keys())
 target_metadata = Base.metadata
-
+print("=== Tables in metadata ===")
+for table in target_metadata.tables:
+    print(table)
+print("==========================")
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -79,6 +86,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    target_metadata.schema = "secura"
 
     # ↓ override the config and use your actual connection string
     connectable = create_engine(DATABASE_URL, poolclass=pool.NullPool)
@@ -90,10 +98,10 @@ def run_migrations_online() -> None:
     # )
     def include_object(object, name, type_, reflected, compare_to):
         excluded_tables = {
-            "assets", "asset_groups", "asset_relations", "asset_owners",
-            "asset_lifecycle_events", "asset_scans", "asset_maintenance",
-            "asset_security_profiles", "asset_types", "asset_tags", "asset_tags_links",
-            "persons","threats"
+            # "assets", "asset_groups", "asset_relations", "asset_owners",
+            # "asset_lifecycle_events", "asset_scans", "asset_maintenance",
+            # "asset_security_profiles", "asset_types", "asset_tags", "asset_tags_links",
+            # "persons","threats"
         }
         if type_ == "table" and name in excluded_tables:
             return False

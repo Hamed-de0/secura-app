@@ -1,28 +1,25 @@
 from sqlalchemy import ForeignKey, Column, Integer, String, Text, DateTime, Boolean, Table
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.config import DB_SCHEMA
 from datetime import datetime, timezone
 
 
 asset_tags_links = Table(
     'asset_tags_links',
     Base.metadata,
-    Column('asset_id', Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'), primary_key=True),
-    Column('tag_id', Integer, ForeignKey(f'{DB_SCHEMA}.asset_tags.id'), primary_key=True),
-    schema=DB_SCHEMA,
+    Column('asset_id', Integer, ForeignKey('assets.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('asset_tags.id'), primary_key=True),
     extend_existing=True
 )
 
 class Asset(Base):
     __tablename__ = "assets"
-    __table_args__ = {"schema": DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
     uuid = Column(String(36), unique=True)
     name = Column(String(255), nullable=False)
-    type_id = Column(Integer, ForeignKey(f"{DB_SCHEMA}.asset_types.id"))
-    group_id = Column(Integer, ForeignKey(f"{DB_SCHEMA}.asset_groups.id"))
+    type_id = Column(Integer, ForeignKey("asset_types.id"))
+    group_id = Column(Integer, ForeignKey("asset_groups.id"))
     description = Column(Text)
 
     type = relationship("AssetType", back_populates="assets")
@@ -43,7 +40,6 @@ class Asset(Base):
 
 class AssetType(Base):
     __tablename__ = 'asset_types'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
@@ -55,11 +51,10 @@ class AssetType(Base):
 
 class AssetGroup(Base):
     __tablename__ = 'asset_groups'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
-    parent_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.asset_groups.id'))
+    parent_id = Column(Integer, ForeignKey('asset_groups.id'))
     description = Column(Text)
 
     parent = relationship("AssetGroup", remote_side=[id])
@@ -67,11 +62,10 @@ class AssetGroup(Base):
 
 class AssetOwner(Base):
     __tablename__ = 'asset_owners'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
-    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
-    person_id = Column(Integer, ForeignKey("secura.persons.id"), nullable=False)
+    asset_id = Column(Integer, ForeignKey('assets.id'))
+    person_id = Column(Integer, ForeignKey("persons.id"), nullable=False)
     role = Column(String(100))
     valid_from = Column(DateTime, default=datetime.now(timezone.utc))
     valid_to = Column(DateTime, nullable=True)
@@ -82,11 +76,10 @@ class AssetOwner(Base):
 
 class AssetRelation(Base):
     __tablename__ = 'asset_relations'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
-    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
-    related_asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    asset_id = Column(Integer, ForeignKey('assets.id'))
+    related_asset_id = Column(Integer, ForeignKey('assets.id'))
     relation_type = Column(String(100))
     description = Column(Text)
 
@@ -96,10 +89,9 @@ class AssetRelation(Base):
 
 class AssetLifecycleEvent(Base):
     __tablename__ = 'asset_lifecycle_events'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
-    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    asset_id = Column(Integer, ForeignKey('assets.id'))
     event_type = Column(String(100))
     timestamp = Column(DateTime, default=datetime.now(timezone.utc))
     description = Column(Text)
@@ -108,10 +100,9 @@ class AssetLifecycleEvent(Base):
 
 class AssetMaintenance(Base):
     __tablename__ = 'asset_maintenance'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
-    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    asset_id = Column(Integer, ForeignKey('assets.id'))
     maintenance_type = Column(String(100))
     performed_by = Column(String(100))
     timestamp = Column(DateTime, default=datetime.now(timezone.utc))
@@ -121,10 +112,9 @@ class AssetMaintenance(Base):
 
 class AssetScan(Base):
     __tablename__ = 'asset_scans'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
-    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'))
+    asset_id = Column(Integer, ForeignKey('assets.id'))
     scanner = Column(String(100))
     status = Column(String(50))
     scan_date = Column(DateTime, default=datetime.now(timezone.utc))
@@ -136,10 +126,9 @@ class AssetScan(Base):
 
 class AssetSecurityProfile(Base):
     __tablename__ = 'asset_security_profiles'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
-    asset_id = Column(Integer, ForeignKey(f'{DB_SCHEMA}.assets.id'), unique=True)
+    asset_id = Column(Integer, ForeignKey('assets.id'), unique=True)
     confidentiality = Column(Integer)
     integrity = Column(Integer)
     availability = Column(Integer)
@@ -150,7 +139,6 @@ class AssetSecurityProfile(Base):
 
 class AssetTag(Base):
     __tablename__ = 'asset_tags'
-    __table_args__ = {'schema': DB_SCHEMA}
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), unique=True, nullable=False)
