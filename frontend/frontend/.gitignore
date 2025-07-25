@@ -22,3 +22,43 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# === Python Backend ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+venv/
+.env.*
+*.sqlite3
+.mypy_cache/
+.pytest_cache/
+.cache/
+.idea/
+
+# === Node Frontend ===
+node_modules/
+dist/
+build/
+.env
+.env.*
+.vite/
+*.log
+
+# === OS / Editor files ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# === Coverage / Reports ===
+coverage/
+htmlcov/
+*.coverage
+*.lcov
+
+# === VSCode ===
+.vscode/
