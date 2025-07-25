@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.api.risks import router as risk_router
+from app.api.controls import router as control_router
 from app.api.users import person
 from app.api.assets import asset_lifecycle_event, asset_type, asset_relation, asset_group, asset_maintenance, \
     asset_security_profile, asset_tag, asset_scan, asset_owner, asset
@@ -33,6 +34,7 @@ app.include_router(asset_tag.router)
 
 app.include_router(person.router)
 app.include_router(risk_router, prefix="/risks")
+app.include_router(control_router,prefix="/controls")
 
 
 @app.get("/")

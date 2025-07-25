@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, Text
 from app.core.base import BaseModel
+from sqlalchemy.orm import relationship
 
 class Person(BaseModel):
     __tablename__ = "persons"
@@ -13,3 +14,5 @@ class Person(BaseModel):
     phone = Column(String(50), nullable=True)
     notes = Column(Text, nullable=True)
     enabled = Column(Boolean, default=True)
+
+    controls = relationship("Control", back_populates="owner")

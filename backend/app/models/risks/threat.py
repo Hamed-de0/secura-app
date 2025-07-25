@@ -14,3 +14,5 @@ class Threat(BaseModel, NameDescriptionMixin):
 
     # Relationships (placeholders for now)
     vulnerabilities = relationship("VulnerabilityThreatLink", back_populates="threat")
+
+    controls = relationship("ControlThreatLink", back_populates="threat", cascade="all, delete-orphan")

@@ -26,6 +26,7 @@ class Asset(BaseModel, NameDescriptionMixin):
     maintenance = relationship("AssetMaintenance", back_populates="asset", cascade="all, delete-orphan")
     scans = relationship("AssetScan", back_populates="asset", cascade="all, delete-orphan")
     profile = relationship("AssetSecurityProfile", uselist=False, back_populates="asset")
-
     tags = relationship("AssetTag", secondary=asset_tags_links, back_populates="assets")
+
+    controls = relationship("ControlAssetLink", back_populates="asset", cascade="all, delete-orphan")
 

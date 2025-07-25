@@ -14,3 +14,7 @@ class RiskScenario(BaseModel):
 
     impacts = relationship("ImpactRating", back_populates="scenario", cascade="all, delete-orphan")
     # Add links to asset, threat, vulnerability via relationships
+
+    controls = relationship("ControlRiskLink", back_populates="risk_scenario", cascade="all, delete-orphan")
+
+
