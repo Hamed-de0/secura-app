@@ -4,14 +4,15 @@ import ContentView from '../components/ContentView'
 import Footer from '../components/Footer'
 
 const MainView = ({ children }) => {
+  const footer = <Footer />;
   return (
-    <div style={{ width: '100%', height: '100vh', display: 'flex',  backgroundColor: '#e5f57dff' }}>
+    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#e5f57dff' }}>
       <Header />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden',marginTop: '64px' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column',  width: '100%', }}>
-          <ContentView>{children}</ContentView>
-          <Footer />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <ContentView footer={<Footer/>} style={{ flex: 1, width: '100%' }}>{children}</ContentView>
+          
         </div>
       </div>
     </div>

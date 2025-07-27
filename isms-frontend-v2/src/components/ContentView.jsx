@@ -1,16 +1,18 @@
-
-const ContentView = ({ children }) => (
-    
-  <main style={{
-    flex: 1,
-    padding: '2rem',
-    margin: '10px',
-
-    display: 'flex',
-    overflowY: 'auto',
-    backgroundColor: 'white',
-  }}>
-    {children}
+const ContentView = ({ children, footer }) => (
+  <main
+    style={{
+      flex: 1,
+      width: '100%',
+      overflowY: 'auto',
+      backgroundColor: '#faf6f6ff',
+      marginTop: '3rem',
+      boxSizing: 'border-box',
+    }}
+  >
+    <div style={{ width: '100%' }}>
+      {children}
+    </div>
+    {footer && <footer style={{ marginTop: '2rem' }}>{footer}</footer>}
   </main>
 )
 

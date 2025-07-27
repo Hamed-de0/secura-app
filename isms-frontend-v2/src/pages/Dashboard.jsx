@@ -8,9 +8,7 @@ const Dashboard = () => (
         <Typography variant="body1" paragraph>
             This is your central hub to manage assets, threats, risks, controls, and compliance.
         </Typography>
-        <Button variant="contained" color="primary" sx={{ mb: 3 }}>
-            Go to Asset Inventory
-        </Button>
+        
         <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mt: 2 }}>
             <Box sx={{ flex: 1, minWidth: 220, p: 2, border: '1px solid #eee', borderRadius: 2 }}>
                 <Typography variant="h6">Assets</Typography>

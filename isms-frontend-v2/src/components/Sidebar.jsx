@@ -32,11 +32,17 @@ const Sidebar = () => {
           Dashboard
         </Button>
 
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assets')}>
+        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
           Assets
         </Button>
         <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
-          Asset Groups
+          Threats
+        </Button>
+        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
+          Vulnerabilities
+        </Button>
+        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
+          Controls
         </Button>
         <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/persons')}>
           Persons

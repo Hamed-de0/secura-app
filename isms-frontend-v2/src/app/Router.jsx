@@ -3,15 +3,19 @@ import MainView from '../layout/MainView'
 
 // Pages
 import Dashboard from '../pages/Dashboard'
-// import AssetPage from '../features/assets/pages/AssetsPage'
-// import ThreatsPage from '../features/threats/pages/ThreatsPage'
+import GroupAssetTreePage from '../features/assets/assetGroups/GroupAssetTreePage'
+import AssetEditPage from '../features/assets/assetMain/AssetEditPage'
+
+
 // Add others progressively...
 
 function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
-      
+      <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />
+      <Route path="/assets/edit/:id" element={<MainView><AssetEditPage /></MainView>} />
+
       {/* Future structure - just plug in your page modules */}
       {/* 
       <Route path="/assets" element={<MainView><AssetPage /></MainView>} />
