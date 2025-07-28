@@ -5,6 +5,10 @@ import MainView from '../layout/MainView'
 import Dashboard from '../pages/Dashboard'
 import GroupAssetTreePage from '../features/assets/assetGroups/GroupAssetTreePage'
 import AssetEditPage from '../features/assets/assetMain/AssetEditPage'
+import PersonPage from '../features/persons/PersonPage'
+import ThreatsPage from '../features/threats/ThreatsPage'
+import VulnerabilitiesPage from '../features/vulnerabilities/VulnerabilitiesPage'
+
 
 
 // Add others progressively...
@@ -15,6 +19,9 @@ function AppRouter() {
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />
       <Route path="/assets/edit/:id" element={<MainView><AssetEditPage /></MainView>} />
+      <Route path="/persons" element={<MainView><PersonPage /></MainView>} />
+      <Route path="/threats" element={<MainView><ThreatsPage /></MainView>} />
+      <Route path="/vulnerabilities" element={<MainView><VulnerabilitiesPage /></MainView>} />
 
       {/* Future structure - just plug in your page modules */}
       {/* 

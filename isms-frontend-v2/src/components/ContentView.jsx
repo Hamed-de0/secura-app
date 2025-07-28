@@ -2,10 +2,11 @@ const ContentView = ({ children, footer }) => (
   <main
     style={{
       flex: 1,
+      padding: '1rem',
       width: '100%',
       overflowY: 'auto',
       backgroundColor: '#faf6f6ff',
-      marginTop: '3rem',
+      marginTop: '4.1rem',
       boxSizing: 'border-box',
     }}
   >

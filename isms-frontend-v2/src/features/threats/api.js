@@ -1,0 +1,7 @@
+import axios from 'axios' // adjust path if needed
+import configs from '../configs';
+
+export const getThreats = () => axios.get(`${configs.API_BASE_URL}/risks/threats`)
+export const createThreat = (data) => axios.post(`${configs.API_BASE_URL}/risks/threats`, data)
+export const updateThreat = (id, data) => axios.put(`${configs.API_BASE_URL}/risks/threats/${id}`, data)
+export const deleteThreat = (id) => axios.delete(`${configs.API_BASE_URL}/risks/threats/${id}`)

@@ -35,10 +35,10 @@ const Sidebar = () => {
         <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
           Assets
         </Button>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
+        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/threats')}>
           Threats
         </Button>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
+        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/vulnerabilities')}>
           Vulnerabilities
         </Button>
         <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
