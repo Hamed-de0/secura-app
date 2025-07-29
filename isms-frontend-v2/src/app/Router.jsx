@@ -8,7 +8,7 @@ import AssetEditPage from '../features/assets/assetMain/AssetEditPage'
 import PersonPage from '../features/persons/PersonPage'
 import ThreatsPage from '../features/threats/ThreatsPage'
 import VulnerabilitiesPage from '../features/vulnerabilities/VulnerabilitiesPage'
-
+import ThreatVulnerabilityMapPage from '../features/relationships/threat_vulnerability/ThreatVulnerabilityMapPage'
 
 
 // Add others progressively...
@@ -22,7 +22,8 @@ function AppRouter() {
       <Route path="/persons" element={<MainView><PersonPage /></MainView>} />
       <Route path="/threats" element={<MainView><ThreatsPage /></MainView>} />
       <Route path="/vulnerabilities" element={<MainView><VulnerabilitiesPage /></MainView>} />
-
+      <Route path="/vulnerabilities" element={<MainView><VulnerabilitiesPage /></MainView>} />
+      <Route path="/relationships/threat-vulnerability" element={<MainView><ThreatVulnerabilityMapPage  /></MainView>} />
       {/* Future structure - just plug in your page modules */}
       {/* 
       <Route path="/assets" element={<MainView><AssetPage /></MainView>} />

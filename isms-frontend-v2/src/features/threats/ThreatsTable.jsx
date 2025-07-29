@@ -1,5 +1,5 @@
-import { Table, TableHead, TableRow, TableCell, TableBody, IconButton } from '@mui/material'
-import EditIcon from '@mui/icons-material/Edit'
+import { Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
+import ThreatsTableRow from './ThreatsTableRow';
 
 const ThreatsTable = ({ data, onEdit }) => (
   <Table size="small">
@@ -13,19 +13,11 @@ const ThreatsTable = ({ data, onEdit }) => (
       </TableRow>
     </TableHead>
     <TableBody>
-      {data.map(threat => (
-        <TableRow key={threat.id}>
-          <TableCell>{threat.reference_code}</TableCell>
-          <TableCell>{threat.name}</TableCell>
-          <TableCell>{threat.category}</TableCell>
-          <TableCell>{threat.source}</TableCell>
-          <TableCell>
-            <IconButton onClick={() => onEdit(threat)}><EditIcon /></IconButton>
-          </TableCell>
-        </TableRow>
+      {data.map((threat) => (
+        <ThreatsTableRow key={threat.id} threat={threat} onEdit={onEdit} />
       ))}
     </TableBody>
   </Table>
-)
+);
 
-export default ThreatsTable
+export default ThreatsTable;

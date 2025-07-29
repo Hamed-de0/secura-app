@@ -6,6 +6,12 @@ from datetime import datetime
 
 Base = declarative_base()
 
+class BaseMain(Base):
+    __abstract__ = True
+    id = Column(Integer, primary_key=True)
+    enabled = Column(Boolean, default=True)
+
+
 class BaseModel(Base):
     __abstract__ = True
     id = Column(Integer, primary_key=True)
