@@ -1,0 +1,12 @@
+backend/app/api/assets/__pycache__/asset.cpython-313.pyc
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# Backend/Python
+backend/__pycache__/
+backend/**/*.pyc
