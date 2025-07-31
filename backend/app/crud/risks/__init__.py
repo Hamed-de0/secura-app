@@ -4,3 +4,4 @@ from .risk_scenario import *
 from .threat_links import *
 from .vulnerability import *
 from .threat import *
+from .risk_category import *

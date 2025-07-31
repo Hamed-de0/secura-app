@@ -1,10 +1,31 @@
 from sqlalchemy.orm import Session
 from app.models.risks.risk_scenario import RiskScenario
+from app.models.assets.asset_tag import AssetTag
+from app.models.risks.impact_rating import ImpactRating
+from app.models.controls.control_risk_link import ControlRiskLink
 from app.schemas.risks import RiskScenarioCreate, RiskScenarioUpdate
 from typing import List, Optional
 
-def create_risk_scenario(db: Session, scenario_in: RiskScenarioCreate) -> RiskScenario:
-    scenario = RiskScenario(**scenario_in.dict())
+def create_risk_scenario(db: Session, data: RiskScenarioCreate) -> RiskScenario:
+    scenario = RiskScenario(
+        title_en=data.title_en,
+        title_de=data.title_de,
+        description_en=data.description_en,
+        description_de=data.description_de,
+        likelihood=data.likelihood,
+        threat_id=data.threat_id,
+        vulnerability_id=data.vulnerability_id,
+        asset_id=data.asset_id,
+        asset_group_id=data.asset_group_id,
+        lifecycle_states=data.lifecycle_states,
+        subcategory_id=data.subcategory_id
+    )
+
+    # Link tags
+    if data.tag_ids:
+        tags = db.query(AssetTag).filter(AssetTag.id.in_(data.tag_ids)).all()
+        scenario.tags = tags
+
     db.add(scenario)
     db.commit()
     db.refresh(scenario)

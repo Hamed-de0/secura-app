@@ -4,4 +4,5 @@ from app.schemas.risks.risk_scenario import RiskScenarioBase, RiskScenarioCreate
 from app.schemas.risks.threat import ThreatBase, ThreatRead, ThreatCreate, ThreatUpdate
 from app.schemas.risks.vulnerability import VulnerabilityBase, VulnerabilityRead, VulnerabilityCreate, VulnerabilityUpdate
 from app.schemas.risks.threat_links import *
+from app.schemas.risks.risk_category import *
 

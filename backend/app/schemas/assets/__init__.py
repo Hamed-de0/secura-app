@@ -1,4 +1,4 @@
-from .asset import AssetBase, AssetCreate, AssetRead
+from .asset import AssetBase, AssetCreate, AssetRead, AssetUpdate
 from .asset_type import AssetTypeBase, AssetTypeCreate, AssetTypeRead
 from .asset_group import AssetGroupBase, AssetGroupCreate, AssetGroupRead
 from .asset_owner import AssetOwnerBase, AssetOwnerCreate, AssetOwnerRead

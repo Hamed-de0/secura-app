@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Table
+from sqlalchemy import Column, Integer, ForeignKey, String, JSON
 from sqlalchemy.orm import relationship
 from app.core.base import BaseModel
 from app.core.mixins import NameDescriptionMixin
@@ -17,6 +17,8 @@ class Asset(BaseModel, NameDescriptionMixin):
 
     type_id = Column(Integer, ForeignKey("asset_types.id"))
     group_id = Column(Integer, ForeignKey("asset_groups.id"))
+    location = Column(String(1000), nullable=True)
+    details = Column(JSON, nullable=True, default=lambda :{})
 
     type = relationship("AssetType", back_populates="assets")
     group = relationship("AssetGroup", back_populates="assets")

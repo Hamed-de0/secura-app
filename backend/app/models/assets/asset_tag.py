@@ -19,3 +19,9 @@ class AssetTag(BaseModel, NameDescriptionMixin):
         secondary=asset_tags_links,
         back_populates='tags'
     )
+
+    risk_scenarios = relationship(
+        "RiskScenario",
+        secondary="risk_scenario_tags",
+        back_populates="asset_tags"
+    )

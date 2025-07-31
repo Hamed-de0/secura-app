@@ -34,8 +34,7 @@ def read_all(
     include_children: bool = Query(False, description="Include related child assets"),
     db: Session = Depends(get_db)
 ):
-    print('test')
-    logger.info('test')
+
     if include_children:
         return get_assets_with_children(db)
     return get_assets(db, skip=skip, limit=limit)
@@ -77,30 +76,3 @@ def delete_cascade(asset_id: int, db: Session = Depends(get_db)):
 
     return {"deleted": True}
 
-
-# from fastapi import APIRouter, Depends, HTTPException
-# from sqlalchemy.orm import Session
-# from app.schemas.asset import AssetCreate, AssetRead
-# from app.crud.asset import get_assets, create_asset
-# from app.database import SessionLocal
-# from typing import List
-#
-# router = APIRouter(
-#     prefix="/assets",
-#     tags=["Assets"]
-# )
-#
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-#
-# @router.get("/", response_model=List[AssetRead])
-# def read_assets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-#     return get_assets(db, skip=skip, limit=limit)
-#
-# @router.post("/", response_model=AssetRead)
-# def add_asset(asset: AssetCreate, db: Session = Depends(get_db)):
-#     return create_asset(db, asset)
