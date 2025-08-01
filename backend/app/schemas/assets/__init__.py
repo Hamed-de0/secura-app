@@ -7,4 +7,5 @@ from .asset_lifecycle import AssetLifecycleEventBase, AssetLifecycleEventCreate,
 from .asset_maintenance import AssetMaintenanceBase, AssetMaintenanceCreate, AssetMaintenanceRead
 from .asset_scan import AssetScanBase, AssetScanCreate, AssetScanRead
 from .asset_security_profile import AssetSecurityProfileBase, AssetSecurityProfileCreate, AssetSecurityProfileRead
-from .asset_tag import AssetTagBase, AssetTagCreate, AssetTagRead, AssetTagUpdate
+from .asset_tag import AssetTagBase, AssetTagCreate, AssetTagRead, AssetTagUpdate, AssetTagBulkCreate
+from .lifecycle_event_type import LifecycleEventTypeCreate, LifecycleEventTypeRead, LifecycleEventTypeBase

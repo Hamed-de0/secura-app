@@ -1,8 +1,10 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, RootModel
+from typing import Optional, List
+
 
 class AssetTagBase(BaseModel):
     name: str
+    category: Optional[str] = None
     description: Optional[str] = None
 
 class AssetTagCreate(AssetTagBase):
@@ -19,4 +21,5 @@ class AssetTagUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
 
-
+class AssetTagBulkCreate(RootModel[List[AssetTagCreate]]):
+    pass

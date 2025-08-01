@@ -47,6 +47,9 @@ const Sidebar = () => {
         <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/persons')}>
           Persons
         </Button>
+        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/tags')}>
+          Tags 
+        </Button>
 
         {/* Settings toggle */}
         <Button

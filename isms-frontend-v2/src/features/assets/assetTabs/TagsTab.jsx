@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Typography, Chip, TextField, MenuItem, Button, Stack
+  Box, Typography, Chip, Autocomplete, TextField, Button, Stack
 } from '@mui/material';
 import axios from 'axios';
 import configs from '../../configs';
@@ -8,7 +8,7 @@ import configs from '../../configs';
 const TagsTab = ({ assetId }) => {
   const [availableTags, setAvailableTags] = useState([]);
   const [assignedTags, setAssignedTags] = useState([]);
-  const [selectedTagId, setSelectedTagId] = useState('');
+  const [selectedTag, setSelectedTag] = useState(null);
 
   useEffect(() => {
     fetchAvailableTags();
@@ -34,11 +34,25 @@ const TagsTab = ({ assetId }) => {
   };
 
   const handleAssign = async () => {
-    if (!selectedTagId) return;
+    if (!selectedTag || selectedTag === '') return;
     try {
-      await axios.post(`${configs.API_BASE_URL}/asset-tags/assets/${assetId}/tags/${selectedTagId}`);
-      setSelectedTagId('');
-      fetchAssignedTags();
+        const tagName = typeof selectedTag === 'string' ? selectedTag : selectedTag.name;
+        console.log('Assigning tag:', tagName);
+
+      if (typeof selectedTag === 'string' || selectedTag.name) {
+        // Create or assign tag via backend
+        const res = await axios.post(
+          `${configs.API_BASE_URL}/asset-tags/assets/${assetId}/tags/create-or-assign`,
+          { name: selectedTag.name || selectedTag }
+        );
+        setSelectedTag(null);
+        fetchAssignedTags();
+      } else {
+        // Assign existing tag
+        await axios.post(`${configs.API_BASE_URL}/asset-tags/assets/${assetId}/tags/${selectedTag.id}`);
+        setSelectedTag(null);
+        fetchAssignedTags();
+      }
     } catch (err) {
       console.error('Error assigning tag:', err);
     }
@@ -69,19 +83,19 @@ const TagsTab = ({ assetId }) => {
 
       <Typography variant="subtitle2" gutterBottom>Add Tag to Asset</Typography>
       <Stack direction="row" spacing={2} alignItems="center">
-        <TextField
-          select
-          label="Select Tag"
-          value={selectedTagId}
-          onChange={e => setSelectedTagId(e.target.value)}
-          sx={{ minWidth: 200 }}
-        >
-          {availableTags.map(tag => (
-            <MenuItem key={tag.id} value={tag.id}>
-              {tag.name}
-            </MenuItem>
-          ))}
-        </TextField>
+        <Autocomplete
+          freeSolo
+          options={availableTags.filter(tag =>
+            !assignedTags.some(assigned => assigned.id === tag.id)
+          )}
+          getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
+          value={selectedTag}
+          onChange={(e, newValue) => setSelectedTag(newValue)}
+          onInputChange={(e, inputValue) => setSelectedTag(inputValue)}
+          sx={{ width: 300 }}
+          renderInput={(params) => <TextField {...params} label="Select or Add Tag" />}
+        />
+
         <Button variant="contained" onClick={handleAssign}>Assign</Button>
       </Stack>
     </Box>

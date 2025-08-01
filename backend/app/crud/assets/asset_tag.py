@@ -5,7 +5,7 @@ from typing import List, Optional
 
 
 def get_all_asset_tags(db: Session) -> List[AssetTag]:
-    return db.query(AssetTag).all()
+    return db.query(AssetTag).order_by(AssetTag.name.asc()).all()
 
 
 def get_asset_tag_by_id(db: Session, tag_id: int) -> Optional[AssetTag]:
@@ -75,3 +75,10 @@ def remove_tag_from_asset(db: Session, asset_id: int, tag_id: int):
         asset.tags.remove(tag)
         db.commit()
     return True
+
+def get_asset_tag_by_name(db: Session, name: str) -> Optional[AssetTag]:
+    return db.query(AssetTag).filter(AssetTag.name == name).first()
+
+# def asset_tag_bulk_create(db: Session, )
+
+

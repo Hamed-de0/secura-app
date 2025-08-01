@@ -9,12 +9,14 @@ import {
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import configs from '../../configs';
+import TagSelector from '../../tags/TagSelector';
 
 const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
   const [types, setTypes] = useState([]);
   const [groups, setGroups] = useState([]);
   const [parentAsset, setParentAsset] = useState(null);
   const [loading, setLoading] = useState(!!assetId);
+  // const [tagIds, setTagIds] = useState(initialValues?.tags?.map(tag => tag.id) || []);
 
   const [form, setForm] = useState({
     uuid: uuidv4(),
@@ -107,7 +109,6 @@ const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
       } else {
         assetRes = await axios.post(`${configs.API_BASE_URL}/assets/`, form);
       }
-      // const assetRes = await axios.post(`${configs.API_BASE_URL}/assets/`, form);
 
       const newAsset = assetRes.data;
       onSuccess?.();

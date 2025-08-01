@@ -8,3 +8,4 @@ from .asset_maintenance import AssetMaintenance
 from .asset_scan import AssetScan
 from .asset_security_profile import AssetSecurityProfile
 from .asset_tag import AssetTag
+from .lifecycle_event_type import LifecycleEventType

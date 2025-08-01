@@ -160,13 +160,13 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
             setAddGroupOpen(true);
             closeMenu();
           }}>
-            ➕ Add Sub-Group
+            Add Sub-Group
           </MenuItem>,
           <MenuItem key={`add-asset-${menuTarget.data.id}`} onClick={() => {
             navigate(`/assets/new?parent_id=${menuTarget.data.id}&group_id=${menuTarget.data.id}`);
             closeMenu();
           }}>
-            ➕ Add Asset to Group
+            Add Asset to Group
           </MenuItem>
         ]}
         {menuTarget?.type === 'asset' && (
@@ -174,7 +174,7 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
             navigate(`/assets/new?parent_id=${menuTarget.data.id}&group_id=${menuTarget.data.group_id}`);
             closeMenu();
           }}>
-            ➕ Add Related Asset
+            Add Related Asset
           </MenuItem>
         )}
       </Menu>

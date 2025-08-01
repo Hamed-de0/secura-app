@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Table
+from sqlalchemy import Column, Integer, ForeignKey, Table, String
 from sqlalchemy.orm import relationship
 from app.core.base import BaseModel
 from app.core.mixins import NameDescriptionMixin
@@ -13,6 +13,8 @@ asset_tags_links = Table(
 
 class AssetTag(BaseModel, NameDescriptionMixin):
     __tablename__ = 'asset_tags'
+
+    category = Column(String(100), nullable=True)  # ← NEW
 
     assets = relationship(
         'Asset',

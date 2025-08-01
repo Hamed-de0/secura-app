@@ -23,3 +23,8 @@ class ControlStatus(str, Enum):
     in_progress = "In Progress"
     implemented = "Implemented"
     verified = "Verified"
+
+# Asset Lifecycle Event Types
+class LifecycleEvents(str, Enum):
+    acquired = "Acquired"
+
