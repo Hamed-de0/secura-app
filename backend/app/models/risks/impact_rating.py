@@ -12,3 +12,5 @@ class ImpactRating(BaseModel):
 
     domain = relationship("ImpactDomain", back_populates="impacts")
     scenario = relationship("RiskScenario", back_populates="impacts")
+
+

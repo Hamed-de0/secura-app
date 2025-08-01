@@ -7,6 +7,7 @@ import {
   getRiskScenarioById,
   updateRiskScenario,
 } from './api';
+import ImpactRatingsForm from './ImpactRatingsForm';
 
 const RiskScenarioEdit = () => {
   const { scenarioId } = useParams(); // URL param like /risk-scenarios/edit/5
@@ -104,7 +105,7 @@ const RiskScenarioEdit = () => {
 </Box>
 
 
-      {/* ✏️ Editable bottom section */}
+      
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Typography variant="subtitle2">Title (EN)</Typography>
@@ -147,6 +148,9 @@ const RiskScenarioEdit = () => {
       <Box sx={{ mt: 4 }}>
         <Button variant="contained" onClick={handleSave}>Save Changes</Button>
       </Box>
+
+            <ImpactRatingsForm scenarioId={scenarioId} />
+
     </Box>
   );
 };

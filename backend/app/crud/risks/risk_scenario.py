@@ -41,7 +41,7 @@ def update_risk_scenario(db: Session, scenario_id: int, scenario_data: RiskScena
         setattr(db_item, field, value)
 
     db.commit()
-    db.refresh(db_item)  
+    db.refresh(db_item)
     return db_item
 
 

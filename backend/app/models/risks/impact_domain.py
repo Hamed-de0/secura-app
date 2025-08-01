@@ -8,3 +8,5 @@ class ImpactDomain(BaseModel, NameDescriptionMixin):
     __tablename__ = "impact_domains"
 
     impacts = relationship("ImpactRating", back_populates="domain")
+
+

@@ -21,3 +21,13 @@ export const createRiskScenario = (payload) => axios.post(`${configs.API_BASE_UR
 export const getRiskScenarioById = (id) => axios.get(`${configs.API_BASE_URL}/risks/risk-scenarios/${id}`).then(res => res.data);
 
 export const updateRiskScenario = (id, payload) => axios.put(`${configs.API_BASE_URL}/risks/risk-scenarios/${id}`, payload);
+
+export const getImpactDomains = () => axios.get(`${configs.API_BASE_URL}/risks/impact-domains/`).then(res => res.data);
+export const updateImpactRatings = (payload) => axios.post(`${configs.API_BASE_URL}/risks/impact-ratings/batch`, payload).then(res => res.data);
+
+export const getImpactRatings = (scenarioId) => {
+  return axios.get(`${configs.API_BASE_URL}/risks/impact-ratings/by-scenario/${scenarioId}`).then(res => res.data);
+};
+
+
+
