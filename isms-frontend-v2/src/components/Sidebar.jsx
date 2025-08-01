@@ -50,6 +50,9 @@ const Sidebar = () => {
         <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/tags')}>
           Tags 
         </Button>
+        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/risk-scenarios')}>
+          Risk Scenarios
+        </Button>
 
         {/* Settings toggle */}
         <Button

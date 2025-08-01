@@ -19,6 +19,7 @@ class RiskScenario(BaseModel):
     asset_group_id = Column(Integer, ForeignKey("asset_groups.id"), nullable=True)
     asset_type_id = Column(Integer, ForeignKey("asset_types.id"), nullable=True)
     lifecycle_states = Column(ARRAY(String), nullable=True)  # e.g., ["in_use", "maintenance"]
+    status = Column(String(50), default="Open")  # optional default
 
     threat_id = Column(Integer, ForeignKey("threats.id"))
     vulnerability_id = Column(Integer, ForeignKey("vulnerabilities.id"))

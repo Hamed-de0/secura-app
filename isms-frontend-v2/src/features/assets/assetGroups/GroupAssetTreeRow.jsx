@@ -11,6 +11,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
 import AddAssetGroupDialog from './AddAssetGroupDialog';
+import AssignTagModal from '../assetTags/AssignTagModal';
 import { deleteAssetGroup, deleteAssetCascade } from '../api';
 
 const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
@@ -19,6 +20,7 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
   const [menuTarget, setMenuTarget] = useState(null);
   const [addGroupOpen, setAddGroupOpen] = useState(false);
   const [addGroupParent, setAddGroupParent] = useState(null);
+  const [assignTagOpen, setAssignTagOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -167,6 +169,12 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
             closeMenu();
           }}>
             Add Asset to Group
+          </MenuItem>,
+          <MenuItem key={`add-tag-to-group-${menuTarget.data.id}`} onClick={() => {          
+            setAssignTagOpen(true);
+            closeMenu();
+          }}>
+            Assign Tag
           </MenuItem>
         ]}
         {menuTarget?.type === 'asset' && (
@@ -175,9 +183,20 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
             closeMenu();
           }}>
             Add Related Asset
+          </MenuItem>,
+          <MenuItem key={`add-tag-to-asset-${menuTarget.data.id}`} onClick={() => {          
+            setAssignTagOpen(true);
+            closeMenu();
+          }}>
+            Assign Tag
           </MenuItem>
+          
+          
         )}
+        
+          
       </Menu>
+      
 
       {/* Add Group Dialog */}
       <AddAssetGroupDialog
@@ -186,6 +205,13 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
         parentGroup={addGroupParent}
         onSuccess={handleGroupFormSuccess}
       />
+      {/* Assign Tag Modal */}
+      <AssignTagModal
+        open={assignTagOpen}
+        onClose={() => setAssignTagOpen(false)}
+        target={menuTarget}
+      />
+
     </>
   );
 };
