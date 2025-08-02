@@ -6,16 +6,12 @@ import { useParams } from 'react-router-dom';
 import {
   getRiskScenarioById,
   updateRiskScenario,
+  getRiskAnalysis
 } from './api';
 import ImpactRatingsForm from './ImpactRatingsForm';
 import ControlImpactTable from './ControlImpactTable';
+import RiskScoreBarChart from './RiskScoreBarChart';
 
-const calculatedScores = {
-  initial_score: 15,
-  initial_label: 'High',
-  residual_score: 8,
-  residual_label: 'Medium'
-};
 
 const RiskScenarioEdit = () => {
   const { scenarioId } = useParams();
@@ -30,6 +26,8 @@ const RiskScenarioEdit = () => {
     status: 'Open',
   });
 
+  const [riskAnalysis, setRiskAnalysis] = useState({});
+
   useEffect(() => {
     getRiskScenarioById(scenarioId).then((data) => {
       setScenario(data);
@@ -42,6 +40,8 @@ const RiskScenarioEdit = () => {
         status: data.status || 'Open',
       });
     });
+
+    getRiskAnalysis(scenarioId).then(setRiskAnalysis);
   }, [scenarioId]);
 
   const handleChange = (e) => {
@@ -133,10 +133,11 @@ const RiskScenarioEdit = () => {
             borderRadius: 2,
             }}
         >
-            <ImpactRatingsForm scenarioId={scenarioId} />
+            <ImpactRatingsForm scenarioId={scenarioId}
+            onRefreshAnalysis={() => getRiskAnalysis(scenarioId).then(setRiskAnalysis)} />
         </Box>
 
-        {/* Right: Risk Details */}
+        {/* Middle: Risk Details */}
         <Box
             sx={{
             width: '33%',
@@ -149,10 +150,10 @@ const RiskScenarioEdit = () => {
             <Typography variant="h6" gutterBottom>Risk Details</Typography>
             <InfoRow label="Likelihood" value={scenario.likelihood || '–'} />
             <InfoRow label="Status" value={scenario.status || '–'} />
-            <InfoRow label="Initial Score" value={<Typography color="error">15 – High</Typography>} />
-            <InfoRow label="Residual Score" value={<Typography color="warning.main">8 – Medium</Typography>} />
+            <InfoRow label="Initial Score" value={<Typography color="error">{ riskAnalysis?.initial_score }</Typography>} />
+            <InfoRow label="Residual Score" value={<Typography color="warning.main">{ riskAnalysis?.residual_score }</Typography>} />
         </Box>
-
+        {/* Right: Risk Analysis */}
         <Box
             sx={{
             width: '33%',
@@ -161,17 +162,20 @@ const RiskScenarioEdit = () => {
             p: 2,
             borderRadius: 2,
             }}>
-
+                <RiskScoreBarChart
+                    initialByDomain={riskAnalysis.initial_by_domain}
+                    residualByDomain={riskAnalysis.residual_by_domain}
+                />
             </Box>
     </Box>
 
 
 
-      {/* 📊 Impact Ratings */}
-      
-
       {/* 🔗 Control Effect Table */}
-      <ControlImpactTable scenarioId={scenarioId} />
+      <ControlImpactTable 
+        scenarioId={scenarioId} 
+        onRefreshAnalysis={() => getRiskAnalysis(scenarioId).then(setRiskAnalysis)}
+        />
     </Box>
   );
 };

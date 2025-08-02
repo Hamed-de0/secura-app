@@ -6,13 +6,13 @@ from app.schemas.assets import *
 from app.crud.assets.asset import (create_asset, get_asset, get_assets, update_asset, delete_asset,
                                    get_assets_with_children, get_asset_with_children, delete_asset_and_descendants)
 from typing import List
-import logging
+
 router = APIRouter(
     prefix="/assets",
     tags=["Assets"]
 )
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 # Dependency to get DB session

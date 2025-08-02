@@ -4,7 +4,7 @@ import {
 } from '@mui/material';
 import { getImpactRatings, updateImpactRatings, getImpactDomains } from './api';
 
-const ImpactRatingsForm = ({ scenarioId }) => {
+const ImpactRatingsForm = ({ scenarioId, onRefreshAnalysis }) => {
   const [domains, setDomains] = useState([]);
   const [ratings, setRatings] = useState({}); // { domain_id: score }
 
@@ -44,6 +44,7 @@ const ImpactRatingsForm = ({ scenarioId }) => {
         scenario_id: scenarioId,
       }));
       await updateImpactRatings(payload);
+      onRefreshAnalysis?.();
       console.log('Impact ratings saved!');
     } catch (err) {
       console.error('Error saving impact ratings:', err);

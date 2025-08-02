@@ -9,7 +9,7 @@ import { getAllControls, getControlLinksByScenario, createOrUpdateControlLink, d
 import EditButton from '@mui/icons-material/Edit';
 
 
-const ControlImpactTable = ({ scenarioId }) => {
+const ControlImpactTable = ({ scenarioId, onRefreshAnalysis }) => {
   const [allControls, setAllControls] = useState([]);
   const [linkedControls, setLinkedControls] = useState([]);
   
@@ -71,11 +71,10 @@ const handleAdd = () => {
             score: domainScores[d.id] ?? 0,
         }));
         saveControlEffectRatings(effectPayload).then(() => {
-            // console.log('Control effects saved!');
-            fetchLinks(); // refresh links
-        });  // new API call
-        // console.log('Saved!');
-        // fetchLinks(); 
+            fetchLinks();
+        });  
+        onRefreshAnalysis?.();
+        
         setEditMode(null); 
     }).catch(err => {
       console.error('Error saving control link:', err);

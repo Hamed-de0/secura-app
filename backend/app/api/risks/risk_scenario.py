@@ -11,7 +11,7 @@ from app.crud.risks import (
     update_risk_scenario
 )
 from app.schemas.risks import RiskScenarioCreate, RiskScenarioRead, RiskScenarioGrouped, RiskScenarioUpdate
-from typing import Dict
+from typing import Dict, Any
 from app.services import calculate_risk_scores
 
 router = APIRouter(prefix="/risk-scenarios", tags=["Risk Scenarios"])
@@ -62,6 +62,6 @@ def update_scenario(scenario_id: int, update_data: RiskScenarioUpdate, db: Sessi
         raise HTTPException(status_code=404, detail="Risk Scenario not found")
     return updated
 
-@router.get("/risk-score/{scenario_id}", response_model=Dict[str, int])
+@router.get("/risk-score/{scenario_id}", response_model=Dict[str, Any])
 def get_risk_score(scenario_id: int, db: Session = Depends(get_db)):
     return calculate_risk_scores(db, scenario_id)
