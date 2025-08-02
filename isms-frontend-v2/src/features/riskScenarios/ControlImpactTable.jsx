@@ -1,32 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Typography, Table, TableBody, TableCell, TableContainer,
+  Box, Typography, Table, TableBody, TableCell, TableContainer, Grid,
   TableHead, TableRow, Paper, IconButton, Select, MenuItem, TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { getAllControls, getControlLinksByScenario, createOrUpdateControlLink, deleteControlLink } from './api';
+import { getAllControls, getControlLinksByScenario, createOrUpdateControlLink, deleteControlLink, 
+    getImpactDomains, saveControlEffectRatings , getControlEffectRatings} from './api';
 import EditButton from '@mui/icons-material/Edit';
 
-const statusOptions = ['Implemented', 'Planned', 'Not Applicable'];
-const effectOptions = ['Likelihood', 'Impact', 'Both'];
 
 const ControlImpactTable = ({ scenarioId }) => {
   const [allControls, setAllControls] = useState([]);
   const [linkedControls, setLinkedControls] = useState([]);
-  const [newControlId, setNewControlId] = useState('');
-
+  
   const [editMode, setEditMode] = useState(null); // null or 'add' or 'edit'
 const [editingLink, setEditingLink] = useState(null); // object being edited or null
 const [selectedCategory, setSelectedCategory] = useState('All');
+const [impactDomains, setImpactDomains] = useState([]);
+const [domainScores, setDomainScores] = useState({}); // domain_id => score
+const [controlEffects, setControlEffects] = useState([]);
 
+    useEffect(() => {
+        getImpactDomains().then(setImpactDomains);
+    }, []);
+     
   useEffect(() => {
     getAllControls().then(setAllControls);
     fetchLinks();
   }, [scenarioId]);
 
-  const fetchLinks = () => {
-    getControlLinksByScenario(scenarioId).then(setLinkedControls);
+  useEffect(() => {
+  if (editMode === 'edit' && editingLink?.control_id && controlEffects.length) {
+    const scoresForControl = controlEffects.filter(e => e.control_id === editingLink.control_id);
+    const initial = {};
+    for (const entry of scoresForControl) {
+      initial[entry.domain_id] = entry.score;
+    }
+    setDomainScores(initial);
+  }
+}, [editMode, editingLink, controlEffects]);
+    
+    const fetchLinks = () => {
+        getControlLinksByScenario(scenarioId).then(setLinkedControls);
+        getControlEffectRatings(scenarioId).then(setControlEffects);
     };
+
   const filteredControls = allControls
         .filter(c => selectedCategory === 'All' || c.category === selectedCategory)
         .sort((a, b) => a.reference_code.localeCompare(b.reference_code));
@@ -45,8 +63,19 @@ const handleAdd = () => {
   const handleSave = (link) => {
     const payload = { ...link, risk_scenario_id: scenarioId}
     createOrUpdateControlLink(payload).then(() => {
-        console.log('Saved!');
-        fetchLinks(); 
+        
+        const effectPayload = impactDomains.map(d => ({
+            control_id: editingLink.control_id,
+            risk_scenario_id: scenarioId,
+            domain_id: d.id,
+            score: domainScores[d.id] ?? 0,
+        }));
+        saveControlEffectRatings(effectPayload).then(() => {
+            // console.log('Control effects saved!');
+            fetchLinks(); // refresh links
+        });  // new API call
+        // console.log('Saved!');
+        // fetchLinks(); 
         setEditMode(null); 
     }).catch(err => {
       console.error('Error saving control link:', err);
@@ -66,43 +95,12 @@ const handleAdd = () => {
   return (
     <>
     <Box sx={{ mt: 4 }}>
-      <Typography variant="h6" gutterBottom>Control Impact on Risk</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+          <Typography variant="h6" gutterBottom>Control Impact on Risk</Typography>
+          <Button variant="contained" onClick={handleAdd}>Add</Button>
 
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2">Filter by Control Category</Typography>
-        <Button variant="contained" onClick={handleAdd}>Add</Button>
-        <TextField
-            select
-            fullWidth
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-        >
-            <MenuItem value="All">All</MenuItem>
-            {[...new Set(allControls.map(c => c.category))].sort().map(cat => (
-            <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-            ))}
-        </TextField>
-
-        <Select
-          value={newControlId}
-          onChange={(e) => setNewControlId(e.target.value)}
-          displayEmpty
-          fullWidth
-        >
-          <MenuItem value="" disabled>Select Control</MenuItem>
-          {filteredControls.map(c => (
-            <MenuItem key={c.id} value={c.id}>
-              {c.reference_code} {c.title_en}
-            </MenuItem>
-          ))}
-        </Select>
-        
-    </Box>
-
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-        
-        
-      </Box>
+        </Box>
+     
 
       {/* Table */}
       <TableContainer component={Paper}>
@@ -139,75 +137,96 @@ const handleAdd = () => {
       </TableContainer>
     </Box>
     <Dialog open={!!editMode} onClose={() => setEditMode(null)} maxWidth="sm" fullWidth>
-  <DialogTitle>{editMode === 'add' ? 'Add Control Link' : 'Edit Control Link'}</DialogTitle>
-  <DialogContent dividers>
+    <DialogTitle>{editMode === 'add' ? 'Add Control Link' : 'Edit Control Link'}</DialogTitle>
+    <DialogContent dividers>
 
-    <TextField
-      select fullWidth sx={{ mb: 2 }}
-      label="Control" name="control_id"
-      value={editingLink?.control_id || ''}
-      onChange={(e) => setEditingLink({ ...editingLink, control_id: e.target.value })}
-      disabled={editMode === 'edit'} // prevent changing linked control on edit
-    >
-      {allControls.map(c => (
-        <MenuItem key={c.id} value={c.id}>
-          {c.reference_code} – {c.title_en}
-        </MenuItem>
-      ))}
-    </TextField>
+        <TextField
+        select fullWidth sx={{ mb: 2 }}
+        label="Control" name="control_id"
+        value={editingLink?.control_id || ''}
+        onChange={(e) => setEditingLink({ ...editingLink, control_id: e.target.value })}
+        disabled={editMode === 'edit'} // prevent changing linked control on edit
+        >
+        {allControls.map(c => (
+            <MenuItem key={c.id} value={c.id}>
+            {c.reference_code} – {c.title_en}
+            </MenuItem>
+        ))}
+        </TextField>
 
-    <TextField
-      select fullWidth sx={{ mb: 2 }}
-      label="Effect Type" name="effect_type"
-      value={editingLink?.effect_type || ''}
-      onChange={(e) => setEditingLink({ ...editingLink, effect_type: e.target.value })}
-    >
-      {['Likelihood', 'Impact', 'Both'].map(opt => (
-        <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-      ))}
-    </TextField>
+        <TextField
+        select fullWidth sx={{ mb: 2 }}
+        label="Effect Type" name="effect_type"
+        value={editingLink?.effect_type || ''}
+        onChange={(e) => setEditingLink({ ...editingLink, effect_type: e.target.value })}
+        >
+        {['Likelihood', 'Impact', 'Both'].map(opt => (
+            <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+        ))}
+        </TextField>
 
-    <TextField
-      select fullWidth sx={{ mb: 2 }}
-      label="Status" name="status"
-      value={editingLink?.status || ''}
-      onChange={(e) => setEditingLink({ ...editingLink, status: e.target.value })}
-    >
-      {['Planned', 'Implemented', 'Partial'].map(opt => (
-        <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-      ))}
-    </TextField>
+        <TextField
+        select fullWidth sx={{ mb: 2 }}
+        label="Status" name="status"
+        value={editingLink?.status || ''}
+        onChange={(e) => setEditingLink({ ...editingLink, status: e.target.value })}
+        >
+        {['Planned', 'Implemented', 'Partial'].map(opt => (
+            <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+        ))}
+        </TextField>
 
-    <TextField
-      fullWidth type="number" sx={{ mb: 2 }}
-      label="Residual Score"
-      value={editingLink?.residual_score || ''}
-      onChange={(e) => setEditingLink({ ...editingLink, residual_score: parseInt(e.target.value) })}
-      inputProps={{ min: 0, max: 10 }}
-    />
+        <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+                Control Effect per Domain
+            </Typography>
+            <Grid container spacing={2} fullWidth sx={{ mb: 2 }}>
+                {impactDomains.map(domain => (
+                <Grid key={domain.id} item xs={6}>
+                    <TextField
+                    sx={{ minWidth: 160 }}
+                    select fullWidth
+                    label={domain.name}
+                    value={domainScores[domain.id] ?? ''}
+                    onChange={(e) =>
+                        setDomainScores(prev => ({
+                        ...prev,
+                        [domain.id]: parseInt(e.target.value),
+                        }))
+                    }
+                    >
+                    {[0, 1, 2, 3, 4, 5].map(score => (
+                        <MenuItem key={score} value={score}>{score}</MenuItem>
+                    ))}
+                    </TextField>
+                </Grid>
+                ))}
+            </Grid>
+            </Box>
 
-    <TextField
-      multiline fullWidth minRows={2}
-      label="Justification"
-      value={editingLink?.justification || ''}
-      onChange={(e) => setEditingLink({ ...editingLink, justification: e.target.value })}
-    />
-  </DialogContent>
 
-  <DialogActions>
-    <Button onClick={() => setEditMode(null)}>Cancel</Button>
-    <Button
-      variant="contained"
-      onClick={() => {
-        handleSave(editingLink);
-        
-        setEditMode(null);
-        setEditingLink(null);
-      }}
-    >
-      Save
-    </Button>
-  </DialogActions>
+        <TextField
+        multiline fullWidth minRows={2}
+        label="Justification"
+        value={editingLink?.justification || ''}
+        onChange={(e) => setEditingLink({ ...editingLink, justification: e.target.value })}
+        />
+    </DialogContent>
+
+    <DialogActions>
+        <Button onClick={() => setEditMode(null)}>Cancel</Button>
+        <Button
+        variant="contained"
+        onClick={() => {
+            handleSave(editingLink);
+            
+            setEditMode(null);
+            setEditingLink(null);
+        }}
+        >
+        Save
+        </Button>
+    </DialogActions>
     </Dialog>
     </>
   );

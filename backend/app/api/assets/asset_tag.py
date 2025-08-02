@@ -79,7 +79,7 @@ def read_tags_for_asset(asset_id: int, db: Session = Depends(get_db)):
 @router.post("/assets/{asset_id}/tags/create-or-assign", response_model=AssetTagRead)
 def create_or_assign_tag(asset_id: int, tag: AssetTagCreate, db: Session = Depends(get_db)):
     # Check if tag exists
-    print(asset_id)
+    # print(asset_id)
     db_tag = crud.get_asset_tag_by_name(db, tag.name)
     if not db_tag:
         db_tag = crud.create_asset_tag(db, tag)

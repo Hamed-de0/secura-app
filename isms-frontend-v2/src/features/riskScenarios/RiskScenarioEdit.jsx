@@ -10,6 +10,13 @@ import {
 import ImpactRatingsForm from './ImpactRatingsForm';
 import ControlImpactTable from './ControlImpactTable';
 
+const calculatedScores = {
+  initial_score: 15,
+  initial_label: 'High',
+  residual_score: 8,
+  residual_label: 'Medium'
+};
+
 const RiskScenarioEdit = () => {
   const { scenarioId } = useParams();
 
@@ -50,87 +57,118 @@ const RiskScenarioEdit = () => {
     }
   };
 
+  const InfoRow = ({ label, value }) => (
+    <Box sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" component="span">{label}: </Typography>
+        <Typography component="span">{value || '–'}</Typography>
+    </Box>
+    );
+
   if (!scenario) return <Typography>Loading...</Typography>;
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
       <Typography variant="h4" gutterBottom>Edit Risk Scenario</Typography>
 
-      {/* 🔷 Summary Section */}
-      <Paper variant="outlined" sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>📘 Scenario Summary</Typography>
+        <Box sx={{ mb: 3, p: 3, backgroundColor: '#f9f9f9', borderRadius: 2, border: '1px solid #ddd' }}>
+  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <span role="img" aria-label="icon">📄</span> Scenario Summary
+  </Typography>
 
-        <Grid container spacing={2}>
-          <Grid item xs={6}><b>Asset:</b> {scenario.asset_name || '–'}</Grid>
-          <Grid item xs={6}><b>Group:</b> {scenario.asset_group_name || '–'}</Grid>
-          <Grid item xs={6}><b>Type:</b> {scenario.asset_type_name || '–'}</Grid>
-          <Grid item xs={6}>
-            <b>Lifecycle:</b>
-            {(scenario.lifecycle_states || []).map((state, i) => (
-              <Chip key={i} label={state} size="small" sx={{ mx: 0.5 }} />
-            ))}
-          </Grid>
-          <Grid item xs={6}><b>Category:</b> {scenario.category_name_en}</Grid>
-          <Grid item xs={6}><b>Subcategory:</b> {scenario.subcategory_name_en}</Grid>
-          <Grid item xs={6}>
-            <b>Tags:</b>
-            {(scenario.tag_names || []).map((tag, i) => (
-              <Chip key={i} label={tag} size="small" sx={{ mx: 0.5 }} />
-            ))}
-          </Grid>
-          <Grid item xs={6}><b>Threat:</b> {scenario.threat_name}</Grid>
-          <Grid item xs={6}><b>Vulnerability:</b> {scenario.vulnerability_name}</Grid>
-        </Grid>
-      </Paper>
+  <Grid container spacing={2}>
+    {/* LEFT COLUMN: Category, Title, Description */}
+    <Grid item xs={12} md={6}>
+      <InfoRow label="Category" value={scenario.category_name_en} />
+      <InfoRow label="Subcategory" value={scenario.subcategory_name_en} />
+      <InfoRow label="Title (EN)" value={scenario.title_en} />
+      <InfoRow label="Description (EN)" value={scenario.description_en} />
+    </Grid>
 
-      {/* ✏️ Editable Fields */}
-      <Paper variant="outlined" sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>📝 Scenario Details</Typography>
+    {/* RIGHT COLUMN: Scope + Risk */}
+    <Grid item xs={12} md={6}>
+        <InfoRow label="Status" value={scenario.status} />
+      {scenario.asset_name && <InfoRow label="Asset" value={scenario.asset_name} />}
+      {scenario.asset_group_name && <InfoRow label="Asset Group" value={scenario.asset_group_name} />}
+      {scenario.asset_type_name && <InfoRow label="Asset Type" value={scenario.asset_type_name} />}
+        {scenario.threat_name && <InfoRow label="Threat" value={scenario.threat_name} />}
+      {scenario.vulnerability_name && <InfoRow label="Vulnerability" value={scenario.vulnerability_name} />}
+      <InfoRow
+        label="Lifecycle"
+        value={(scenario.lifecycle_states || []).map((s, i) => (
+          <Chip key={i} label={s} size="small" sx={{ mr: 0.5 }} />
+        ))}
+      />
 
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <TextField label="Title (EN)" name="title_en" fullWidth value={formData.title_en} onChange={handleChange} />
-          </Grid>
-          <Grid item xs={6}>
-            <TextField label="Title (DE)" name="title_de" fullWidth value={formData.title_de} onChange={handleChange} />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField label="Description (EN)" name="description_en" fullWidth multiline minRows={2} value={formData.description_en} onChange={handleChange} />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField label="Description (DE)" name="description_de" fullWidth multiline minRows={2} value={formData.description_de} onChange={handleChange} />
-          </Grid>
-          <Grid item xs={6}>
-            <TextField
-              label="Likelihood (1–5)"
-              select fullWidth name="likelihood"
-              value={formData.likelihood}
-              onChange={handleChange}
-            >
-              {[1, 2, 3, 4, 5].map(l => <MenuItem key={l} value={l}>{l}</MenuItem>)}
-            </TextField>
-          </Grid>
-          <Grid item xs={6}>
-            <TextField
-              label="Status"
-              select fullWidth name="status"
-              value={formData.status}
-              onChange={handleChange}
-            >
-              {['Open', 'Mitigated', 'Accepted'].map(s => (
-                <MenuItem key={s} value={s}>{s}</MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-        </Grid>
+      
+      {scenario.tag_names?.length > 0 && (
+        <InfoRow
+          label="Tags"
+          value={scenario.tag_names.map((tag, i) => (
+            <Chip key={i} label={tag} size="small" sx={{ mr: 0.5 }} />
+          ))}
+        />
+      )}
 
-        <Box sx={{ mt: 3 }}>
-          <Button variant="contained" color="primary" onClick={handleSave}>💾 Save Changes</Button>
+      
+    </Grid>
+  </Grid>
+</Box>
+     <Box
+        sx={{
+            display: 'flex',
+            gap: 2,
+            borderRadius: 2,
+            border: '1px solid #ddd',
+            backgroundColor: '#f9f9f9',
+            p: 2,
+        }}
+        >
+        {/* Left: Impact Ratings */}
+        <Box
+            sx={{
+            width: '33%',
+            backgroundColor: '#eee',
+            border: '1px solid #ddd',
+            p: 2,
+            borderRadius: 2,
+            }}
+        >
+            <ImpactRatingsForm scenarioId={scenarioId} />
         </Box>
-      </Paper>
+
+        {/* Right: Risk Details */}
+        <Box
+            sx={{
+            width: '33%',
+            borderRadius: 2,
+            border: '1px solid #ddd',
+            backgroundColor: '#eee',
+            p: 2,
+            }}
+        >
+            <Typography variant="h6" gutterBottom>Risk Details</Typography>
+            <InfoRow label="Likelihood" value={scenario.likelihood || '–'} />
+            <InfoRow label="Status" value={scenario.status || '–'} />
+            <InfoRow label="Initial Score" value={<Typography color="error">15 – High</Typography>} />
+            <InfoRow label="Residual Score" value={<Typography color="warning.main">8 – Medium</Typography>} />
+        </Box>
+
+        <Box
+            sx={{
+            width: '33%',
+            backgroundColor: '#eee',
+            border: '1px solid #ddd',
+            p: 2,
+            borderRadius: 2,
+            }}>
+
+            </Box>
+    </Box>
+
+
 
       {/* 📊 Impact Ratings */}
-      <ImpactRatingsForm scenarioId={scenarioId} />
+      
 
       {/* 🔗 Control Effect Table */}
       <ControlImpactTable scenarioId={scenarioId} />

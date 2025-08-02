@@ -35,31 +35,6 @@ def delete_asset_group(db: Session, group_id: int) -> bool:
     db.commit()
     return True
 
-"""
-def build_group_tree(db: Session, parent_id=None) -> List[dict]:
-    groups = db.query(AssetGroup).filter(AssetGroup.parent_id == parent_id).all()
-    result = []
-
-    for group in groups:
-        children = build_group_tree(db, group.id)
-        assets = db.query(Asset).filter(Asset.group_id == group.id).all()
-        # assets = get_assets_with_children(db)
-        if assets:
-            print('ASSETS IN', assets)
-        result.append({
-            "id": group.id,
-            "name": group.name,
-            "description": group.description,
-            "children": children,
-            "assets": [{"id": a.id, "name": a.name, "description": a.description, "group_id": a.group_id} for a in assets]
-        })
-
-    return result
-"""
-
-# def get_asset_group_tree(db: Session) -> List[dict]:
-#     print('test')
-#     return build_group_tree(db)
 
 def build_asset_tree(db: Session, asset_id: int) -> dict:
     asset = db.query(Asset).filter(Asset.id == asset_id).first()

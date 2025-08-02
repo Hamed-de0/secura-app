@@ -34,6 +34,9 @@ export const getControlLinksByScenario = (scenarioId) => axios.get(`${configs.AP
 export const createOrUpdateControlLink = (payload) => axios.post(`${configs.API_BASE_URL}/controls/control-risk-links/`, payload); // for now using POST always
 export const deleteControlLink = (linkId) => axios.delete(`${configs.API_BASE_URL}/controls/control-risk-links/${linkId}`);
 
+export const saveControlEffectRatings = (payload) =>
+  axios.post(`${configs.API_BASE_URL}/controls/control-effect-ratings/`, payload);
 
-
+export const getControlEffectRatings = (scenarioId) =>
+  axios.get(`${configs.API_BASE_URL}/controls/control-effect-ratings/by-scenario/${scenarioId}`).then(res => res.data);
 
