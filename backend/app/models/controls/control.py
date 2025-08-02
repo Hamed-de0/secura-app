@@ -21,7 +21,7 @@ class Control(BaseMain):
     capabilities = Column(ARRAY(String))  # ["Governance"]
     security_domains = Column(ARRAY(String))  # ["Resilience"]
     owner_id = Column(Integer, ForeignKey("persons.id"), nullable=True)
-
+    category = Column(String)
 
     # relationships
     owner = relationship("Person", back_populates="controls", lazy="joined", uselist=False)

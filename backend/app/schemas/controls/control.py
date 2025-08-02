@@ -16,13 +16,8 @@ class ControlBase(BaseModel):
     capabilities: List[str] = None
     security_domains: List[str] = None
     owner_id: Optional[int] = None
+    category: Optional[str] = None
 
-    # name: str
-    # description: Optional[str] = None
-    # type: ControlType
-    # status: Optional[ControlStatus] = ControlStatus.proposed
-    # standard_refs: Optional[List[str]] = None
-    # owner_id: Optional[int] = None
 
 
 class ControlCreate(ControlBase):

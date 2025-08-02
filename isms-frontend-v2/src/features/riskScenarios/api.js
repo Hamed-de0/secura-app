@@ -29,5 +29,11 @@ export const getImpactRatings = (scenarioId) => {
   return axios.get(`${configs.API_BASE_URL}/risks/impact-ratings/by-scenario/${scenarioId}`).then(res => res.data);
 };
 
+export const getAllControls = () => axios.get(`${configs.API_BASE_URL}/controls/controls/`).then(res => res.data);
+export const getControlLinksByScenario = (scenarioId) => axios.get(`${configs.API_BASE_URL}/controls/control-risk-links/by-scenario/${scenarioId}`).then(res => res.data);
+export const createOrUpdateControlLink = (payload) => axios.post(`${configs.API_BASE_URL}/controls/control-risk-links/`, payload); // for now using POST always
+export const deleteControlLink = (linkId) => axios.delete(`${configs.API_BASE_URL}/controls/control-risk-links/${linkId}`);
+
+
 
 
