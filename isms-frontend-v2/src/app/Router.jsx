@@ -19,6 +19,7 @@ function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
+      <Route path="/home" element={<MainView><Dashboard /></MainView>} />
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />
       <Route path="/assets/edit/:id" element={<MainView><AssetEditPage /></MainView>} />
       <Route path="/persons" element={<MainView><PersonPage /></MainView>} />

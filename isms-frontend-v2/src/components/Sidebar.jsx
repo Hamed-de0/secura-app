@@ -1,92 +1,105 @@
 import React, { useState } from 'react';
-import { Drawer, Toolbar, Box, Button, Collapse } from '@mui/material';
+import {
+  Drawer, Toolbar, Box, IconButton, Tooltip, List, ListItemButton,
+  ListItemIcon, ListItemText, Divider, Collapse
+} from '@mui/material';
+import {
+  Dashboard as DashboardIcon,
+  Devices as AssetsIcon,
+  ReportProblem as ThreatsIcon,
+  BugReport as VulnerabilitiesIcon,
+  Security as ControlsIcon,
+  Groups as PersonsIcon,
+  Insights as AnalysisIcon,
+  LocalOffer as TagsIcon,
+  AccountTree as RiskScenariosIcon,
+  BarChart as ReportsIcon,
+  Settings, ExpandLess, ExpandMore, Tune
+} from '@mui/icons-material';
+import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate } from 'react-router-dom';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { useTheme } from '@mui/material'
+import { useTheme } from '@mui/material';
 
+const drawerWidth = 240;
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const [collapsed, setCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const menuItems = [
+    { icon: <DashboardIcon color="primary" />, label: 'Dashboard', route: '/home' },
+    { icon: <AssetsIcon color="info" />, label: 'Assets', route: '/assetgroups/tree' },
+    { icon: <ThreatsIcon color="error" />, label: 'Threats', route: '/threats' },
+    { icon: <VulnerabilitiesIcon color="warning" />, label: 'Vulnerabilities', route: '/vulnerabilities' },
+    { icon: <ControlsIcon color="success" />, label: 'Controls', route: '/controls' },
+    { icon: <PersonsIcon color="secondary" />, label: 'Persons', route: '/persons' },
+    { icon: <AnalysisIcon color="action" />, label: 'Analysis', route: '/analysis' },
+    { icon: <TagsIcon color="default" />, label: 'Tags', route: '/tags' },
+    { icon: <RiskScenariosIcon color="primary" />, label: 'Risk Scenarios', route: '/risk-scenarios' },
+    { icon: <ReportsIcon color="secondary" />, label: 'Reports', route: '/reports' },
+  ];
+
 
   return (
     <Drawer
       variant="permanent"
-      anchor="left"
       sx={{
-        width: 240,
+        width: collapsed ? 70 : drawerWidth,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
-          width: 240,
+          width: collapsed ? 70 : drawerWidth,
+          transition: 'width 0.3s',
+          overflowX: 'hidden',
           boxSizing: 'border-box',
           backgroundColor: theme.palette.background.paper,
-          padding: '10px',
+          p: 1,
         },
       }}
     >
       <Toolbar />
-      <Box sx={{ mt: 2 }}>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/home')}>
-          Dashboard
-        </Button>
-
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
-          Assets
-        </Button>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/threats')}>
-          Threats
-        </Button>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/vulnerabilities')}>
-          Vulnerabilities
-        </Button>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/assetgroups/tree')}>
-          Controls
-        </Button>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/persons')}>
-          Persons
-        </Button>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/tags')}>
-          Tags 
-        </Button>
-        <Button fullWidth variant="outlined" sx={{ mb: 1 }} onClick={() => navigate('/risk-scenarios')}>
-          Risk Scenarios
-        </Button>
-
-        {/* Settings toggle */}
-        <Button
-          fullWidth
-          variant="outlined"
-          endIcon={settingsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          onClick={() => setSettingsOpen(!settingsOpen)}
-          sx={{ mb: 1 }}
-        >
-          Settings
-        </Button>
-
-        {/* Collapsible settings links */}
-        <Collapse in={settingsOpen} timeout="auto" unmountOnExit>
-          <Box sx={{ pl: 2 }}>
-            <Button
-              fullWidth
-              variant="text"
-              onClick={() => navigate('/settings/asset-types')}
-              sx={{ justifyContent: 'flex-start' }}
-            >
-              Asset Types
-            </Button>
-            <Button
-              fullWidth
-              variant="text"
-              onClick={() => navigate('/settings/asset-groups')}
-              sx={{ justifyContent: 'flex-start' }}
-            >
-              Asset Groups
-            </Button>
-          </Box>
-        </Collapse>
+      <Box display="flex" justifyContent="center" mb={2}>
+        <IconButton onClick={() => setCollapsed(!collapsed)}>
+          <MenuIcon />
+        </IconButton>
       </Box>
+
+      <List>
+        {menuItems.map((item) => (
+          <Tooltip key={item.label} title={collapsed ? item.label : ''} placement="right">
+            <ListItemButton onClick={() => navigate(item.route)} sx={{ px: 2 }}>
+              <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 2 }}>{item.icon}</ListItemIcon>
+              {!collapsed && <ListItemText primary={item.label} />}
+            </ListItemButton>
+          </Tooltip>
+        ))}
+      </List>
+
+      <Divider sx={{ my: 1 }} />
+
+      <Tooltip title={collapsed ? 'Settings' : ''} placement="right">
+        <ListItemButton onClick={() => setSettingsOpen(!settingsOpen)} sx={{ px: 2 }}>
+          <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 2 }}>
+            <Settings />
+          </ListItemIcon>
+          {!collapsed && <ListItemText primary="Settings" />}
+          {!collapsed && (settingsOpen ? <ExpandLess /> : <ExpandMore />)}
+        </ListItemButton>
+      </Tooltip>
+
+      <Collapse in={settingsOpen && !collapsed} timeout="auto" unmountOnExit>
+        <List component="div" disablePadding>
+          <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/settings/asset-types')}>
+            <ListItemIcon><Tune /></ListItemIcon>
+            <ListItemText primary="Asset Types" />
+          </ListItemButton>
+          <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/settings/asset-groups')}>
+            <ListItemIcon><Tune /></ListItemIcon>
+            <ListItemText primary="Asset Groups" />
+          </ListItemButton>
+        </List>
+      </Collapse>
     </Drawer>
   );
 };
