@@ -13,6 +13,7 @@ import TagList from '../features/tags/TagList'
 import RiskScenarioTable from '../features/riskScenarios/RiskScenarioTable'
 import RiskScenarioForm from '../features/riskScenarios/RiskScenarioForm'
 import RiskScenarioEdit from '../features/riskScenarios/RiskScenarioEdit'
+import RiskDashboard from '../features/riskScenarios/RiskDashboard'
 // Add others progressively...
 
 function AppRouter() {
@@ -25,12 +26,12 @@ function AppRouter() {
       <Route path="/persons" element={<MainView><PersonPage /></MainView>} />
       <Route path="/threats" element={<MainView><ThreatsPage /></MainView>} />
       <Route path="/vulnerabilities" element={<MainView><VulnerabilitiesPage /></MainView>} />
-      <Route path="/vulnerabilities" element={<MainView><VulnerabilitiesPage /></MainView>} />
       <Route path="/relationships/threat-vulnerability" element={<MainView><ThreatVulnerabilityMapPage  /></MainView>} />
       <Route path='/tags' element={<MainView><TagList /></MainView>} />
       <Route path="/risk-scenarios" element={<MainView><RiskScenarioTable /></MainView>} />
       <Route path="/risk-scenarios/new" element={<MainView><RiskScenarioForm /></MainView>} />
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
+      <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} />
 
       {/* Future structure - just plug in your page modules */}
       {/* 

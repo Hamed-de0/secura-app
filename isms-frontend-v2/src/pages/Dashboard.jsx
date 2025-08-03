@@ -103,32 +103,32 @@ const riskPieData = {
       <Box sx={{ mt: 4, textAlign: 'center', backgroundColor: '#fff', p: 3, borderRadius: 2, border: '1px solid #acaaaaff' }}>
         
         <Grid container spacing={2} mb={3}>
-  {/* Left Chart */}
-  <Grid item xs={12} md={3} size={4}>
-    <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-      <Typography variant="h6">Risk Levels Breakdown</Typography>
-      <Pie data={riskPieData} />
-      <Box sx={{ mt: 1 }}>
-        <Typography variant="body2"><strong>5%</strong> HIGH</Typography>
-        <Typography variant="body2"><strong>55%</strong> MEDIUM</Typography>
-        <Typography variant="body2"><strong>30%</strong> LOW</Typography>
-      </Box>
-    </Paper>
-  </Grid>
+        {/* Left Chart */}
+            <Grid item xs={12} md={3} size={4}>
+                <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6">Risk Levels Breakdown</Typography>
+                <Pie data={riskPieData} />
+                <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2"><strong>5%</strong> HIGH</Typography>
+                    <Typography variant="body2"><strong>55%</strong> MEDIUM</Typography>
+                    <Typography variant="body2"><strong>30%</strong> LOW</Typography>
+                </Box>
+                </Paper>
+            </Grid>
 
-  {/* Right Chart */}
-  <Grid item xs={12} md={8} size={8}>
-    <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-      <Typography variant="h6">Mitigation Trend</Typography>
-      <Box sx={{ height: 280 }}> {/* Optional: control fixed chart height */}
-        <Line data={trendLineData} options={{ maintainAspectRatio: false }} />
-      </Box>
-      <Box textAlign="right" mt={1}>
-        <Typography variant="body2" color="primary" sx={{ cursor: 'pointer' }}>View All</Typography>
-      </Box>
-    </Paper>
-  </Grid>
-</Grid>
+            {/* Right Chart */}
+            <Grid item xs={12} md={8} size={8}>
+                <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6">Mitigation Trend</Typography>
+                <Box sx={{ height: 280 }}> {/* Optional: control fixed chart height */}
+                    <Line data={trendLineData} options={{ maintainAspectRatio: false }} />
+                </Box>
+                <Box textAlign="right" mt={1}>
+                    <Typography variant="body2" color="primary" sx={{ cursor: 'pointer' }}>View All</Typography>
+                </Box>
+                </Paper>
+            </Grid>
+        </Grid>
 
         </Box>
         <Box sx={{ mt: 4, textAlign: 'center' }}>

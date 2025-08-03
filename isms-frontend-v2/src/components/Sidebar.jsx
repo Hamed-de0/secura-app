@@ -35,7 +35,7 @@ const Sidebar = () => {
     { icon: <VulnerabilitiesIcon color="warning" />, label: 'Vulnerabilities', route: '/vulnerabilities' },
     { icon: <ControlsIcon color="success" />, label: 'Controls', route: '/controls' },
     { icon: <PersonsIcon color="secondary" />, label: 'Persons', route: '/persons' },
-    { icon: <AnalysisIcon color="action" />, label: 'Analysis', route: '/analysis' },
+    { icon: <AnalysisIcon color="action" />, label: 'Analysis', route: '/risk-dashboard' },
     { icon: <TagsIcon color="default" />, label: 'Tags', route: '/tags' },
     { icon: <RiskScenariosIcon color="primary" />, label: 'Risk Scenarios', route: '/risk-scenarios' },
     { icon: <ReportsIcon color="secondary" />, label: 'Reports', route: '/reports' },
