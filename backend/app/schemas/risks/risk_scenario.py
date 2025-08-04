@@ -79,3 +79,10 @@ class RiskScenarioGrouped(BaseModel):
     category_name_de: str
     category_name_en: str
     subcategories: List[RiskScenarioSubcategoryGrouped]
+
+
+class RiskScenarioEnrichRequest(BaseModel):
+    threat_id: Optional[str] = None
+    vulnerability_id: Optional[str] = None
+    controls: Optional[List[str]] = []
+

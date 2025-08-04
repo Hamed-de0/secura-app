@@ -8,9 +8,10 @@ from app.crud.risks import (
     delete_risk_scenario,
     read_grouped_risk_scenarios,
     get_categories_with_subcategories,
-    update_risk_scenario
+    update_risk_scenario,
+    enrich_risk_scenario_from_reference_codes
 )
-from app.schemas.risks import RiskScenarioCreate, RiskScenarioRead, RiskScenarioGrouped, RiskScenarioUpdate
+from app.schemas.risks import RiskScenarioCreate, RiskScenarioRead, RiskScenarioGrouped, RiskScenarioUpdate, RiskScenarioEnrichRequest
 from typing import Dict, Any
 from app.services import calculate_risk_scores
 
@@ -65,3 +66,17 @@ def update_scenario(scenario_id: int, update_data: RiskScenarioUpdate, db: Sessi
 @router.get("/risk-score/{scenario_id}", response_model=Dict[str, Any])
 def get_risk_score(scenario_id: int, db: Session = Depends(get_db)):
     return calculate_risk_scores(db, scenario_id)
+
+@router.post("/risk-scenarios/{scenario_id}/enrich")
+def enrich_scenario(scenario_id: int, data: RiskScenarioEnrichRequest, db: Session = Depends(get_db)):
+    try:
+        scenario = enrich_risk_scenario_from_reference_codes(
+            db=db,
+            scenario_id=scenario_id,
+            threat_id=data.threat_id,
+            vulnerability_id=data.vulnerability_id,
+            controls=data.controls or []
+        )
+        return {"message": "Scenario enriched successfully\n" + scenario.title_de}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
