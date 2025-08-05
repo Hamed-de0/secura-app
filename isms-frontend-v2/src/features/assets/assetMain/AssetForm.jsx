@@ -9,14 +9,19 @@ import {
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import configs from '../../configs';
-import TagSelector from '../../tags/TagSelector';
+import GroupSelectModal from '../assetGroups/GroupSelectModal';
+import JsonDetailsEditor from '../../../components/JsonDetailsEditor';
+import { useNavigate } from 'react-router-dom'; 
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+
 
 const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
   const [types, setTypes] = useState([]);
   const [groups, setGroups] = useState([]);
   const [parentAsset, setParentAsset] = useState(null);
   const [loading, setLoading] = useState(!!assetId);
-  // const [tagIds, setTagIds] = useState(initialValues?.tags?.map(tag => tag.id) || []);
+  const navigate = useNavigate();
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
 
   const [form, setForm] = useState({
     uuid: uuidv4(),
@@ -24,20 +29,27 @@ const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
     type_id: '',
     group_id: '',
     description: '',
-    parent_id: ''
+    parent_id: '',
+    location: '',
+    details: {}
   });
+
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
 
   const fetchAsset = async () => {
     if (!assetId) return;
     try {
       const res = await axios.get(`${configs.API_BASE_URL}/assets/${assetId}`);
       const asset = res.data;
+
       setForm({
         uuid: asset.uuid || '',
         name: asset.name || '',
         type_id: asset.type_id || '',
         group_id: asset.group_id || '',
-        description: asset.description || ''
+        description: asset.description || '',
+        location: asset.location || '',
+        details: asset.details || {},
       });
     } catch (err) {
       console.error('Failed to fetch asset', err);
@@ -111,7 +123,7 @@ const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
       }
 
       const newAsset = assetRes.data;
-      onSuccess?.();
+      
 
       if (parentAssetId) {
         await axios.post(`${configs.API_BASE_URL}/asset_relations/`, {
@@ -121,6 +133,9 @@ const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
           description: 'Auto-linked on creation'
         });
       }
+
+      onSuccess?.();
+      setSuccessModalOpen(true);
 
     } catch (err) {
       console.error("Error creating asset", err);
@@ -158,22 +173,35 @@ const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
         ))}
       </TextField>
 
-      <TextField
-        label="Asset Group *"
-        name="group_id"
-        select
-        fullWidth
-        margin="normal"
-        required
-        value={form.group_id}
-        onChange={handleChange}
-      >
-        {groups.map(group => (
-          <MenuItem key={group.id} value={group.id}>
-            {group.name}
-          </MenuItem>
-        ))}
-      </TextField>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <TextField
+          label="Asset Group *"
+          name="group_id"
+          select
+          fullWidth
+          margin="normal"
+          required
+          value={form.group_id}
+          onChange={handleChange}
+        >
+          {groups.map(group => (
+            <MenuItem key={group.id} value={group.id}>
+              {group.name}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <Button
+          variant="outlined"
+          onClick={() => setGroupModalOpen(true)}
+          sx={{ height: '56px', minWidth: '40px', mt: '16px' }}
+        >
+          🌳
+        </Button>
+      </Box>
+
+
+
         {parentAsset && (
           <TextField
             label="Parent Asset"
@@ -183,6 +211,19 @@ const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
             margin="normal"
           />
         )}
+
+      <TextField
+            label="Location"
+            name='location'
+            value={form.location}
+            fullWidth
+            margin="normal"
+        onChange={handleChange}
+      />
+      <JsonDetailsEditor
+        value={form.details}
+        onChange={(newDetails) => setForm(prev => ({ ...prev, details: newDetails }))}
+      />
       <TextField
         label="Description"
         name="description"
@@ -193,10 +234,31 @@ const AssetForm = ({ assetId, onSuccess, parentAssetId, groupId }) => {
         value={form.description}
         onChange={handleChange}
       />
-
+      <Button onClick={()=>{ navigate("/assetgroups/tree")}} sx={{ mt: 2, mr: 1 }}>
+        To List
+      </Button>
       <Button type="submit" variant="contained" sx={{ mt: 2 }}>
         Submit
       </Button>
+
+      <GroupSelectModal
+        open={groupModalOpen}
+        onClose={() => setGroupModalOpen(false)}
+        groups={groups}
+        onSelect={(selected) => {
+          setForm(prev => ({ ...prev, group_id: selected.id }));
+          setGroupModalOpen(false);
+        }}
+      />
+
+      <Dialog open={successModalOpen} onClose={() => setSuccessModalOpen(false)}>
+        <DialogTitle>Success</DialogTitle>
+        <DialogContent>Asset saved successfully!</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSuccessModalOpen(false)}>OK</Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 };

@@ -14,8 +14,14 @@ def create_asset_group(db: Session, obj: AssetGroupCreate) -> AssetGroup:
 def get_asset_group(db: Session, group_id: int) -> Optional[AssetGroup]:
     return db.query(AssetGroup).filter(AssetGroup.id == group_id).first()
 
-def get_asset_groups(db: Session, skip: int = 0, limit: int = 100) -> List[AssetGroup]:
-    return db.query(AssetGroup).offset(skip).limit(limit).all()
+def get_asset_groups(db: Session, skip: int = 0, limit: int = 100, fields: Optional[str] = None) -> List[AssetGroup]:
+    query = db.query(AssetGroup)
+
+    if fields:
+        field_list = [getattr(AssetGroup, f.strip()) for f in fields.split(",")]
+        query = db.query(*field_list)
+
+    return query.offset(skip).limit(limit).all()
 
 def update_asset_group(db: Session, group_id: int, obj: AssetGroupCreate) -> Optional[AssetGroup]:
     db_obj = db.query(AssetGroup).filter(AssetGroup.id == group_id).first()

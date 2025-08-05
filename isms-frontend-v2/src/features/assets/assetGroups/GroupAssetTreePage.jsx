@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import React, { use, useEffect, useState } from 'react';
+import { Box, Typography, Button } from '@mui/material';
 import GroupAssetTreeTable from './GroupAssetTreeTable';
 import { getAssetGroupsTree } from '../api';
+import { useNavigate } from 'react-router-dom';
 
 const GroupAssetTreePage = () => {
   const [treeData, setTreeData] = useState([]);
+  const navigate = useNavigate();
   const reloadTree = () => {
     getAssetGroupsTree().then(res => setTreeData(res.data))
         .catch(err => console.error('Failed to load tree', err));
@@ -16,6 +18,7 @@ const GroupAssetTreePage = () => {
   return (
     <Box sx={{  p: 1, width: '100%'}}>
       <Typography variant="h5" gutterBottom>Asset Group Tree</Typography>
+      <Button variant="contained" color="primary" onClick={() => navigate("/assets/new")} sx={{ mb: 2 }}>+ Add New Asset</Button>
       <GroupAssetTreeTable tree={treeData} onRefresh={reloadTree} />
     </Box>
   );

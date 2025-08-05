@@ -1,7 +1,6 @@
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
 from app.schemas.assets import AssetGroupCreate, AssetGroupRead
 from app.crud.assets.asset_group import (
     create_asset_group,
@@ -11,27 +10,22 @@ from app.crud.assets.asset_group import (
     delete_asset_group,
     get_asset_group_tree
 )
-from typing import List
+from typing import List, Optional
+from app.database import get_db
 
 router = APIRouter(
     prefix="/asset-groups",
     tags=["Asset Groups"]
 )
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/", response_model=AssetGroupRead)
 def create(obj: AssetGroupCreate, db: Session = Depends(get_db)):
     return create_asset_group(db, obj)
 
 @router.get("/", response_model=List[AssetGroupRead])
-def read_all(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return get_asset_groups(db, skip=skip, limit=limit)
+def read_all(skip: int = 0, limit: int = 300, db: Session = Depends(get_db), fields: Optional[str] = Query(None),):
+    return get_asset_groups(db, skip=skip, limit=limit, fields=fields)
 
 @router.get("/{group_id}", response_model=AssetGroupRead)
 def read(group_id: int, db: Session = Depends(get_db)):
