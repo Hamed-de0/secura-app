@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from app.models.risks import RiskScenario, RiskScenarioCategory, RiskScenarioSubcategory
 from app.models.assets import AssetTag
-from app.models.risks.impact_rating import ImpactRating
+from app.models.risks.risk_context_impact_rating import RiskContextImpactRating
 from app.models.controls.control_risk_link import ControlRiskLink
 from app.schemas.risks import RiskScenarioCreate, RiskScenarioUpdate, RiskScenarioRead
 from typing import List, Optional

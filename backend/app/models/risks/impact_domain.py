@@ -7,6 +7,9 @@ from app.core.mixins import NameDescriptionMixin
 class ImpactDomain(BaseModel, NameDescriptionMixin):
     __tablename__ = "impact_domains"
 
-    impacts = relationship("ImpactRating", back_populates="domain")
+    risk_context_impact_ratings = relationship("RiskContextImpactRating", back_populates="domain",
+                                               cascade="all, delete")
+
+
 
 

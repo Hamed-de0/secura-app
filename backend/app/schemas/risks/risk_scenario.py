@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from .impact_rating import ImpactRatingRead
+from .risk_context_impact_rating import RiskContextImpactRatingRead
 
 class RiskScenarioBase(BaseModel):
     title_en: str
@@ -47,7 +47,7 @@ class RiskScenarioRead(RiskScenarioBase):
     created_at: datetime
     updated_at: datetime
     enabled: bool
-    impacts: List[ImpactRatingRead] = []  # auto-loaded by relationship
+    impacts: List[RiskContextImpactRatingRead] = []  # auto-loaded by relationship
 
     class Config:
         from_attributes = True
