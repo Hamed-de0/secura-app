@@ -1,1 +1,1 @@
-from .risk_analysis import calculate_risk_scores
+from .risk_analysis import calculate_risk_scores_by_context, calculate_risk_scores_by_scenario

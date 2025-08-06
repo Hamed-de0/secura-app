@@ -13,7 +13,7 @@ from app.crud.risks import (
 )
 from app.schemas.risks import RiskScenarioCreate, RiskScenarioRead, RiskScenarioGrouped, RiskScenarioUpdate, RiskScenarioEnrichRequest
 from typing import Dict, Any
-from app.services import calculate_risk_scores
+from app.services import calculate_risk_scores_by_scenario
 
 router = APIRouter(prefix="/risk-scenarios", tags=["Risk Scenarios"])
 
@@ -65,7 +65,7 @@ def update_scenario(scenario_id: int, update_data: RiskScenarioUpdate, db: Sessi
 
 @router.get("/risk-score/{scenario_id}", response_model=Dict[str, Any])
 def get_risk_score(scenario_id: int, db: Session = Depends(get_db)):
-    return calculate_risk_scores(db, scenario_id)
+    return calculate_risk_scores_by_scenario(db, scenario_id)
 
 @router.post("/risk-scenarios/{scenario_id}/enrich")
 def enrich_scenario(scenario_id: int, data: RiskScenarioEnrichRequest, db: Session = Depends(get_db)):
