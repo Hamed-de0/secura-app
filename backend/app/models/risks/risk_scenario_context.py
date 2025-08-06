@@ -28,3 +28,7 @@ class RiskScenarioContext(Base):
     # Relationships
     risk_scenario = relationship("RiskScenario", back_populates="contexts")
     impact_ratings = relationship("RiskContextImpactRating", back_populates="context", cascade="all, delete")
+
+    asset = relationship("Asset", backref="risk_scenario_contexts")
+    asset_group = relationship("AssetGroup", backref="risk_scenario_contexts")
+    asset_tag = relationship("AssetTag", backref="risk_scenario_contexts")

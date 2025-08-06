@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel
 
 class RiskScenarioContextBase(BaseModel):
@@ -26,3 +26,17 @@ class RiskScenarioContextInDBBase(RiskScenarioContextBase):
 
 class RiskScenarioContext(RiskScenarioContextInDBBase):
     pass
+
+class ImpactRatingInput(BaseModel):
+    domain_id: int
+    score: int
+
+class RiskContextBatchAssignInput(BaseModel):
+    risk_scenario_id: int
+    scope_type: Literal["asset", "group", "tag", "type"]
+    target_ids: List[int]
+    likelihood: int
+    status: str
+    lifecycle_states: List[str] = []
+    impact_ratings: List[ImpactRatingInput]
+

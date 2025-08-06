@@ -14,6 +14,7 @@ import RiskScenarioTable from '../features/riskScenarios/RiskScenarioTable'
 import RiskScenarioForm from '../features/riskScenarios/RiskScenarioForm'
 import RiskScenarioEdit from '../features/riskScenarios/RiskScenarioEdit'
 import RiskDashboard from '../features/riskScenarios/RiskDashboard'
+import RiskScenarioContextView from '../features/RiskScenarioContexts/RiskScenarioContextView'
 // Add others progressively...
 
 function AppRouter() {
@@ -30,6 +31,7 @@ function AppRouter() {
       <Route path="/relationships/threat-vulnerability" element={<MainView><ThreatVulnerabilityMapPage  /></MainView>} />
       <Route path='/tags' element={<MainView><TagList /></MainView>} />
       <Route path="/risk-scenarios" element={<MainView><RiskScenarioTable /></MainView>} />
+      <Route path="/risk-scenarios-context" element={<MainView><RiskScenarioContextView /></MainView>} />
       <Route path="/risk-scenarios/new" element={<MainView><RiskScenarioForm /></MainView>} />
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
       <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} />

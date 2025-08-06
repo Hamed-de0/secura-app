@@ -5,7 +5,6 @@ from app.models.risks.risk_context_impact_rating import RiskContextImpactRating
 from app.models.controls.control_risk_link import ControlRiskLink
 from app.schemas.risks import RiskScenarioCreate, RiskScenarioUpdate, RiskScenarioRead
 from typing import List, Optional
-# from models import RiskScenario, Threat, Vulnerability, Control, RiskScenarioControlLink
 
 from app.models.risks.threat import Threat
 from app.models.risks.vulnerability import Vulnerability
@@ -18,12 +17,8 @@ def create_risk_scenario(db: Session, data: RiskScenarioCreate) -> RiskScenario:
         title_de=data.title_de,
         description_en=data.description_en,
         description_de=data.description_de,
-        likelihood=data.likelihood,
         threat_id=data.threat_id,
         vulnerability_id=data.vulnerability_id,
-        asset_id=data.asset_id,
-        asset_group_id=data.asset_group_id,
-        lifecycle_states=data.lifecycle_states,
         subcategory_id=data.subcategory_id
     )
 
@@ -56,9 +51,6 @@ def get_risk_scenario(db: Session, scenario_id: int) -> Optional[RiskScenarioRea
         .options(
             joinedload(RiskScenario.threat),
             joinedload(RiskScenario.vulnerability),
-            joinedload(RiskScenario.asset),
-            joinedload(RiskScenario.group),
-            joinedload(RiskScenario.asset_tags),
             joinedload(RiskScenario.subcategory).joinedload(RiskScenarioSubcategory.category)
         )
         .filter(RiskScenario.id == scenario_id)
@@ -73,13 +65,10 @@ def get_risk_scenario(db: Session, scenario_id: int) -> Optional[RiskScenarioRea
     return RiskScenarioRead.from_orm(scenario).copy(update={
         "threat_name": scenario.threat.name if scenario.threat else None,
         "vulnerability_name": scenario.vulnerability.name if scenario.vulnerability else None,
-        "asset_name": scenario.asset.name if scenario.asset else None,
-        "group_name": scenario.group.name if scenario.group else None,
         "subcategory_name_en": scenario.subcategory.name_en if scenario.subcategory else None,
         "subcategory_name_de": scenario.subcategory.name_de if scenario.subcategory else None,
         "category_name_en": scenario.subcategory.category.name_en if scenario.subcategory and scenario.subcategory.category else None,
         "category_name_de": scenario.subcategory.category.name_de if scenario.subcategory and scenario.subcategory.category else None,
-        "tag_names": [tag.name for tag in scenario.asset_tags],
     })
 
 def get_risk_scenarios(db: Session, skip: int = 0, limit: int = 100) -> List[RiskScenario]:
@@ -118,14 +107,10 @@ def read_grouped_risk_scenarios(db: Session) -> List[dict]:
                     {
                         "id": s.id,
                         "title_en": s.title_en,
-                        "likelihood": s.likelihood,
-                        "lifecycle_states": s.lifecycle_states,
                         "threat_id": s.threat_id,
                         "threat_name": s.threat.name if s.threat else None,
                         "vulnerability_id": s.vulnerability_id,
                         "vulnerability_name": s.vulnerability.name if s.vulnerability else None,
-                        "asset_id": s.asset_id,
-                        "asset_name": s.asset.name if s.asset else None,
                         "status": "Open"
                     }
                     for s in scenarios

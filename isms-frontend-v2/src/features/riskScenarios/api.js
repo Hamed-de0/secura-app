@@ -40,5 +40,4 @@ export const saveControlEffectRatings = (payload) =>
 export const getControlEffectRatings = (scenarioId) =>
   axios.get(`${configs.API_BASE_URL}/controls/control-effect-ratings/by-scenario/${scenarioId}`).then(res => res.data);
 
-export const getRiskAnalysis = (scenarioId) =>
-  axios.get(`${configs.API_BASE_URL}/risks/risk-scenarios/risk-score/${scenarioId}`).then(res => res.data);
+export const getRiskAnalysis = (scenarioId) => axios.get(`${configs.API_BASE_URL}/risks/risk-scenarios/risk-score/${scenarioId}`).then(res => res.data);

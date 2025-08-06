@@ -14,6 +14,7 @@ import {
   LocalOffer as TagsIcon,
   AccountTree as RiskScenariosIcon,
   BarChart as ReportsIcon,
+  Assessment as RiskAssessmentIcon,
   Settings, ExpandLess, ExpandMore, Tune
 } from '@mui/icons-material';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -38,6 +39,7 @@ const Sidebar = () => {
     { icon: <AnalysisIcon color="action" />, label: 'Analysis', route: '/risk-dashboard' },
     { icon: <TagsIcon color="default" />, label: 'Tags', route: '/tags' },
     { icon: <RiskScenariosIcon color="primary" />, label: 'Risk Scenarios', route: '/risk-scenarios' },
+    { icon: <RiskAssessmentIcon color="primary" />, label: 'Risk Contexts', route: '/risk-scenarios-context' },
     { icon: <ReportsIcon color="secondary" />, label: 'Reports', route: '/reports' },
   ];
 

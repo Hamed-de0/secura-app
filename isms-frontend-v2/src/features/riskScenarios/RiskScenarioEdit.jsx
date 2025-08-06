@@ -36,7 +36,7 @@ const RiskScenarioEdit = () => {
         title_de: data.title_de || '',
         description_en: data.description_en || '',
         description_de: data.description_de || '',
-        likelihood: data.likelihood || '',
+        // likelihood: data.likelihood || '',
         status: data.status || 'Open',
       });
     });

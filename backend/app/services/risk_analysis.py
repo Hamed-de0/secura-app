@@ -16,6 +16,14 @@ def calculate_risk_scores(db: Session, scenario_context_id: int) -> Dict[str, An
             "residual_by_domain": {}
         }
 
+    return {
+        "initial_score": 0,
+        "residual_score": 0,
+        "likelihood": 0,
+        "initial_by_domain": {},
+        "residual_by_domain": {}
+    }
+
     likelihood = scenario.likelihood or 0
 
     # Fetch impact ratings

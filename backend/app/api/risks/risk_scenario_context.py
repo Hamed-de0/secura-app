@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 from app.schemas.risks.risk_scenario_context import (
     RiskScenarioContext,
     RiskScenarioContextCreate,
-    RiskScenarioContextUpdate
+    RiskScenarioContextUpdate,
+    RiskContextBatchAssignInput
 )
 from app.crud.risks import risk_scenario_context as crud
 from app.database import get_db
+from typing import Optional
 
 router = APIRouter(prefix="/risk_scenario_contexts", tags=["Risk Scenario Contexts"])
 
@@ -14,12 +16,36 @@ router = APIRouter(prefix="/risk_scenario_contexts", tags=["Risk Scenario Contex
 def create_context(obj_in: RiskScenarioContextCreate, db: Session = Depends(get_db)):
     return crud.create_context(db, obj_in)
 
+@router.post("/batch-assign")
+def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session = Depends(get_db)):
+    return crud.batch_assign_contexts(data, db)
+
 @router.get("/{context_id}", response_model=RiskScenarioContext)
 def read_context(context_id: int, db: Session = Depends(get_db)):
     obj = crud.get_context(db, context_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Context not found")
     return obj
+
+@router.get("/expanded/manage")
+def get_expanded_contexts(
+    db: Session = Depends(get_db),
+    page: int = 1,
+    page_size: int = 10,
+    search: Optional[str] = None,
+    scope_type: Optional[str] = None,
+    status: Optional[str] = None,
+    ):
+
+    return crud.get_expanded_contexts(
+        db=db,
+        page=page,
+        page_size=page_size,
+        search=search,
+        scope_type=scope_type,
+        status=status,
+    )
+
 
 @router.get("/", response_model=list[RiskScenarioContext])
 def read_all_contexts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
