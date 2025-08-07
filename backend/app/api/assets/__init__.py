@@ -10,9 +10,15 @@ from .asset_relation import router as asset_relation_router
 from .asset_maintenance import router as asset_maintenance_router
 from .asset_security_profile import router as asset_security_profile_router
 from .lifecycle_event_type import router as lifecycle_event_type_router
+from .asset_type_threat_link import router as threat_link_router
+from .asset_type_control_link import router as control_link_router
+from .asset_type_vulnerability_link import router as vuln_link_router
 
 router = APIRouter()
 
+router.include_router(threat_link_router)
+router.include_router(control_link_router)
+router.include_router(vuln_link_router)
 router.include_router(asset_router)
 router.include_router(asset_group_router)
 router.include_router(asset_lifecycle_event_router)

@@ -9,3 +9,6 @@ from .asset_scan import AssetScan
 from .asset_security_profile import AssetSecurityProfile
 from .asset_tag import AssetTag
 from .lifecycle_event_type import LifecycleEventType
+from .asset_type_control_link import AssetTypeControlLink
+from .asset_type_threat_link import AssetTypeThreatLink
+from .asset_type_vulnerability_link import AssetTypeVulnerabilityLink

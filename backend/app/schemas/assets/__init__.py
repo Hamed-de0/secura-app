@@ -9,3 +9,8 @@ from .asset_scan import AssetScanBase, AssetScanCreate, AssetScanRead
 from .asset_security_profile import AssetSecurityProfileBase, AssetSecurityProfileCreate, AssetSecurityProfileRead
 from .asset_tag import AssetTagBase, AssetTagCreate, AssetTagRead, AssetTagUpdate, AssetTagBulkCreate
 from .lifecycle_event_type import LifecycleEventTypeCreate, LifecycleEventTypeRead, LifecycleEventTypeBase
+from .asset_type_threat_link import *
+from .asset_type_control_link import *
+from .asset_type_vulnerability_link import *
+
+
