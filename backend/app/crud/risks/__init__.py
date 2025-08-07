@@ -6,3 +6,4 @@ from .threat_links import *
 from .vulnerability import *
 from .threat import *
 from .risk_category import *
+from .risk_score import *

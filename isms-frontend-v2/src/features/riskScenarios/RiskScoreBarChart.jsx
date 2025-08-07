@@ -13,6 +13,8 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const RiskScoreBarChart = ({ initialByDomain, residualByDomain }) => {
+  console.log('Initial by Domain:', initialByDomain);
+  console.log('Residual by Domain:', residualByDomain);
   const domains = Object.keys(initialByDomain).map(id => {
     switch (parseInt(id)) {
       case 1: return 'Confidentiality';

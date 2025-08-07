@@ -32,3 +32,7 @@ class RiskScenarioContext(Base):
     asset = relationship("Asset", backref="risk_scenario_contexts")
     asset_group = relationship("AssetGroup", backref="risk_scenario_contexts")
     asset_tag = relationship("AssetTag", backref="risk_scenario_contexts")
+
+    # Inside RiskScenarioContext class
+    score = relationship("RiskScore", back_populates="context", uselist=False, cascade="all, delete-orphan")
+    score_history = relationship("RiskScoreHistory", back_populates="context", cascade="all, delete-orphan")

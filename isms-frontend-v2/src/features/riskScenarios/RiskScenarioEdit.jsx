@@ -11,7 +11,7 @@ import {
 import ImpactRatingsForm from './ImpactRatingsForm';
 import ControlImpactTable from './ControlImpactTable';
 import RiskScoreBarChart from './RiskScoreBarChart';
-
+import {IMPACT_DOMAINS} from '../../app/constants'
 
 const RiskScenarioEdit = () => {
   const { scenarioId } = useParams();
@@ -36,13 +36,17 @@ const RiskScenarioEdit = () => {
         title_de: data.title_de || '',
         description_en: data.description_en || '',
         description_de: data.description_de || '',
-        // likelihood: data.likelihood || '',
         status: data.status || 'Open',
       });
     });
-
+    console.log('Fetching risk analysis for scenario:', scenarioId);
     getRiskAnalysis(scenarioId).then(setRiskAnalysis);
   }, [scenarioId]);
+
+  useEffect(() => {
+      console.log('Risk Analysis:', riskAnalysis);
+
+  }, [riskAnalysis, scenarioId]);
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -112,62 +116,63 @@ const RiskScenarioEdit = () => {
       
     </Grid>
   </Grid>
-</Box>
-     <Box
-        sx={{
-            display: 'flex',
-            gap: 2,
-            borderRadius: 2,
-            border: '1px solid #ddd',
-            backgroundColor: '#f9f9f9',
-            p: 2,
-        }}
-        >
-        {/* Left: Impact Ratings */}
-        <Box
-            sx={{
-            width: '33%',
-            backgroundColor: '#eee',
-            border: '1px solid #ddd',
-            p: 2,
-            borderRadius: 2,
-            }}
-        >
-            <ImpactRatingsForm scenarioId={scenarioId}
-            onRefreshAnalysis={() => getRiskAnalysis(scenarioId).then(setRiskAnalysis)} />
         </Box>
 
-        {/* Middle: Risk Details */}
         <Box
             sx={{
-            width: '33%',
-            borderRadius: 2,
-            border: '1px solid #ddd',
-            backgroundColor: '#eee',
-            p: 2,
+                display: 'flex',
+                gap: 2,
+                borderRadius: 2,
+                border: '1px solid #ddd',
+                backgroundColor: '#f9f9f9',
+                p: 2,
             }}
-        >
-            <Typography variant="h6" gutterBottom>Risk Details</Typography>
-            <InfoRow label="Likelihood" value={scenario.likelihood || '–'} />
-            <InfoRow label="Status" value={scenario.status || '–'} />
-            <InfoRow label="Initial Score" value={<Typography color="error">{ riskAnalysis?.initial_score }</Typography>} />
-            <InfoRow label="Residual Score" value={<Typography color="warning.main">{ riskAnalysis?.residual_score }</Typography>} />
-        </Box>
-        {/* Right: Risk Analysis */}
-        <Box
-            sx={{
-            width: '33%',
-            backgroundColor: '#eee',
-            border: '1px solid #ddd',
-            p: 2,
-            borderRadius: 2,
-            }}>
-                <RiskScoreBarChart
-                    initialByDomain={riskAnalysis.initial_by_domain}
-                    residualByDomain={riskAnalysis.residual_by_domain}
-                />
+            >
+            {/* Left: Impact Ratings */}
+            <Box
+                sx={{
+                width: '33%',
+                backgroundColor: '#eee',
+                border: '1px solid #ddd',
+                p: 2,
+                borderRadius: 2,
+                }}
+            >
+                {/* <ImpactRatingsForm scenarioId={scenarioId}
+                  onRefreshAnalysis={() => getRiskAnalysis(scenarioId).then(setRiskAnalysis)} /> */}
             </Box>
-    </Box>
+
+            {/* Middle: Risk Details */}
+            <Box
+                sx={{
+                width: '33%',
+                borderRadius: 2,
+                border: '1px solid #ddd',
+                backgroundColor: '#eee',
+                p: 2,
+                }}
+            >
+                <Typography variant="h6" gutterBottom>Risk Details</Typography>
+                <InfoRow label="Likelihood" value={scenario.likelihood || '–'} />
+                <InfoRow label="Status" value={scenario.status || '–'} />
+                <InfoRow label="Initial Score" value={<Typography color="error">{ riskAnalysis?.initial_score }</Typography>} />
+                <InfoRow label="Residual Score" value={<Typography color="warning.main">{ riskAnalysis?.residual_score }</Typography>} />
+            </Box>
+            {/* Right: Risk Analysis */}
+            <Box
+                sx={{
+                width: '33%',
+                backgroundColor: '#eee',
+                border: '1px solid #ddd',
+                p: 2,
+                borderRadius: 2,
+                }}>
+                    <RiskScoreBarChart
+                        initialByDomain={riskAnalysis.initial_by_domain}
+                        residualByDomain={riskAnalysis.residual_by_domain}
+                    />
+                </Box>
+        </Box>
 
 
 

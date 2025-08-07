@@ -16,8 +16,8 @@ const getColor = (value) => {
 };
 
 const RiskHeatmap = () => (
-  <Box sx={{ width: '100%', maxWidth: '600px', mx: 'auto', mt: 4 }}>
-    <Typography variant="h6" mb={2}>
+  <Box sx={{ width: '100%', maxWidth: '600px', mx: 'auto', mt: 1 }}>
+    <Typography variant="h6" mb={1}>
       Risk Heatmap
     </Typography>
 
@@ -25,8 +25,8 @@ const RiskHeatmap = () => (
       sx={{
         display: 'grid',
         gridTemplateColumns: '60px repeat(5, 1fr)',
-        gridTemplateRows: 'repeat(6, 1fr)',
-        gap: 1,
+        gridTemplateRows: '60px repeat(6, 1fr)',
+        gap: 0.1,
         width: '100%',
       }}
     >

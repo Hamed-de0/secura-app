@@ -6,3 +6,4 @@ from app.models.risks.impact_domain import ImpactDomain
 from app.models.risks.risk_context_impact_rating import RiskContextImpactRating
 from app.models.risks.risk_scenario_context import RiskScenarioContext
 from app.models.risks.risk_category import RiskScenarioCategory, RiskScenarioSubcategory
+from app.models.risks.risk_score import RiskScore,RiskScoreHistory
