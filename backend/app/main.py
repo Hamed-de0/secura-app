@@ -4,6 +4,7 @@ from app.api.controls import router as control_router
 from app.api.users import person
 from app.api.assets import router as asset_router
 from app.api.dashboards import router as dashboard_router
+from app.api import ai_router
 
 from app.api.assets import asset_lifecycle_event, asset_type, asset_relation, asset_group, asset_maintenance, \
     asset_security_profile, asset_tag, asset_scan, asset_owner, asset
@@ -35,6 +36,7 @@ app.add_middleware(
 # app.include_router(asset_security_profile.router)
 # app.include_router(asset_tag.router)
 
+app.include_router(ai_router)
 app.include_router(dashboard_router)
 app.include_router(person.router)
 app.include_router(risk_router, prefix="/risks")

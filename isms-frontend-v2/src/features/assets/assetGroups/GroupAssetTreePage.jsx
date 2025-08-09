@@ -19,6 +19,7 @@ const GroupAssetTreePage = () => {
     <Box sx={{  p: 1, width: '100%'}}>
       <Typography variant="h5" gutterBottom>Asset Group Tree</Typography>
       <Button variant="contained" color="primary" onClick={() => navigate("/assets/new")} sx={{ mb: 2 }}>+ Add New Asset</Button>
+      <Button variant="contained" color="primary" onClick={() => navigate("/asset-types/manage")} sx={{ mb: 2, ml: 2 }}>Asset Types</Button>
       <GroupAssetTreeTable tree={treeData} onRefresh={reloadTree} />
     </Box>
   );

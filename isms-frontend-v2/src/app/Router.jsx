@@ -15,6 +15,8 @@ import RiskScenarioForm from '../features/riskScenarios/RiskScenarioForm'
 import RiskScenarioEdit from '../features/riskScenarios/RiskScenarioEdit'
 import RiskDashboard from '../features/riskScenarios/RiskDashboard'
 import RiskScenarioContextView from '../features/RiskScenarioContexts/RiskScenarioContextView'
+import AssetTypePage from '../features/assets/assetTypes/AssetTypePage'
+
 // Add others progressively...
 
 function AppRouter() {
@@ -25,6 +27,7 @@ function AppRouter() {
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />
       <Route path="/assets/edit/:id" element={<MainView><AssetEditPage /></MainView>} />
       <Route path="/assets/new" element={<MainView><AssetEditPage /></MainView>} />
+      <Route path="/asset-types/manage" element={<MainView><AssetTypePage /></MainView>} />
       <Route path="/persons" element={<MainView><PersonPage /></MainView>} />
       <Route path="/threats" element={<MainView><ThreatsPage /></MainView>} />
       <Route path="/vulnerabilities" element={<MainView><VulnerabilitiesPage /></MainView>} />

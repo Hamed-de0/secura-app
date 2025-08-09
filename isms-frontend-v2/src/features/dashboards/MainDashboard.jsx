@@ -119,15 +119,22 @@ const MainDashboard = () => {
         <Grid container spacing={2} mb={3}>
         {/* Left Chart */}
             <Grid item xs={12} md={3} size={4}>
-                <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-                <Typography variant="h6">Risk Levels Breakdown</Typography>
-                <Pie data={riskPieData} />
-                <Box sx={{ mt: 1 }}>
-                    <Typography variant="body2"><strong>High:</strong> {summary?.risk_levels.high}</Typography>
-                    <Typography variant="body2"><strong>Medium:</strong> {summary?.risk_levels.medium}</Typography>
-                    <Typography variant="body2"><strong>Low:</strong> {summary?.risk_levels.low}</Typography>
-                </Box>
-                </Paper>
+                
+                {!riskPieData?.datasets ? (
+                <p>Loading risk data...</p>
+                ) : (
+                    <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
+                        <Typography variant="h6">Risk Levels Breakdown</Typography>
+                        <Pie data={riskPieData} />
+                        <Box sx={{ mt: 1 }}>
+                            <Typography variant="body2"><strong>High:</strong> {summary?.risk_levels.high}</Typography>
+                            <Typography variant="body2"><strong>Medium:</strong> {summary?.risk_levels.medium}</Typography>
+                            <Typography variant="body2"><strong>Low:</strong> {summary?.risk_levels.low}</Typography>
+                        </Box>
+                    </Paper>
+                )}
+                
+                
             </Grid>
 
             {/* Right Chart */}
