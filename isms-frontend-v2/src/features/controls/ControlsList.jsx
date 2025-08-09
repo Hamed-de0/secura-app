@@ -1,38 +1,35 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Button, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import { getThreats } from './api';
+import { getControls } from './api';
 
-export default function ThreatsList({ rows, onEdit, onAddClick }) {
-  const [threats, setThreats] = useState([]);
+export default function ControlsList({ rows, onEdit, onAddClick }) {
+  const [controls, setControls] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [category, setCategory] = useState('All');
 
   useEffect(() => {
-    if (rows) { setThreats(rows); return; }
-    getThreats().then((data) => setThreats(data)).catch(() => setThreats([]));
+    if (rows) { setControls(rows); return; }
+    getControls().then(setControls).catch(() => setControls([]));
   }, [rows]);
 
   const categories = useMemo(() => {
-    if (!Array.isArray(threats)) return ['All'];
-    const all = threats.map(t => t.category).filter(Boolean);
-    return ['All', ...Array.from(new Set(all))];
-  }, [threats]);
+    if (!Array.isArray(controls)) return ['All'];
+    return ['All', ...Array.from(new Set(controls.map(c => c.category).filter(Boolean)))];
+  }, [controls]);
 
   useEffect(() => {
-    setFiltered(category === 'All' ? threats : threats.filter(t => t.category === category));
-  }, [category, threats]);
+    setFiltered(category === 'All' ? controls : controls.filter(c => c.category === category));
+  }, [category, controls]);
 
   const columns = [
-    { field: 'reference_code', headerName: 'Code', width: 120 },
-    { field: 'name', headerName: 'Threat', flex: 1, minWidth: 260 },
+    { field: 'reference_code', headerName: 'Code', width: 130 },
+    { field: 'title_en', headerName: 'Control', flex: 1, minWidth: 260 },
     { field: 'category', headerName: 'Category', width: 160 },
-    { field: 'source', headerName: 'Source', width: 140 },
+    { field: 'control_source', headerName: 'Source', width: 140 },
     {
-      field: 'actions', headerName: 'Actions', width: 120, sortable: false,
-      renderCell: (params) => (
-        <Button size="small" onClick={() => onEdit?.(params.row)}>Edit</Button>
-      )
+      field: 'actions', headerName: '...', width: 40, sortable: false,
+      renderCell: (params) => <Button size="small" onClick={() => onEdit?.(params.row)}>...</Button>
     }
   ];
 
