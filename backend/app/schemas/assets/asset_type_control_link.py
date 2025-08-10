@@ -21,7 +21,7 @@ class AssetTypeControlLinkOutDetails(BaseModel):
     id: int
     control_id: int
     asset_type_id: int
-    score: Optional[int] = None
+    score: Optional[float] = None
     justification: Optional[str] = None
 
     # From Threat table

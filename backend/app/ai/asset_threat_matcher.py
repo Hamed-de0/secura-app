@@ -1,7 +1,7 @@
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+# from sentence_transformers import SentenceTransformer
+# from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Dict
-import numpy as np
+# import numpy as np
 
 # Load model once globally for performance
 # model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')  # ~80MB, fast and solid

@@ -79,7 +79,7 @@ export default function AssetTypeDetailsTabs({ assetType }) {
             // refresh(); // your custom logic to reload the list
             await loadAll();          // refresh table
         } finally {
-            setVulnModalOpen(false);  // close modal
+            // setVulnModalOpen(false);  // close modal
         }
     };
 
