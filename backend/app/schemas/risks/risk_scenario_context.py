@@ -6,6 +6,7 @@ class RiskScenarioContextBase(BaseModel):
     asset_id: Optional[int] = None
     asset_group_id: Optional[int] = None
     asset_tag_id: Optional[int] = None
+    asse_type_id: Optional[int] = None
     lifecycle_states: Optional[List[str]] = None
     status: Optional[str] = "Open"
     threat_id: Optional[int] = None

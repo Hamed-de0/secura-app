@@ -1,5 +1,5 @@
 # Core scenario logic
-from sqlalchemy import Column, Integer, String, ForeignKey, ARRAY, Table
+from sqlalchemy import Column, Integer, String, ForeignKey, ARRAY, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.core.base import Base
 
@@ -14,7 +14,7 @@ class RiskScenarioContext(Base):
     asset_id = Column(Integer, ForeignKey("assets.id"), nullable=True)
     asset_group_id = Column(Integer, ForeignKey("asset_groups.id"), nullable=True)
     asset_tag_id = Column(Integer, ForeignKey("asset_tags.id"), nullable=True)
-
+    asset_type_id = Column(Integer, ForeignKey("asset_types.id"), nullable=True)
 
     # Context info
     lifecycle_states = Column(ARRAY(String), nullable=True)
@@ -32,7 +32,23 @@ class RiskScenarioContext(Base):
     asset = relationship("Asset", backref="risk_scenario_contexts")
     asset_group = relationship("AssetGroup", backref="risk_scenario_contexts")
     asset_tag = relationship("AssetTag", backref="risk_scenario_contexts")
+    asset_type = relationship("AssetType", backref="risk_scenario_contexts")  # NEW
 
     # Inside RiskScenarioContext class
     score = relationship("RiskScore", back_populates="context", uselist=False, cascade="all, delete-orphan")
     score_history = relationship("RiskScoreHistory", back_populates="context", cascade="all, delete-orphan")
+
+
+    __table_args__ = (
+        # Exactly one scope not null (Postgres-specific cast to int)
+        CheckConstraint(
+            "((asset_id IS NOT NULL)::int + (asset_group_id IS NOT NULL)::int + "
+            "(asset_tag_id IS NOT NULL)::int + (asset_type_id IS NOT NULL)::int) = 1",
+            name="ck_rsc_exactly_one_scope"
+        ),
+        # Prevent duplicates per scope
+        UniqueConstraint("risk_scenario_id", "asset_id", name="uq_rsc_asset"),
+        UniqueConstraint("risk_scenario_id", "asset_group_id", name="uq_rsc_group"),
+        UniqueConstraint("risk_scenario_id", "asset_tag_id", name="uq_rsc_tag"),
+        UniqueConstraint("risk_scenario_id", "asset_type_id", name="uq_rsc_type"),
+    )

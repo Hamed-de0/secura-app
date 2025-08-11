@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 9001",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -25,6 +25,7 @@
     "react-dom": "^19.1.0",
     "react-mui-sidebar": "^1.6.3",
     "react-router-dom": "^7.7.1",
+    "recharts": "^3.1.2",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

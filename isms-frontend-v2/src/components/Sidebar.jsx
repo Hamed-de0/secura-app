@@ -40,7 +40,7 @@ const Sidebar = () => {
     { icon: <TagsIcon color="default" />, label: 'Tags', route: '/tags' },
     { icon: <RiskScenariosIcon color="primary" />, label: 'Risk Scenarios', route: '/risk-scenarios' },
     { icon: <RiskAssessmentIcon color="primary" />, label: 'Risk Contexts', route: '/risk-scenarios-context' },
-    { icon: <ReportsIcon color="secondary" />, label: 'Reports', route: '/reports' },
+    { icon: <ReportsIcon color="secondary" />, label: 'Reports', route: '/risk-view' },
   ];
 
 

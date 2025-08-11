@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
 origins = [
+    "*",
     "http://localhost:5173",  # Vite dev server
     # Add more if needed (e.g., production domain)
 ]

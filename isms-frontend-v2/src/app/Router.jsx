@@ -16,6 +16,7 @@ import RiskScenarioEdit from '../features/riskScenarios/RiskScenarioEdit'
 import RiskDashboard from '../features/riskScenarios/RiskDashboard'
 import RiskScenarioContextView from '../features/RiskScenarioContexts/RiskScenarioContextView'
 import AssetTypePage from '../features/assets/assetTypes/AssetTypePage'
+import RisksEffectiveView from '../features/dashboards/RiskEffectiveView'
 
 // Add others progressively...
 
@@ -38,6 +39,7 @@ function AppRouter() {
       <Route path="/risk-scenarios/new" element={<MainView><RiskScenarioForm /></MainView>} />
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
       <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} />
+      <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} />
 
       {/* Future structure - just plug in your page modules */}
       {/* 

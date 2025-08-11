@@ -45,15 +45,18 @@ def get_expanded_contexts(db: Session, page: int, page_size: int, search: Option
             joinedload(RiskScenarioContext.asset),
             joinedload(RiskScenarioContext.asset_group),
             joinedload(RiskScenarioContext.asset_tag),
-        )
+            joinedload(RiskScenarioContext.asset_type),
+    )
 
-    if scope_type in ("asset", "group", "tag"):
+    if scope_type in ("asset", "group", "tag", "type"):
         if scope_type == "asset":
             query = query.filter(RiskScenarioContext.asset_id.isnot(None))
         elif scope_type == "group":
             query = query.filter(RiskScenarioContext.asset_group_id.isnot(None))
         elif scope_type == "tag":
             query = query.filter(RiskScenarioContext.asset_tag_id.isnot(None))
+        elif scope_type == "type":
+            query = query.filter(RiskScenarioContext.asset_type_id.isnot(None))
 
     if status:
         query = query.filter(RiskScenarioContext.status.ilike(status))
@@ -75,6 +78,7 @@ def get_expanded_contexts(db: Session, page: int, page_size: int, search: Option
             ctx.asset.name if ctx.asset_id else
             ctx.asset_group.name if ctx.asset_group_id else
             ctx.asset_tag.name if ctx.asset_tag_id else
+            ctx.asset_type.name if ctx.asset_type_id else
             "Unknown"
         )
 
