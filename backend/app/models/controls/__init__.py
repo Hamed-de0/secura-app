@@ -5,3 +5,5 @@ from app.models.controls.control_threat_link import ControlThreatLink
 from app.models.controls.control_risk_link import ControlRiskLink
 from app.models.controls.control_vulnerability_link import ControlVulnerabilityLink
 from app.models.controls.control_effect_rating import ControlEffectRating
+from app.models.controls.control_context_link import ControlContextLink
+from app.models.controls.control_context_effect_override import ControlContextEffectOverride

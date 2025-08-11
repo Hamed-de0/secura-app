@@ -14,7 +14,7 @@ app = FastAPI()
 
 origins = [
     "*",
-    "http://localhost:5173",  # Vite dev server
+    # "http://localhost:9001",  # Vite dev server
     # Add more if needed (e.g., production domain)
 ]
 
@@ -26,16 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# app.include_router(asset.router)
-# app.include_router(asset_type.router)
-# app.include_router(asset_group.router)
-# app.include_router(asset_owner.router)
-# app.include_router(asset_relation.router)
-# app.include_router(asset_lifecycle_event.router)
-# app.include_router(asset_maintenance.router)
-# app.include_router(asset_scan.router)
-# app.include_router(asset_security_profile.router)
-# app.include_router(asset_tag.router)
 
 app.include_router(ai_router)
 app.include_router(dashboard_router)

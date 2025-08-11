@@ -279,11 +279,11 @@ const DEMO_RISKS = [
     lastReview: "2025-07-08",
     nextReview: "2025-10-01",
     sources: [
-      { scope: "group", name: "External-Facing", likelihood: 4, impacts: { C: 4, I: 4, A: 3, L: 4, R: 4 } },
-      { scope: "type", name: "Web Application", likelihood: 3, impacts: { C: 3, I: 3, A: 3, L: 3, R: 3 } },
+    { scope: "group", name: "External-Facing", likelihood: 4, impacts: { C: 4, I: 4, A: 3, L: 4, R: 4 } },
+    { scope: "type", name: "Web Application", likelihood: 3, impacts: { C: 3, I: 3, A: 3, L: 3, R: 3 } },
     ],
     compliance: ["ISO 27001: 8.23", "NIST 800-53: IA-2"],
-  },
+    },
   {
     id: 5,
     scenarioId: 108,
@@ -608,7 +608,7 @@ export default function RisksEffectiveView() {
           <KPICard title="Total Residual Trend" value={<span>92%</span>} spark={demoSpark.map((p)=>({ ...p, y: p.y - 10}))} />
           <KPICard title="% with Owner" value={<span>{Math.round((rows.filter(r=>r.owner!=="Open" && r.owner!=="Unassigned").length / Math.max(rows.length,1))*100)}%</span>} spark={demoSpark.map((p)=>({ ...p, y: p.y + 6}))} />
           <KPICard title="Exceptions expiring" value={3} spark={demoSpark.map((p)=>({ ...p, y: p.y - 4}))} />
-          <KPICard title="Last Review SLA" value={<span>85%</span>} spark={demoSpark.map((p)=>({ ...p, y: p.y + 2}))} />
+          <KPICard title="Last Review SLA" value={<span>81%</span>} spark={demoSpark.map((p)=>({ ...p, y: p.y + 2}))} />
         </Stack>
 
         {/* Filters */}

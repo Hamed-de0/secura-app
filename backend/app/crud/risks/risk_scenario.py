@@ -62,7 +62,7 @@ def get_risk_scenario(db: Session, scenario_id: int) -> Optional[RiskScenarioRea
 
     # Convert to Pydantic schema and enrich fields
     # print(scenario)
-    return RiskScenarioRead.from_orm(scenario).copy(update={
+    return RiskScenarioRead.from_attributes(scenario).copy(update={
         "threat_name": scenario.threat.name if scenario.threat else None,
         "vulnerability_name": scenario.vulnerability.name if scenario.vulnerability else None,
         "subcategory_name_en": scenario.subcategory.name_en if scenario.subcategory else None,

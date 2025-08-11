@@ -9,9 +9,11 @@ from .threat_links import router as threat_links_router
 from .risk_category import router as risk_category_router
 from .risk_score import router as risk_score_router
 from .risk_engine import router as risk_engine_router
+from .risk_effective import router as risk_effective_router
 
 router = APIRouter()
 router.include_router(impact_domain_router)
+router.include_router(risk_effective_router)
 router.include_router(risk_context_impact_rating_router)
 router.include_router(risk_scenario_context_router)
 router.include_router(risk_scenario_router)

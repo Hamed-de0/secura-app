@@ -6,4 +6,5 @@ from app.schemas.risks.threat import ThreatBase, ThreatRead, ThreatCreate, Threa
 from app.schemas.risks.vulnerability import VulnerabilityBase, VulnerabilityRead, VulnerabilityCreate, VulnerabilityUpdate
 from app.schemas.risks.threat_links import *
 from app.schemas.risks.risk_category import *
+from app.schemas.risks.risk_effective import *
 
