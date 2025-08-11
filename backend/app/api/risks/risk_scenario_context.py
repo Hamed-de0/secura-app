@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.schemas.risks.risk_scenario_context import (
     RiskScenarioContext,
@@ -6,12 +6,13 @@ from app.schemas.risks.risk_scenario_context import (
     RiskScenarioContextUpdate,
     RiskContextBatchAssignInput
 )
+from app.schemas.risks.risk_context_list import RiskContextListResponse
 from app.services import calculate_risk_scores_by_context
-from app.crud.risks import risk_scenario_context as crud
+from app.crud.risks import risk_scenario_context as crud, risk_context_list
 from app.database import get_db
 from typing import Optional, Dict, Any
 
-router = APIRouter(prefix="/risk_scenario_contexts", tags=["Risk Scenario Contexts"])
+router = APIRouter(prefix="/risk_scenario_contexts", tags=["Risk Contexts"])
 
 @router.post("/", response_model=RiskScenarioContext)
 def create_context(obj_in: RiskScenarioContextCreate, db: Session = Depends(get_db)):
@@ -24,6 +25,33 @@ def get_risk_score(context_id: int, db: Session = Depends(get_db)):
 @router.post("/batch-assign")
 def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session = Depends(get_db)):
     return crud.batch_assign_contexts(data, db)
+
+
+@router.get("/contexts", response_model=RiskContextListResponse)
+def get_contexts(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=200),
+    sort_by: str = Query("updated_at"),
+    sort_dir: str = Query("desc"),
+    scope: str = Query("all"),
+    status: str = Query("all"),
+    search: str = Query("", max_length=200),
+    asset_id: int | None = None,
+    asset_type_id: int | None = None,
+    db: Session = Depends(get_db),
+):
+    return risk_context_list.list_contexts(
+        db,
+        offset=offset,
+        limit=limit,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        scope=scope,
+        status=status,
+        search=search,
+        asset_id=asset_id,
+        asset_type_id=asset_type_id,
+    )
 
 @router.get("/{context_id}", response_model=RiskScenarioContext)
 def read_context(context_id: int, db: Session = Depends(get_db)):

@@ -7,4 +7,7 @@ from app.schemas.risks.vulnerability import VulnerabilityBase, VulnerabilityRead
 from app.schemas.risks.threat_links import *
 from app.schemas.risks.risk_category import *
 from app.schemas.risks.risk_effective import *
+from app.schemas.risks.risk_score import *
+from app.schemas.risks.risk_context_list import *
+
 

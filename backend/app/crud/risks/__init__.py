@@ -7,3 +7,4 @@ from .vulnerability import *
 from .threat import *
 from .risk_category import *
 from .risk_score import *
+from .risk_context_list import *

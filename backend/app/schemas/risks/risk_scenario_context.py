@@ -1,4 +1,5 @@
-from typing import Optional, List, Literal
+from typing import List, Optional, Literal
+from datetime import datetime
 from pydantic import BaseModel
 
 class RiskScenarioContextBase(BaseModel):
@@ -13,6 +14,7 @@ class RiskScenarioContextBase(BaseModel):
     vulnerability_id: Optional[int] = None
     likelihood: Optional[int] = None
 
+
 class RiskScenarioContextCreate(RiskScenarioContextBase):
     pass
 
@@ -21,6 +23,9 @@ class RiskScenarioContextUpdate(RiskScenarioContextBase):
 
 class RiskScenarioContextInDBBase(RiskScenarioContextBase):
     id: int
+    created_at: datetime
+    updated_at: datetime
+    enabled: bool
 
     class Config:
         from_attributes = True

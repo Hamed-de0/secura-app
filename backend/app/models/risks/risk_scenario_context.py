@@ -1,10 +1,10 @@
 # Core scenario logic
 from sqlalchemy import Column, Integer, String, ForeignKey, ARRAY, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
-from app.core.base import Base
+from app.core.base import BaseModel
 
 
-class RiskScenarioContext(Base):
+class RiskScenarioContext(BaseModel):
     __tablename__ = "risk_scenario_contexts"
 
     id = Column(Integer, primary_key=True)
