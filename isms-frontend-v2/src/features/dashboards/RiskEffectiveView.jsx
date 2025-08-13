@@ -604,8 +604,33 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
   const theme = useTheme();
   if (!row) return null;
 
-  const pct = row.controls.total
-    ? Math.round((row.controls.implemented / row.controls.total) * 100)
+  const sampleData = {
+    id: 4,
+    scenarioId: 107,
+    scenarioTitle: "Credential stuffing against customer portal",
+    assetName: "Customer Portal",
+    scope: "group",
+    owner: "Hamed",
+    ownerInitials: "SV",
+    status: "Open",
+    likelihood: 4,
+    impacts: { C: 4, I: 4, A: 3, L: 4, R: 4 },
+    initial: 60,
+    residual: 34,
+    // trend: demoSpark.map((p) => ({ ...p, y: p.y + (p.x % 4 === 0 ? 8 : -4) })),
+    controls: { implemented: 2, total: 7, recommended: ["MFA", "Rate limiting", "WAF", "Password policy"], implementedList: ["WAF", "Rate limiting"] },
+    evidence: { ok: 2, warn: 2 },
+    lastReview: "2025-07-08",
+    nextReview: "2025-10-01",
+    sources: [
+      { scope: "group", name: "External-Facing", likelihood: 4, impacts: { C: 4, I: 4, A: 3, L: 4, R: 4 } },
+      { scope: "type", name: "Web Application", likelihood: 3, impacts: { C: 3, I: 3, A: 3, L: 3, R: 3 } },
+    ],
+    compliance: ["ISO 27001: 8.23", "NIST 800-53: IA-2"],
+  };
+
+  const pct = sampleData.controls.total
+    ? Math.round((sampleData.controls.implemented / sampleData.controls.total) * 100)
     : 0;
 
   return (
@@ -730,8 +755,8 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
                       Implemented
                     </Typography>
                     <ControlsCell
-                      implemented={row.controls.implemented}
-                      total={row.controls.total}
+                      implemented={sampleData.controls.implemented}
+                      total={sampleData.controls.total}
                     />
                   </Stack>
                   <Divider flexItem sx={{ my: 1 }} />
@@ -739,7 +764,7 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
                     Recommended
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {row.controls.recommended.map((c, i) => (
+                    {sampleData.controls.recommended.map((c, i) => (
                       <Chip
                         key={i}
                         icon={<AssessmentIcon />}
@@ -757,7 +782,7 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
                     Implemented
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {row.controls.implementedList.map((c, i) => (
+                    {sampleData.controls.implementedList.map((c, i) => (
                       <Chip
                         key={i}
                         icon={<CheckCircleIcon />}
@@ -786,7 +811,7 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
                     Sources
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {row.sources.map((s, idx) => (
+                    {sampleData.sources.map((s, idx) => (
                       <Chip
                         key={idx}
                         label={`${s.scope.toUpperCase()} • ${s.name}`}
@@ -807,7 +832,7 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
                     Compliance
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap">
-                    {row.compliance?.map((c, i) => (
+                    {sampleData.compliance?.map((c, i) => (
                       <Chip
                         key={i}
                         icon={<GavelIcon />}
@@ -828,7 +853,7 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
                   >
                     Evidence
                   </Typography>
-                  <EvidenceCell ok={row.evidence.ok} warn={row.evidence.warn} />
+                  <EvidenceCell ok={sampleData.evidence.ok} warn={sampleData.evidence.warn} />
                 </CardContent>
               </Card>
             </Stack>
