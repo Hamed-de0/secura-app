@@ -629,8 +629,8 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
     compliance: ["ISO 27001: 8.23", "NIST 800-53: IA-2"],
   };
 
-  const pct = sampleData.controls.total
-    ? Math.round((sampleData.controls.implemented / sampleData.controls.total) * 100)
+  const pct = row.controls.total
+    ? Math.round((row.controls.implemented / row.controls.total) * 100)
     : 0;
 
   return (
@@ -662,7 +662,7 @@ function RiskDetailModal({ open, onClose, row, appetite = 30 }) {
               />
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              Asset / Context: <b>{row.assetName}</b>
+              Asset / Context: <b>{row.scopeName}</b>
             </Typography>
           </Stack>
           <IconButton onClick={onClose} sx={{ ml: 2 }}>

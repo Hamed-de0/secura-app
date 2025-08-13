@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Dict
+
+from sympy.multipledispatch.dispatcher import source
+
 from app.database import get_db
 from app.schemas.risks.risk_effective import RiskEffectiveItem, ControlsOut, EvidenceOut, SourceOut
 from app.models.assets.asset import Asset
@@ -8,6 +11,9 @@ from app.models.assets.asset_type import AssetType
 from app.models.risks.risk_scenario_context import RiskScenarioContext
 from app.models.risks.risk_scenario import RiskScenario
 from app.models.risks.risk_score import RiskScore, RiskScoreHistory
+from app.models.controls.control_context_link import ControlContextLink
+from app.services.policy.resolver import resolve_appetite, compute_rag, get_required_controls
+
 
 router = APIRouter(prefix="/assets", tags=["Risks (Effective)"])
 
@@ -27,6 +33,17 @@ def scope_of(ctx: RiskScenarioContext) -> str:
     if ctx.asset_group_id: return "group"
     if ctx.asset_type_id: return "type"
     return "type"
+
+def control_display_name(c) -> str:
+    code  = getattr(c, "reference_code", None) or getattr(c, "code", None)
+    control_source = getattr(c, "control_source", None)
+    title = (
+        getattr(c, "title_en", None)
+        or getattr(c, "title", None)
+        or getattr(c, "name", None)
+        or f"Control #{getattr(c, 'id', '')}"
+    )
+    return f"{control_source} — {code} — {title}" if code else title
 
 @router.get("/{asset_id}/risks", response_model=List[RiskEffectiveItem])
 def get_effective_risks_for_asset(
@@ -94,14 +111,42 @@ def get_effective_risks_for_asset(
                 impacts=pack_impacts(sctx)
             ))
 
-        # placeholders for yet-to-be-implemented parts
+        # required controls from template + MSB policies
+        required_controls = get_required_controls(db, asset=asset, scenario_id=scn_id)
+        required_ids = {c.id for c in required_controls}
+        recommended_names = [control_display_name(c) for c in required_controls]
+
+        # implemented controls on the PRIMARY context
+        impl_status = ("implemented", "Verified")
+        impl_links = db.query(ControlContextLink).filter(
+            ControlContextLink.risk_scenario_context_id == primary.id,
+            ControlContextLink.status.in_(impl_status)
+        ).all() if 'ControlContextLink' in globals() else []
+
+        impl_ids = {l.control_id for l in impl_links} & required_ids
+        implemented_names = [control_display_name(c) for c in required_controls if c.id in impl_ids]
+
         controls = ControlsOut(
-            implemented=0,
-            total=0,
-            recommended=[],         # TODO: join control_risk_links
-            implementedList=[],      # TODO: join control_context_links
+            implemented=len(impl_ids),
+            total=len(required_ids),
+            recommended=recommended_names,
+            implementedList=implemented_names
         )
         evidence = EvidenceOut(ok=0, warn=0)  # TODO: compute from control links evidence
+
+        impacts = pack_impacts(primary)
+        residual_val = residual if residual else 25  # your fallback
+        appetite = resolve_appetite(db, asset=asset) or {
+            "greenMax": 20, "amberMax": 30, "domainCaps": {}, "slaDays": {"amber": 30, "red": 7}
+        }
+        rag = compute_rag(
+            residual=residual_val,
+            appetite=appetite,
+            likelihood=int(primary.likelihood or 0),
+            impacts=impacts,
+        )
+
+
 
         item = RiskEffectiveItem(
             id=primary.id,
@@ -123,7 +168,23 @@ def get_effective_risks_for_asset(
             nextReview=None,            # TODO
             sources=sources,
             compliance=[],              # TODO: derive from controls standards
+            appetite=appetite,
+            rag=rag
         )
+
+        # appetite = resolve_appetite(db, asset=asset) or {
+        #     "greenMax": 20, "amberMax": 30, "domainCaps": {}, "slaDays": {"amber": 30, "red": 7}
+        # }
+        # rag = compute_rag(
+        #     residual=item.residual,  # your computed residual/int fallback
+        #     appetite=appetite,
+        #     likelihood=int(primary.likelihood or 0),
+        #     impacts=pack_impacts(primary)  # you already have this helper
+        # )
+
+        # item["appetite"] = appetite
+        # item["rag"] = rag
+
         results.append(item)
 
     if view == "all":

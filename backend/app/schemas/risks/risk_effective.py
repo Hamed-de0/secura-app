@@ -1,5 +1,19 @@
 from pydantic import BaseModel
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Literal
+
+class SlaDaysOut(BaseModel):
+    amber: Optional[int] = None
+    red: Optional[int] = None
+
+class AppetiteOut(BaseModel):
+    greenMax: int
+    amberMax: int
+    domainCaps: Dict[str, int] = {}
+    slaDays: SlaDaysOut
+
+    class Config:
+        # tolerate extras like "_policy_id" if you include it in the resolver
+        extra = "ignore"
 
 class ControlsOut(BaseModel):
     implemented: int
@@ -16,6 +30,7 @@ class SourceOut(BaseModel):
     name: str
     likelihood: int
     impacts: Dict[str, int]
+
 
 class RiskEffectiveItem(BaseModel):
     id: int
@@ -37,3 +52,5 @@ class RiskEffectiveItem(BaseModel):
     nextReview: Optional[str] = None
     sources: List[SourceOut]
     compliance: List[str]
+    appetite: AppetiteOut
+    rag: Literal["Green", "Amber", "Red"]
