@@ -12,7 +12,7 @@ from app.models.risks.risk_scenario_context import RiskScenarioContext
 from app.models.risks.risk_scenario import RiskScenario
 from app.models.risks.risk_score import RiskScore, RiskScoreHistory
 from app.models.controls.control_context_link import ControlContextLink
-from app.services.policy.resolver import resolve_appetite, compute_rag, get_required_controls
+from app.services.policy.resolver import resolve_appetite, compute_rag, get_required_controls, build_compliance_chips
 
 
 router = APIRouter(prefix="/assets", tags=["Risks (Effective)"])
@@ -132,6 +132,14 @@ def get_effective_risks_for_asset(
             recommended=recommended_names,
             implementedList=implemented_names
         )
+
+        compliance = build_compliance_chips(
+            db,
+            asset=asset,
+            required_control_ids=required_ids,
+            implemented_control_ids=impl_ids,
+        )
+
         evidence = EvidenceOut(ok=0, warn=0)  # TODO: compute from control links evidence
 
         impacts = pack_impacts(primary)
@@ -167,7 +175,7 @@ def get_effective_risks_for_asset(
             lastReview=None,            # TODO: add fields to context if you want
             nextReview=None,            # TODO
             sources=sources,
-            compliance=[],              # TODO: derive from controls standards
+            compliance=compliance,
             appetite=appetite,
             rag=rag
         )

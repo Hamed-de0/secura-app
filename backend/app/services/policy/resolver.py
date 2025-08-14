@@ -4,6 +4,10 @@ from app.crud.policies.risk_appetite_policy import resolve_for
 from app.crud.policies.control_applicability_policy import list_effective
 from app.models.controls.control import Control  # adjust import to your project
 from app.models.controls.control_risk_link import ControlRiskLink  # scenario template
+from app.models.compliance.framework import Framework
+from app.models.compliance.framework_requirement import FrameworkRequirement
+from app.models.compliance.control_framework_mapping import ControlFrameworkMapping
+from app.crud.policies.framework_activation_policy import list_active as list_active_fw_policies
 
 
 def resolve_appetite(db: Session, *, asset) -> Optional[Dict[str, Any]]:
@@ -62,5 +66,48 @@ def get_required_controls(db: Session, *, asset, scenario_id: int) -> List[Contr
     # 3) Return canonical control rows (for names)
     return db.query(Control).filter(Control.id.in_(list(required_ids))).all()
 
+def get_active_frameworks(db: Session, *, asset) -> List[Framework]:
+    fw_ids = []
+    for p in list_active_fw_policies(db):
+        if _asset_matches_policy(asset, p):
+            fw_ids.append(p.framework_id)
+    if not fw_ids:
+        return []
+    return db.query(Framework).filter(Framework.id.in_(fw_ids)).all()
 
+def build_compliance_chips(
+    db: Session,
+    *,
+    asset,
+    required_control_ids: List[int],
+    implemented_control_ids: List[int],
+) -> List[str]:
+    chips: List[str] = []
+    frameworks = get_active_frameworks(db, asset=asset)
+    if not frameworks:
+        return chips
+
+    req_set = set(required_control_ids)
+    impl_set = set(implemented_control_ids)
+
+    for fw in frameworks:
+        # all requirements for framework
+        reqs = db.query(FrameworkRequirement).filter_by(framework_id=fw.id).all()
+        if not reqs:
+            continue
+        # pre-fetch mappings for performance (optional micro-opt):
+        # mapping by requirement id
+        for r in reqs:
+            maps = db.query(ControlFrameworkMapping).filter_by(framework_requirement_id=r.id).all()
+            if not maps:
+                continue
+            # denominator: only mappings that intersect required controls
+            denom = sum(m.weight or 0 for m in maps if m.control_id in req_set)
+            if denom <= 0:
+                # skip unmapped-to-required requirements to avoid noise
+                continue
+            num = sum(m.weight or 0 for m in maps if (m.control_id in req_set) and (m.control_id in impl_set))
+            pct = int(round(100 * num / max(1, denom)))
+            chips.append(f"{fw.name} {r.code} ({pct}%)")
+    return chips
 

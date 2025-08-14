@@ -1,2 +1,3 @@
 from .risk_appetite_policy import RiskAppetitePolicy
 from .control_applicability_policy import ControlApplicabilityPolicy
+from .framework_activation_policy import FrameworkActivationPolicy
