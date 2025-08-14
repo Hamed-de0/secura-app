@@ -1,17 +1,28 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from typing import Optional
 
 class FrameworkRequirementBase(BaseModel):
-    framework_id: int
-    code: str
-    title: str
-    notes: Optional[str] = None
-    model_config = ConfigDict(extra="ignore")
-
-class FrameworkRequirementCreate(FrameworkRequirementBase): pass
-class FrameworkRequirementUpdate(BaseModel):
     code: Optional[str] = None
     title: Optional[str] = None
-    notes: Optional[str] = None
-class FrameworkRequirementOut(FrameworkRequirementBase):
+    text: Optional[str] = None
+    parent_id: Optional[int] = None
+    sort_index: Optional[int] = 0
+
+class FrameworkRequirementCreate(FrameworkRequirementBase):
+    # ⬇️ change: version-level scoping
+    framework_version_id: Optional[int] = None  # set from path
+
+class FrameworkRequirementUpdate(FrameworkRequirementBase):
+    pass
+
+class FrameworkRequirementOut(BaseModel):
     id: int
+    framework_version_id: int
+    code: Optional[str] = None
+    title: Optional[str] = None
+    text: Optional[str] = None
+    parent_id: Optional[int] = None
+    sort_index: int
+
+    class Config:
+        from_attributes = True

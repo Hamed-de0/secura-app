@@ -1,3 +1,4 @@
 from .framework import Framework
 from .framework_requirement import FrameworkRequirement
 from .control_framework_mapping import ControlFrameworkMapping
+from .framework_version import FrameworkVersion
