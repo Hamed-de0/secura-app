@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
 from app.models.controls.control_context_link import ControlContextLink
-from app.schemas.controls.control_context_link import ControlContextLinkCreate, ControlContextLinkUpdate
+from app.schemas.controls.control_context_link import ControlContextLinkCreate, ControlContextLinkUpdate, ControlContextStatusUpdate
 
 def upsert(db: Session, data: ControlContextLinkCreate) -> ControlContextLink:
     row = db.query(ControlContextLink).filter_by(
@@ -33,3 +34,20 @@ def delete(db: Session, id: int) -> bool:
 
 def list_by_context(db: Session, context_id: int) -> List[ControlContextLink]:
     return db.query(ControlContextLink).filter_by(risk_scenario_context_id=context_id).all()
+
+
+def update_status(db: Session, link_id: int, payload: ControlContextStatusUpdate) -> Optional[ControlContextLink]:
+    obj = db.query(ControlContextLink).get(link_id)
+    if not obj:
+        return None
+    data = payload.model_dump(exclude_unset=True)
+    if "assurance_status" in data:
+        obj.assurance_status = data["assurance_status"]
+        obj.status_updated_at = datetime.utcnow()
+    if "implemented_at" in data:
+        obj.implemented_at = data["implemented_at"]
+    if "notes" in data:
+        obj.notes = data["notes"]
+    db.commit()
+    db.refresh(obj)
+    return obj

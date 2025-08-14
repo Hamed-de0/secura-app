@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from typing import List
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas.controls.control_context_link import ControlContextLinkCreate, ControlContextLinkUpdate, ControlContextLinkOut
+from app.schemas.controls.control_context_link import  ControlContextLinkCreate, ControlContextLinkUpdate, ControlContextLinkOut
 from app.schemas.controls.control_context_effect_override import ControlContextEffectOverrideCreate, ControlContextEffectOverrideUpdate, ControlContextEffectOverrideOut
 from app.crud.controls import control_context_link as crud_links
 from app.crud.controls import control_context_effect_override as crud_over
 from app.services.risk_analysis import calculate_risk_scores_by_context
+from app.schemas.controls.control_context_link import ControlContextStatusUpdate
+from app.crud.controls import control_context_link as crud
+
 
 router = APIRouter(prefix="/control-context", tags=["Control Context"])
 
@@ -92,3 +95,21 @@ def delete_override(id: int, db: Session = Depends(get_db)):
 @router.get("/overrides/by-context/{context_id}", response_model=List[ControlContextEffectOverrideOut])
 def list_overrides_by_context(context_id: int, db: Session = Depends(get_db)):
     return crud_over.list_by_context(db, context_id)
+
+@router.patch("/{link_id}/status")
+def update_status(
+    link_id: int = Path(...),
+    payload: ControlContextStatusUpdate = ...,
+    db: Session = Depends(get_db),
+):
+    obj = crud.update_status(db, link_id, payload)
+    if not obj:
+        raise HTTPException(404, "ControlContextLink not found")
+    # return a minimal view
+    return {
+        "id": obj.id,
+        "assurance_status": obj.assurance_status,
+        "implemented_at": obj.implemented_at,
+        "status_updated_at": obj.status_updated_at,
+        "notes": obj.notes,
+    }

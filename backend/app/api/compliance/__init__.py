@@ -5,6 +5,9 @@ from .control_framework_mappings import router as control_framework_mapping_rout
 from .coverage import router as coverage_router
 from .imports import router as imports_router
 from .framework_versions import router as framework_version_router
+from .evidence import router as evidence_router
+from .evidence_policies import router as evidence_policies_router
+from .assurance import router as assurance_router
 
 router = APIRouter()
 
@@ -14,4 +17,8 @@ router.include_router(control_framework_mapping_router)
 router.include_router(coverage_router)
 router.include_router(imports_router)
 router.include_router(framework_version_router)
+router.include_router(evidence_policies_router)
+router.include_router(evidence_router)
+router.include_router(assurance_router)
+
 
