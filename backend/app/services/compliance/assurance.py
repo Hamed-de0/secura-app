@@ -7,8 +7,31 @@ from app.models.compliance.control_framework_mapping import ControlFrameworkMapp
 from app.models.controls.control_context_link import ControlContextLink
 from app.models.compliance.control_evidence import ControlEvidence
 from app.models.compliance.evidence_policy import EvidencePolicy
+from app.models.compliance.exception import ComplianceException
 
-AssuranceOrder = ["proposed","mapped","planning","implementing","implemented","monitoring","analyzing","evidenced","fresh","expired"]
+AssuranceOrder = ["proposed","mapped","planning","implementing","implemented","monitoring","analyzing","evidenced","fresh","expired","exception"]
+
+def _has_active_exception_for_req(db, requirement_id: int, context_id: int) -> bool:
+    today = date.today()
+    return db.query(ComplianceException).filter(
+        ComplianceException.risk_scenario_context_id == context_id,
+        ComplianceException.framework_requirement_id == requirement_id,
+        ComplianceException.status.in_(["approved", "active"]),
+        ComplianceException.start_date <= today,
+        ComplianceException.end_date >= today,
+    ).first() is not None
+
+def _has_active_exception_for_any_control(db, control_ids: list[int], context_id: int) -> bool:
+    if not control_ids:
+        return False
+    today = date.today()
+    return db.query(ComplianceException).filter(
+        ComplianceException.risk_scenario_context_id == context_id,
+        ComplianceException.control_id.in_(control_ids),
+        ComplianceException.status.in_(["approved", "active"]),
+        ComplianceException.start_date <= today,
+        ComplianceException.end_date >= today,
+    ).first() is not None
 
 def _best_status(a: str, b: str) -> str:
     # pick the "stronger" status
@@ -99,6 +122,13 @@ def compute_assurance_rollup(
                         st = "expired"
                 best = _best_status(best, st)
 
+        # If we don't already have strong coverage, surface an active exception
+        # (we do NOT override 'fresh' or 'evidenced')
+        if best not in ("fresh", "evidenced"):
+            if _has_active_exception_for_req(db, r.id, risk_scenario_context_id) \
+                    or _has_active_exception_for_any_control(db, cids, risk_scenario_context_id):
+                best = "exception"
+
         per_requirement.append({
             "requirement_id": r.id,
             "code": r.code,
@@ -115,3 +145,16 @@ def compute_assurance_rollup(
         "status_counts": summary_counts,
         "details": per_requirement
     }
+
+
+def _has_active_exception(db, requirement_id: int, context_id: int) -> bool:
+    today = date.today()
+    return db.query(ComplianceException).filter(
+        ComplianceException.risk_scenario_context_id == context_id,
+        ComplianceException.framework_requirement_id == requirement_id,
+        ComplianceException.status.in_(["approved","active"]),
+        ComplianceException.start_date <= today,
+        ComplianceException.end_date >= today,
+    ).first() is not None
+
+

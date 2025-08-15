@@ -8,6 +8,7 @@ from .framework_versions import router as framework_version_router
 from .evidence import router as evidence_router
 from .evidence_policies import router as evidence_policies_router
 from .assurance import router as assurance_router
+from .exceptions import router as exception_router
 
 router = APIRouter()
 
@@ -20,5 +21,6 @@ router.include_router(framework_version_router)
 router.include_router(evidence_policies_router)
 router.include_router(evidence_router)
 router.include_router(assurance_router)
+router.include_router(exception_router)
 
 
