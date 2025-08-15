@@ -8,4 +8,5 @@ from app.models.risks.threat import *
 from app.models.risks.vulnerability import *
 from app.models.compliance import *
 from app.models.business import *
+from app.models.org import *
 

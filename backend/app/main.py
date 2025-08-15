@@ -6,6 +6,7 @@ from app.api.assets import router as asset_router
 from app.api.dashboards import router as dashboard_router
 from app.api.policies import router as policy_router
 from app.api.compliance import router as compliance_router
+from app.api.org import router as org_router
 from app.api import ai_router
 
 from app.api.assets import asset_lifecycle_event, asset_type, asset_relation, asset_group, asset_maintenance, \
@@ -30,6 +31,7 @@ app.add_middleware(
 
 
 app.include_router(ai_router)
+app.include_router(org_router)
 app.include_router(compliance_router)
 app.include_router(policy_router)
 app.include_router(dashboard_router)
