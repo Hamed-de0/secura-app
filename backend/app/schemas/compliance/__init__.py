@@ -7,3 +7,4 @@ from .coverage import *
 from .evidence_policy import *
 from .evidence import *
 from .exceptions import *
+from .obligation_atom import *

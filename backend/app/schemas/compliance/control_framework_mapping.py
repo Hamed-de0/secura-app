@@ -1,16 +1,55 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
+# ==========================================================
+# app/schemas/compliance/control_framework_mapping.py (patch)
+# ==========================================================
+# NOTE: This file shows only the NEW/UPDATED Pydantic models.
+# Merge with your existing mapping schemas.
+
+from typing import Optional, List, Dict
+from pydantic import BaseModel, Field, conint
+
 
 class ControlFrameworkMappingBase(BaseModel):
     framework_requirement_id: int
     control_id: int
-    weight: int = 100
-    notes: Optional[str] = None
-    model_config = ConfigDict(extra="ignore")
 
-class ControlFrameworkMappingCreate(ControlFrameworkMappingBase): pass
+    # NEW: optional atom pointer
+    obligation_atom_id: Optional[int] = Field(
+        None, description="If set, this mapping targets a specific obligation atom; otherwise article-level"
+    )
+
+    # NEW: mapping semantics (keep as strings for now)
+    relation_type: Optional[str] = Field(
+        None, description="satisfies | supports | enables"
+    )
+    coverage_level: Optional[str] = Field(
+        None, description="full | partial | conditional"
+    )
+
+    applicability: Optional[Dict] = None
+    evidence_hint: Optional[List[str]] = None
+    rationale: Optional[str] = Field(None, max_length=1024)
+
+    weight: conint(ge=0, le=1000) = 100
+    notes: Optional[str] = Field(None, max_length=1024)
+
+
+class ControlFrameworkMappingCreate(ControlFrameworkMappingBase):
+    pass
+
+
 class ControlFrameworkMappingUpdate(BaseModel):
-    weight: Optional[int] = None
-    notes: Optional[str] = None
+    obligation_atom_id: Optional[int] = None
+    relation_type: Optional[str] = None
+    coverage_level: Optional[str] = None
+    applicability: Optional[Dict] = None
+    evidence_hint: Optional[List[str]] = None
+    rationale: Optional[str] = Field(None, max_length=1024)
+    weight: Optional[conint(ge=0, le=1000)] = None
+    notes: Optional[str] = Field(None, max_length=1024)
+
+
 class ControlFrameworkMappingOut(ControlFrameworkMappingBase):
     id: int
+
+    class Config:
+        from_attributes = True
