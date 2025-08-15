@@ -9,6 +9,7 @@ from .evidence import router as evidence_router
 from .evidence_policies import router as evidence_policies_router
 from .assurance import router as assurance_router
 from .exceptions import router as exception_router
+from .crosswalk_imports import router as crosswalks_imports_router
 
 router = APIRouter()
 
@@ -22,5 +23,6 @@ router.include_router(evidence_policies_router)
 router.include_router(evidence_router)
 router.include_router(assurance_router)
 router.include_router(exception_router)
+router.include_router(crosswalks_imports_router)
 
 
