@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Literal
 from datetime import datetime
+from app.constants.scopes import is_valid_scope, normalize_scope
 
 AssuranceStatus = Literal[
     "proposed","mapped","planning","implementing","implemented",
@@ -9,14 +10,31 @@ AssuranceStatus = Literal[
 
 
 class ControlContextLinkBase(BaseModel):
-    risk_scenario_context_id: int
+    # EITHER link to a risk context...
+    risk_scenario_context_id: Optional[int] = None
+    # ...OR directly to a scope
+    scope_type: Optional[
+        Literal["asset", "tag", "asset_group", "asset_type", "bu", "site", "entity", "service", "org_group"]] = None
+    scope_id: Optional[int] = None
+
     control_id: int
-
-    # Accept both `assurance_status` and legacy `status` in requests
     assurance_status: AssuranceStatus = Field(default="mapped", alias="status")
-
     implemented_at: Optional[datetime] = None
     notes: Optional[str] = None
+
+    @field_validator("scope_type")
+    @classmethod
+    def _norm_scope(cls, v):
+        if v is None: return v
+        return normalize_scope(v)
+
+    @field_validator("control_id")
+    @classmethod
+    def _require_target(cls, v, info):
+        data = info.data
+        if not data.get("risk_scenario_context_id") and not (data.get("scope_type") and data.get("scope_id")):
+            raise ValueError("Provide either risk_scenario_context_id or (scope_type & scope_id)")
+        return v
 
     class Config:
         from_attributes = True
@@ -35,10 +53,11 @@ class ControlContextLinkCreate(ControlContextLinkBase):
     pass
 
 class ControlContextLinkUpdate(BaseModel):
-    # make all fields optional for PATCH/PUT
     risk_scenario_context_id: Optional[int] = None
-    control_id: Optional[int] = None
-    assurance_status: Optional[AssuranceStatus] = Field(default=None, alias="status")
+    scope_type: Optional[
+        Literal["asset", "tag", "asset_group", "asset_type", "bu", "site", "entity", "service", "org_group"]] = None
+    scope_id: Optional[int] = None
+    assurance_status: Optional[AssuranceStatus] = None
     implemented_at: Optional[datetime] = None
     notes: Optional[str] = None
 
@@ -48,7 +67,9 @@ class ControlContextLinkUpdate(BaseModel):
 
 class ControlContextLinkOut(BaseModel):
     id: int
-    risk_scenario_context_id: int
+    risk_scenario_context_id: Optional[int]
+    scope_type: Optional[str]
+    scope_id: Optional[int]
     control_id: int
     assurance_status: AssuranceStatus
     implemented_at: Optional[datetime]
@@ -57,3 +78,4 @@ class ControlContextLinkOut(BaseModel):
 
     class Config:
         from_attributes = True
+        populate_by_name = True

@@ -1,32 +1,121 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from typing import Optional, Dict, Any, List
+
+from app.database import get_db
 from app.schemas.risks.risk_scenario_context import (
-    RiskScenarioContext,
+    RiskScenarioContext as RiskScenarioContextOut,
     RiskScenarioContextCreate,
     RiskScenarioContextUpdate,
-    RiskContextBatchAssignInput
+    RiskContextBatchAssignInput,
 )
 from app.schemas.risks.risk_context_list import RiskContextListResponse
 from app.services import calculate_risk_scores_by_context
-from app.crud.risks import risk_scenario_context as crud, risk_context_list
-from app.database import get_db
-from typing import Optional, Dict, Any
+from app.crud.risks import risk_scenario_context as crud_legacy, risk_context_list
+from app.crud.risks.risk_scenario_context import RiskScenarioContextCRUD as rsc_crud
+from app.constants.scopes import normalize_scope, is_valid_scope, SCOPE_TYPES
 
 router = APIRouter(prefix="/risk_scenario_contexts", tags=["Risk Contexts"])
 
-@router.post("/", response_model=RiskScenarioContext)
-def create_context(obj_in: RiskScenarioContextCreate, db: Session = Depends(get_db)):
-    return crud.create_context(db, obj_in)
 
+# -------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------
+
+def _infer_scope_from_legacy(
+    asset_id: Optional[int] = None,
+    asset_group_id: Optional[int] = None,
+    asset_tag_id: Optional[int] = None,
+    asset_type_id: Optional[int] = None,
+) -> Optional[tuple[str, int]]:
+    """Map legacy query to normalized scope tuple if provided.
+    Returns (scope_type, scope_id) or None if no legacy hints are present.
+    Order of precedence matches old DB check: asset > group > tag > type.
+    """
+    if asset_id is not None:
+        return ("asset", asset_id)
+    if asset_group_id is not None:
+        return ("asset_group", asset_group_id)
+    if asset_tag_id is not None:
+        return ("tag", asset_tag_id)
+    if asset_type_id is not None:
+        return ("asset_type", asset_type_id)
+    return None
+
+
+# -------------------------------------------------------------
+# CRUD – normalized scope
+# -------------------------------------------------------------
+@router.post("/", response_model=RiskScenarioContextOut)
+def create_context(payload: RiskScenarioContextCreate, db: Session = Depends(get_db)):
+    """Create a risk scenario context using normalized scope (scope_type + scope_id).
+    Legacy asset* fields in the payload are accepted and auto-inferred by the schema.
+    """
+    return rsc_crud.create(db, payload)
+
+
+@router.get("/", response_model=List[RiskScenarioContextOut])
+def list_contexts(
+    risk_scenario_id: Optional[int] = Query(None, description="Filter by scenario id"),
+    scope_type: Optional[str] = Query(None, description=f"One of: {', '.join(SCOPE_TYPES)}"),
+    scope_id: Optional[int] = Query(None, description="Scope id"),
+    # Legacy convenience filters (kept for migration period)
+    asset_id: Optional[int] = Query(None),
+    asset_group_id: Optional[int] = Query(None),
+    asset_tag_id: Optional[int] = Query(None),
+    asset_type_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    # If normalized scope is provided, normalize it; otherwise infer from legacy
+    if scope_type is not None:
+        if not is_valid_scope(scope_type):
+            raise HTTPException(400, detail=f"Unsupported scope_type '{scope_type}'")
+        scope_type = normalize_scope(scope_type)
+        if scope_id is None:
+            raise HTTPException(400, detail="When scope_type is provided, scope_id is required")
+    else:
+        legacy = _infer_scope_from_legacy(asset_id, asset_group_id, asset_tag_id, asset_type_id)
+        if legacy:
+            scope_type, scope_id = legacy
+
+    return rsc_crud.list(db, risk_scenario_id, scope_type, scope_id)
+
+
+@router.get("/{context_id}", response_model=RiskScenarioContextOut)
+def get_context(context_id: int, db: Session = Depends(get_db)):
+    return rsc_crud.get(db, context_id)
+
+
+@router.put("/{context_id}", response_model=RiskScenarioContextOut)
+def update_context(context_id: int, payload: RiskScenarioContextUpdate, db: Session = Depends(get_db)):
+    return rsc_crud.update(db, context_id, payload)
+
+
+@router.delete("/{context_id}", status_code=204)
+def delete_context(context_id: int, db: Session = Depends(get_db)):
+    rsc_crud.delete(db, context_id)
+    return None
+
+
+# -------------------------------------------------------------
+# Risk score view (pure read)
+# -------------------------------------------------------------
 @router.get("/risk-score/{context_id}", response_model=Dict[str, Any])
 def get_risk_score(context_id: int, db: Session = Depends(get_db)):
     return calculate_risk_scores_by_context(db, context_id=context_id)
 
+
+# -------------------------------------------------------------
+# Batch assign – legacy function kept (works with normalized schema too)
+# -------------------------------------------------------------
 @router.post("/batch-assign")
 def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session = Depends(get_db)):
-    return crud.batch_assign_contexts(data, db)
+    return crud_legacy.batch_assign_contexts(data, db)
 
 
+# -------------------------------------------------------------
+# Paginated/managed list – keep existing integration
+# -------------------------------------------------------------
 @router.get("/contexts", response_model=RiskContextListResponse)
 def get_contexts(
     offset: int = Query(0, ge=0),
@@ -36,8 +125,9 @@ def get_contexts(
     scope: str = Query("all"),
     status: str = Query("all"),
     search: str = Query("", max_length=200),
-    asset_id: int | None = None,
-    asset_type_id: int | None = None,
+    # legacy filters retained for now (your list service currently takes these)
+    asset_id: Optional[int] = None,
+    asset_type_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     return risk_context_list.list_contexts(
@@ -53,13 +143,10 @@ def get_contexts(
         asset_type_id=asset_type_id,
     )
 
-@router.get("/{context_id}", response_model=RiskScenarioContext)
-def read_context(context_id: int, db: Session = Depends(get_db)):
-    obj = crud.get_context(db, context_id)
-    if not obj:
-        raise HTTPException(status_code=404, detail="Context not found")
-    return obj
 
+# -------------------------------------------------------------
+# Expanded manage view – keep as-is, but now accepts scope_type
+# -------------------------------------------------------------
 @router.get("/expanded/manage")
 def get_expanded_contexts(
     db: Session = Depends(get_db),
@@ -68,9 +155,14 @@ def get_expanded_contexts(
     search: Optional[str] = None,
     scope_type: Optional[str] = None,
     status: Optional[str] = None,
-    ):
+):
+    # Normalize scope_type if provided; this endpoint delegates to legacy crud which may ignore it
+    if scope_type is not None:
+        if not is_valid_scope(scope_type):
+            raise HTTPException(400, detail=f"Unsupported scope_type '{scope_type}'")
+        scope_type = normalize_scope(scope_type)
 
-    return crud.get_expanded_contexts(
+    return crud_legacy.get_expanded_contexts(
         db=db,
         page=page,
         page_size=page_size,
@@ -78,17 +170,3 @@ def get_expanded_contexts(
         scope_type=scope_type,
         status=status,
     )
-
-
-@router.get("/", response_model=list[RiskScenarioContext])
-def read_all_contexts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud.get_all_contexts(db, skip=skip, limit=limit)
-
-@router.put("/{context_id}", response_model=RiskScenarioContext)
-def update_context(context_id: int, obj_in: RiskScenarioContextUpdate, db: Session = Depends(get_db)):
-    return crud.update_context(db, context_id, obj_in)
-
-@router.delete("/{context_id}")
-def delete_context(context_id: int, db: Session = Depends(get_db)):
-    crud.delete_context(db, context_id)
-    return {"msg": "Deleted"}

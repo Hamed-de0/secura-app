@@ -1,11 +1,15 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.risks.risk_scenario_context import RiskScenarioContext
 from app.schemas.risks.risk_scenario_context import (
     RiskScenarioContextCreate, RiskScenarioContextUpdate,
     RiskContextBatchAssignInput)
 from app.models.risks.risk_context_impact_rating import RiskContextImpactRating
-from typing import Optional
+from typing import Optional, List
+from app.models.risks.risk_scenario_context import RiskScenarioContext as RSCModel
 
+
+# legacy
 def create_context(db: Session, obj_in: RiskScenarioContextCreate) -> RiskScenarioContext:
     obj = RiskScenarioContext(**obj_in.dict())
     db.add(obj)
@@ -140,5 +144,86 @@ def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session):
     db.commit()
     return {"assigned": len(created_contexts)}
 
+
+class RiskScenarioContextCRUD:
+    @staticmethod
+    def get(db: Session, context_id: int) -> RSCModel:
+        obj = db.query(RSCModel).get(context_id)
+        if not obj:
+            raise HTTPException(404, "Risk scenario context not found")
+        return obj
+
+    @staticmethod
+    def list(
+        db: Session,
+        risk_scenario_id: Optional[int] = None,
+        scope_type: Optional[str] = None,
+        scope_id: Optional[int] = None,
+    ) -> List[RSCModel]:
+        q = db.query(RSCModel)
+        if risk_scenario_id is not None:
+            q = q.filter(RSCModel.risk_scenario_id == risk_scenario_id)
+        if scope_type is not None:
+            q = q.filter(RSCModel.scope_type == scope_type)
+        if scope_id is not None:
+            q = q.filter(RSCModel.scope_id == scope_id)
+        return q.order_by(RSCModel.id.asc()).all()
+
+    @staticmethod
+    def create(db: Session, payload) -> RSCModel:
+        # Uniqueness guard: (risk_scenario_id, scope_type, scope_id)
+        dupe = (
+            db.query(RSCModel)
+            .filter(
+                RSCModel.risk_scenario_id == payload.risk_scenario_id,
+                RSCModel.scope_type == payload.scope_type,
+                RSCModel.scope_id == payload.scope_id,
+            )
+            .first()
+        )
+        if dupe:
+            raise HTTPException(409, "Context already exists for this scenario and scope")
+
+        obj = RSCModel(**payload.dict(exclude_unset=True))
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+        return obj
+
+    @staticmethod
+    def update(db: Session, context_id: int, payload) -> RSCModel:
+        obj = RiskScenarioContextCRUD.get(db, context_id)
+
+        data = payload.dict(exclude_unset=True)
+        # If scope fields change, re-check uniqueness
+        if any(k in data for k in ("risk_scenario_id", "scope_type", "scope_id")):
+            rs = data.get("risk_scenario_id", obj.risk_scenario_id)
+            st = data.get("scope_type", obj.scope_type)
+            sid = data.get("scope_id", obj.scope_id)
+            dupe = (
+                db.query(RSCModel)
+                .filter(
+                    RSCModel.id != obj.id,
+                    RSCModel.risk_scenario_id == rs,
+                    RSCModel.scope_type == st,
+                    RSCModel.scope_id == sid,
+                )
+                .first()
+            )
+            if dupe:
+                raise HTTPException(409, "Another context already exists for this scenario and scope")
+
+        for k, v in data.items():
+            setattr(obj, k, v)
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+        return obj
+
+    @staticmethod
+    def delete(db: Session, context_id: int) -> None:
+        obj = RiskScenarioContextCRUD.get(db, context_id)
+        db.delete(obj)
+        db.commit()
 
 
