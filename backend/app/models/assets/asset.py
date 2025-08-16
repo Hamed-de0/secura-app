@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, ForeignKey, String, JSON
 from sqlalchemy.orm import relationship
 from app.core.base import BaseModel
 from app.core.mixins import NameDescriptionMixin
+from .asset_tag import asset_tags_links, AssetTag
 from .asset_type import AssetType
 from .asset_group import AssetGroup
 from .asset_owner import AssetOwner
@@ -10,7 +11,6 @@ from .asset_lifecycle import AssetLifecycleEvent
 from .asset_maintenance import AssetMaintenance
 from .asset_scan import AssetScan
 from .asset_security_profile import AssetSecurityProfile
-from .asset_tag import asset_tags_links, AssetTag
 
 class Asset(BaseModel, NameDescriptionMixin):
     __tablename__ = "assets"
@@ -19,6 +19,9 @@ class Asset(BaseModel, NameDescriptionMixin):
     group_id = Column(Integer, ForeignKey("asset_groups.id"))
     location = Column(String(1000), nullable=True)
     details = Column(JSON, nullable=True, default=lambda :{})
+    entity_id = Column(Integer, ForeignKey("org_entities.id", ondelete="SET NULL"), nullable=True)
+    business_unit_id = Column(Integer, ForeignKey("org_business_units.id", ondelete="SET NULL"), nullable=True)
+    site_id = Column(Integer, ForeignKey("org_sites.id", ondelete="SET NULL"), nullable=True)
 
     type = relationship("AssetType", back_populates="assets")
     group = relationship("AssetGroup", back_populates="assets")
@@ -29,6 +32,7 @@ class Asset(BaseModel, NameDescriptionMixin):
     scans = relationship("AssetScan", back_populates="asset", cascade="all, delete-orphan")
     profile = relationship("AssetSecurityProfile", uselist=False, back_populates="asset")
     tags = relationship("AssetTag", secondary=asset_tags_links, back_populates="assets")
-
     controls = relationship("ControlAssetLink", back_populates="asset", cascade="all, delete-orphan")
-
+    entity = relationship("OrgEntity", lazy="joined")
+    business_unit = relationship("OrgBusinessUnit", lazy="joined")
+    site = relationship("OrgSite", lazy="joined")

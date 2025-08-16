@@ -110,7 +110,7 @@ class ControlContextLinkCRUD:
 
     @staticmethod
     def create(db: Session, payload) -> CCLModel:
-        data = payload.dict(exclude_unset=True, by_alias=True)
+        data = payload.dict(exclude_unset=True, by_alias=False)
         rsc_id = data.get("risk_scenario_context_id")
         scope_type = data.get("scope_type")
         scope_id = data.get("scope_id")
@@ -130,7 +130,7 @@ class ControlContextLinkCRUD:
     @staticmethod
     def update(db: Session, link_id: int, payload) -> CCLModel:
         obj = ControlContextLinkCRUD.get(db, link_id)
-        data = payload.dict(exclude_unset=True, by_alias=True)
+        data = payload.dict(exclude_unset=True, by_alias=False)
 
         rsc_id = data.get("risk_scenario_context_id", obj.risk_scenario_context_id)
         scope_type = data.get("scope_type", obj.scope_type)

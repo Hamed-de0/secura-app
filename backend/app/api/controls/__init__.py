@@ -6,6 +6,7 @@ from .control_asset_link import router as control_asset_router
 from .control_vulnerability_link import router as control_vulnerability_router
 from .control_effect_rating import router as control_effect_rating_router
 from .control_context_link import router as control_context_router
+from .effective import router as effective_router
 
 router = APIRouter()
 
@@ -16,4 +17,5 @@ router.include_router(control_risk_router)
 router.include_router(control_threat_router)
 router.include_router(control_vulnerability_router)
 router.include_router(control_effect_rating_router)
+router.include_router(effective_router)
 
