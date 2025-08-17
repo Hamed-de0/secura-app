@@ -10,3 +10,5 @@ __pycache__/
 # Backend/Python
 backend/__pycache__/
 backend/**/*.pyc
+isms-frontend-v2/src/config/confing.js
+isms-frontend-v2/src/config/confing.js

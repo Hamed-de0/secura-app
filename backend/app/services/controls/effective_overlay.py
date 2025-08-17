@@ -135,6 +135,8 @@ def _resolve_asset_layers(db: Session, asset_id: int) -> Optional[dict]:
 
 
 
+
+
 # -----------------------
 # Core API
 # -----------------------
@@ -201,49 +203,121 @@ def get_effective_controls(db: Session, scope_type: str, scope_id: int) -> List[
         if group_id:
             _consider(_collect_links_for_scope(db, "org_group", group_id), "baseline", ("org_group", group_id))
 
-    # 3) Asset overlays: tag/group/type (+ optional BU/site/entity/provider/group if present)
+    # ---- Asset overlays: type/group/tag + (optional) owner BU/Entity/Site + provider + org_group
     if scope_type == "asset":
-        ctx = _resolve_asset_layers(db, scope_id)
-        if ctx:
-            # tag baselines
-            for tid in ctx.get("tag_ids", []) or []:
-                _consider(_collect_links_for_scope(db, "tag", tid), "baseline", ("tag", tid))
-            # group baseline
-            gid = ctx.get("asset_group_id")
-            if gid:
-                _consider(_collect_links_for_scope(db, "asset_group", gid), "baseline", ("asset_group", gid))
-            # type baseline
-            atid = ctx.get("asset_type_id")
-            if atid:
-                _consider(_collect_links_for_scope(db, "asset_type", atid), "baseline", ("asset_type", atid))
-            # optional org overlays if asset carries these pointers
-            bu_id = ctx.get("bu_id")
-            if bu_id:
-                _consider(_collect_links_for_scope(db, "bu", bu_id), "baseline", ("bu", bu_id))
-            site_id = ctx.get("site_id")
-            if site_id:
-                _consider(_collect_links_for_scope(db, "site", site_id), "baseline", ("site", site_id))
-            ent_id = ctx.get("entity_id")
-            if ent_id:
-                _consider(_collect_links_for_scope(db, "entity", ent_id), "baseline", ("entity", ent_id))
-                # provider services via entity / optional BU
-                for sc in _service_links_for_consumer(db, ent_id, bu_id):
-                    provider_rows = _collect_links_for_scope(db, "service", sc.service_id)
-                    _consider(
-                        provider_rows,
-                        "provider",
-                        ("service", sc.service_id),
-                        provider_info={
-                            "service_id": sc.service_id,
-                            "inheritance_type": sc.inheritance_type,
-                            "responsibility": sc.responsibility,
-                        },
-                    )
-                ent = db.query(OrgEntity).get(ent_id)
-                if ent and ent.group_id:
-                    _consider(_collect_links_for_scope(db, "org_group", ent.group_id), "baseline", ("org_group", ent.group_id))
+        layers = _resolve_asset_layers(db, scope_id)
+
+        # Baselines from “near” asset taxonomies
+        atid = layers.get("asset_type_id")
+        if atid:
+            _consider(_collect_links_for_scope(db, "asset_type", atid), "baseline", ("asset_type", atid))
+
+        agid = layers.get("asset_group_id")
+        if agid:
+            _consider(_collect_links_for_scope(db, "asset_group", agid), "baseline", ("asset_group", agid))
+
+        for tid in layers.get("tag_ids", []) or []:
+            _consider(_collect_links_for_scope(db, "tag", tid), "baseline", ("tag", tid))
+
+        # Optional site baseline
+        sid = layers.get("site_id")
+        if sid and OrgSite:
+            _consider(_collect_links_for_scope(db, "site", sid), "baseline", ("site", sid))
+
+        # Parent BU baseline
+        bu_id = layers.get("bu_id")
+        if bu_id:
+            _consider(_collect_links_for_scope(db, "bu", bu_id), "baseline", ("bu", bu_id))
+
+        # Parent Entity baseline + provider + org_group
+        ent_id = layers.get("entity_id")
+        if ent_id:
+            _consider(_collect_links_for_scope(db, "entity", ent_id), "baseline", ("entity", ent_id))
+
+            # provider services (entity-wide + BU-specific if available)
+            if bu_id is None:
+                prov_rows = (
+                    db.query(OrgServiceConsumer)
+                    .filter(
+                        OrgServiceConsumer.consumer_entity_id == ent_id,
+                        OrgServiceConsumer.consumer_bu_id.is_(None),
+                    ).all()
+                )
+            else:
+                prov_rows = (
+                    db.query(OrgServiceConsumer)
+                    .filter(
+                        or_(
+                            and_(OrgServiceConsumer.consumer_entity_id == ent_id,
+                                 OrgServiceConsumer.consumer_bu_id.is_(None)),
+                            OrgServiceConsumer.consumer_bu_id == bu_id,
+                        )
+                    ).all()
+                )
+
+            for sc in prov_rows:
+                provider_links = _collect_links_for_scope(db, "service", sc.service_id)
+                _consider(
+                    provider_links,
+                    "provider",
+                    ("service", sc.service_id),
+                    provider_info={
+                        "service_id": sc.service_id,
+                        "inheritance_type": sc.inheritance_type,
+                        "responsibility": sc.responsibility,
+                    },
+                )
+
+            # Org group baseline
+            ent = db.query(OrgEntity).get(ent_id)
+            if ent and ent.group_id:
+                _consider(_collect_links_for_scope(db, "org_group", ent.group_id), "baseline",
+                          ("org_group", ent.group_id))
+
+    # 3) Asset overlays: tag/group/type (+ optional BU/site/entity/provider/group if present)
+    # if scope_type == "asset":
+    #     ctx = _resolve_asset_layers(db, scope_id)
+    #     if ctx:
+    #         # tag baselines
+    #         for tid in ctx.get("tag_ids", []) or []:
+    #             _consider(_collect_links_for_scope(db, "tag", tid), "baseline", ("tag", tid))
+    #         # group baseline
+    #         gid = ctx.get("asset_group_id")
+    #         if gid:
+    #             _consider(_collect_links_for_scope(db, "asset_group", gid), "baseline", ("asset_group", gid))
+    #         # type baseline
+    #         atid = ctx.get("asset_type_id")
+    #         if atid:
+    #             _consider(_collect_links_for_scope(db, "asset_type", atid), "baseline", ("asset_type", atid))
+    #         # optional org overlays if asset carries these pointers
+    #         bu_id = ctx.get("bu_id")
+    #         if bu_id:
+    #             _consider(_collect_links_for_scope(db, "bu", bu_id), "baseline", ("bu", bu_id))
+    #         site_id = ctx.get("site_id")
+    #         if site_id:
+    #             _consider(_collect_links_for_scope(db, "site", site_id), "baseline", ("site", site_id))
+    #         ent_id = ctx.get("entity_id")
+    #         if ent_id:
+    #             _consider(_collect_links_for_scope(db, "entity", ent_id), "baseline", ("entity", ent_id))
+    #             # provider services via entity / optional BU
+    #             for sc in _service_links_for_consumer(db, ent_id, bu_id):
+    #                 provider_rows = _collect_links_for_scope(db, "service", sc.service_id)
+    #                 _consider(
+    #                     provider_rows,
+    #                     "provider",
+    #                     ("service", sc.service_id),
+    #                     provider_info={
+    #                         "service_id": sc.service_id,
+    #                         "inheritance_type": sc.inheritance_type,
+    #                         "responsibility": sc.responsibility,
+    #                     },
+    #                 )
+    #             ent = db.query(OrgEntity).get(ent_id)
+    #             if ent and ent.group_id:
+    #                 _consider(_collect_links_for_scope(db, "org_group", ent.group_id), "baseline", ("org_group", ent.group_id))
 
     # 4) Site overlays (if you model sites)
+
     if scope_type == "site" and OrgSite is not None:
         site = db.query(OrgSite).get(scope_id)
         if site:

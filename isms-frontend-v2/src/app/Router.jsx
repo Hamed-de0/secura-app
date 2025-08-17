@@ -17,12 +17,14 @@ import RiskDashboard from '../features/riskScenarios/RiskDashboard'
 import RiskScenarioContextView from '../features/RiskScenarioContexts/RiskScenarioContextView'
 import AssetTypePage from '../features/assets/assetTypes/AssetTypePage'
 import RisksEffectiveView from '../features/dashboards/RiskEffectiveView'
+import ISMSDashboard from '../features/dashboards/ISMSDashboard'
 
 // Add others progressively...
 
 function AppRouter() {
   return (
     <Routes>
+      {/* <Route path="/" element={<MainView><Dashboard /></MainView>} /> */}
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
       <Route path="/home" element={<MainView><Dashboard /></MainView>} />
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />

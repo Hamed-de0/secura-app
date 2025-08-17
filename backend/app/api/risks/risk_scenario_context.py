@@ -81,6 +81,39 @@ def list_contexts(
     return rsc_crud.list(db, risk_scenario_id, scope_type, scope_id)
 
 
+# -------------------------------------------------------------
+# Paginated/managed list – keep existing integration
+# -------------------------------------------------------------
+@router.get("/contexts", response_model=RiskContextListResponse)
+def get_contexts(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=200),
+    sort_by: str = Query("updated_at"),
+    sort_dir: str = Query("desc"),
+    scope: str = Query("all"),
+    status: str = Query("all"),
+    search: str = Query("", max_length=200),
+    # legacy filters retained for now (your list service currently takes these)
+    asset_id: Optional[int] = None,
+    asset_type_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    return risk_context_list.list_contexts(
+        db,
+        offset=offset,
+        limit=limit,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        scope=scope,
+        status=status,
+        search=search,
+        asset_id=asset_id,
+        asset_type_id=asset_type_id,
+    )
+
+
+
+
 @router.get("/{context_id}", response_model=RiskScenarioContextOut)
 def get_context(context_id: int, db: Session = Depends(get_db)):
     return rsc_crud.get(db, context_id)
@@ -111,37 +144,6 @@ def get_risk_score(context_id: int, db: Session = Depends(get_db)):
 @router.post("/batch-assign")
 def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session = Depends(get_db)):
     return crud_legacy.batch_assign_contexts(data, db)
-
-
-# -------------------------------------------------------------
-# Paginated/managed list – keep existing integration
-# -------------------------------------------------------------
-@router.get("/contexts", response_model=RiskContextListResponse)
-def get_contexts(
-    offset: int = Query(0, ge=0),
-    limit: int = Query(25, ge=1, le=200),
-    sort_by: str = Query("updated_at"),
-    sort_dir: str = Query("desc"),
-    scope: str = Query("all"),
-    status: str = Query("all"),
-    search: str = Query("", max_length=200),
-    # legacy filters retained for now (your list service currently takes these)
-    asset_id: Optional[int] = None,
-    asset_type_id: Optional[int] = None,
-    db: Session = Depends(get_db),
-):
-    return risk_context_list.list_contexts(
-        db,
-        offset=offset,
-        limit=limit,
-        sort_by=sort_by,
-        sort_dir=sort_dir,
-        scope=scope,
-        status=status,
-        search=search,
-        asset_id=asset_id,
-        asset_type_id=asset_type_id,
-    )
 
 
 # -------------------------------------------------------------
