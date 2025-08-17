@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
   Box, Grid, Typography, Paper, Avatar
 } from '@mui/material';
@@ -10,61 +10,92 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import GppGoodIcon from '@mui/icons-material/GppGood';
 import 'chart.js/auto';
 
+import { ScopeContext } from '../../store/scope/ScopeProvider.jsx';
+import { useCoverageSummary, useCoverageVersion } from '../../features/coverage/hooks';
+import { useEffectiveControls } from '../../features/controls/hooks';
+
+
 import { getSummary } from './api';
 
 
 
 const MainDashboard = () => {
-    
-    const [summary, setSummary] = useState(null);
 
-    useEffect(() => {
-        getSummary().then(setSummary).catch(error => {
-            console.error("Error fetching summary data:", error);
-        }
-    )}, []);
+  const [summary, setSummary] = useState(null);
 
-    const dashboardCards = summary ? [
-        {
-            title: 'Assets',
-            value: summary ? summary.assets : 0,
-            icon: <DevicesIcon />,
-            color: '#1976d2',
-            description: 'Tracked information assets'
-        },
-        {
-            title: 'Threats',
-            value: summary ? summary.threats : 0,
-            icon: <WarningAmberIcon />,
-            color: '#d32f2f',
-            description: 'Identified potential threats'
-        },
-        {
-            title: 'Risks',
-            value: summary ? summary.risks : 0,
-            icon: <SecurityIcon />,
-            color: '#f57c00',
-            description: 'Total risk scenarios'
-        },
-        {
-            title: 'Controls',
-            value: summary ? summary.controls : 0,
-            icon: <VerifiedUserIcon />,
-            color: '#388e3c',
-            description: 'Available security controls'
-        }
-    ] : [];
+  const { scope, versions } = useContext(ScopeContext);
 
-    const riskPieData = summary ? {
-        labels: ['High', 'Medium', 'Low'],
-        datasets: [
-            {
-                data: [summary.risk_levels.high, summary.risk_levels.medium, summary.risk_levels.low],
-                backgroundColor: ['#f44336', '#ffca28', '#4caf50'],
-                borderWidth: 0,
-            },
-        ],
-    } : {};
+  const { data: summary_ } = useCoverageSummary(scope, versions);
+  const { data: controls } = useEffectiveControls(scope);
+
+  // (optional) one specific version’s detail
+  const firstVersion = versions?.[0];
+  const { data: vDetail } = useCoverageVersion(firstVersion, scope);
+
+  useEffect(() => {
+    console.log('[DASH] scope', scope, 'versions', versions);
+  }, [scope, versions]);
+
+  useEffect(() => {
+    console.log('[DASH] coverage summary', summary_);
+  }, [summary_]);
+
+  useEffect(() => {
+    console.log('[DASH] effective controls', controls);
+  }, [controls]);
+
+  useEffect(() => {
+    console.log('[DASH] version detail', firstVersion, vDetail);
+  }, [firstVersion, vDetail]);
+
+  useEffect(() => {
+    getSummary().then(setSummary).catch(error => {
+      console.error("Error fetching summary data:", error);
+    }
+    )
+  }, []);
+
+  const dashboardCards = summary ? [
+    {
+      title: 'Assets',
+      value: summary ? summary.assets : 0,
+      icon: <DevicesIcon />,
+      color: '#1976d2',
+      description: 'Tracked information assets'
+    },
+    {
+      title: 'Threats',
+      value: summary ? summary.threats : 0,
+      icon: <WarningAmberIcon />,
+      color: '#d32f2f',
+      description: 'Identified potential threats'
+    },
+    {
+      title: 'Risks',
+      value: summary ? summary.risks : 0,
+      icon: <SecurityIcon />,
+      color: '#f57c00',
+      description: 'Total risk scenarios'
+    },
+    {
+      title: 'Controls',
+      value: summary ? summary.controls : 0,
+      icon: <VerifiedUserIcon />,
+      color: '#388e3c',
+      description: 'Available security controls'
+    }
+  ] : [];
+
+  const riskPieData = summary ? {
+    labels: ['High', 'Medium', 'Low'],
+    datasets: [
+      {
+        data: [summary.risk_levels.high, summary.risk_levels.medium, summary.risk_levels.low],
+        backgroundColor: ['#f44336', '#ffca28', '#4caf50'],
+        borderWidth: 0,
+      },
+    ],
+  } : {};
 
 
 
@@ -115,52 +146,52 @@ const MainDashboard = () => {
       </Grid>
 
       <Box sx={{ mt: 4, textAlign: 'center', backgroundColor: '#fff', p: 3, borderRadius: 2, border: '1px solid #acaaaaff' }}>
-        
-        <Grid container spacing={2} mb={3}>
-        {/* Left Chart */}
-            <Grid item xs={12} md={3} size={4}>
-                
-                {!riskPieData?.datasets ? (
-                <p>Loading risk data...</p>
-                ) : (
-                    <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-                        <Typography variant="h6">Risk Levels Breakdown</Typography>
-                        <Pie data={riskPieData} />
-                        <Box sx={{ mt: 1 }}>
-                            <Typography variant="body2"><strong>High:</strong> {summary?.risk_levels.high}</Typography>
-                            <Typography variant="body2"><strong>Medium:</strong> {summary?.risk_levels.medium}</Typography>
-                            <Typography variant="body2"><strong>Low:</strong> {summary?.risk_levels.low}</Typography>
-                        </Box>
-                    </Paper>
-                )}
-                
-                
-            </Grid>
 
-            {/* Right Chart */}
-            <Grid item xs={12} md={8} size={8}>
-                <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-                <Typography variant="h6">Mitigation Trend</Typography>
-                <Box sx={{ height: 280 }}> {/* Optional: control fixed chart height */}
-                    <Line data={trendLineData} options={{ maintainAspectRatio: false }} />
+        <Grid container spacing={2} mb={3}>
+          {/* Left Chart */}
+          <Grid item xs={12} md={3} size={4}>
+
+            {!riskPieData?.datasets ? (
+              <p>Loading risk data...</p>
+            ) : (
+              <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
+                <Typography variant="h6">Risk Levels Breakdown</Typography>
+                <Pie data={riskPieData} />
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="body2"><strong>High:</strong> {summary?.risk_levels.high}</Typography>
+                  <Typography variant="body2"><strong>Medium:</strong> {summary?.risk_levels.medium}</Typography>
+                  <Typography variant="body2"><strong>Low:</strong> {summary?.risk_levels.low}</Typography>
                 </Box>
-                <Box textAlign="right" mt={1}>
-                    <Typography variant="body2" color="primary" sx={{ cursor: 'pointer' }}>View All</Typography>
-                </Box>
-                </Paper>
-            </Grid>
+              </Paper>
+            )}
+
+
+          </Grid>
+
+          {/* Right Chart */}
+          <Grid item xs={12} md={8} size={8}>
+            <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
+              <Typography variant="h6">Mitigation Trend</Typography>
+              <Box sx={{ height: 280 }}> {/* Optional: control fixed chart height */}
+                <Line data={trendLineData} options={{ maintainAspectRatio: false }} />
+              </Box>
+              <Box textAlign="right" mt={1}>
+                <Typography variant="body2" color="primary" sx={{ cursor: 'pointer' }}>View All</Typography>
+              </Box>
+            </Paper>
+          </Grid>
         </Grid>
 
-        </Box>
-        <Box sx={{ mt: 4, textAlign: 'center' }}>
-            <Typography variant="h5" gutterBottom>
-            Security Posture
-            </Typography>
-            <GppGoodIcon sx={{ fontSize: 50, color: '#388e3c' }} />
-            <Typography variant="body1" color="text.secondary">
-            Your current security posture is strong.
-            </Typography>   
-        </Box>
+      </Box>
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Typography variant="h5" gutterBottom>
+          Security Posture
+        </Typography>
+        <GppGoodIcon sx={{ fontSize: 50, color: '#388e3c' }} />
+        <Typography variant="body1" color="text.secondary">
+          Your current security posture is strong.
+        </Typography>
+      </Box>
     </Box>
   );
 };
