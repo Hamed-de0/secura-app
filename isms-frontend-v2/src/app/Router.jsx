@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import MainView from '../layout/MainView'
-
+import RequireCaps from './RequireCaps.jsx';
 // Pages
 import Dashboard from '../pages/Dashboard'
 import GroupAssetTreePage from '../features/assets/assetGroups/GroupAssetTreePage'
@@ -30,18 +30,36 @@ function AppRouter() {
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />
       <Route path="/assets/edit/:id" element={<MainView><AssetEditPage /></MainView>} />
       <Route path="/assets/new" element={<MainView><AssetEditPage /></MainView>} />
-      <Route path="/asset-types/manage" element={<MainView><AssetTypePage /></MainView>} />
-      <Route path="/persons" element={<MainView><PersonPage /></MainView>} />
+      {/* <Route path="/asset-types/manage" element={<MainView><AssetTypePage /></MainView>} /> */}
+      {/* <Route path="/persons" element={<MainView><PersonPage /></MainView>} /> */}
       <Route path="/threats" element={<MainView><ThreatsPage /></MainView>} />
       <Route path="/vulnerabilities" element={<MainView><VulnerabilitiesPage /></MainView>} />
-      <Route path="/relationships/threat-vulnerability" element={<MainView><ThreatVulnerabilityMapPage  /></MainView>} />
+      <Route path="/relationships/threat-vulnerability" element={<MainView><ThreatVulnerabilityMapPage /></MainView>} />
       <Route path='/tags' element={<MainView><TagList /></MainView>} />
       <Route path="/risk-scenarios" element={<MainView><RiskScenarioTable /></MainView>} />
       <Route path="/risk-scenarios-context" element={<MainView><RiskScenarioContextView /></MainView>} />
       <Route path="/risk-scenarios/new" element={<MainView><RiskScenarioForm /></MainView>} />
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
-      <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} />
+      {/* <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} /> */}
       <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} />
+
+      <Route path="/persons" element={
+        <RequireCaps caps={['manage_org']}>
+          <PersonPage />
+        </RequireCaps>
+      } />
+
+      <Route path="/asset-types/manage" element={
+        <RequireCaps caps={['manage_org']}>
+          <AssetTypePage />
+        </RequireCaps>
+      } />
+
+      <Route path="/risk-dashboard" element={
+        <RequireCaps caps={['view_reports']}>
+          <RiskDashboard />
+        </RequireCaps>
+      } />
 
       {/* Future structure - just plug in your page modules */}
       {/* 

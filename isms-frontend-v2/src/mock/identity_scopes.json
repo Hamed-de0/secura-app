@@ -1,0 +1,189 @@
+{
+  "meta": {
+    "version": "0.1",
+    "generated_at": "2025-08-17T12:00:00Z",
+    "note": "Temporary mock for identity, RBAC, and scope APIs"
+  },
+
+  "user": {
+    "user_id": 7,
+    "name": "Hamed (ISMS Admin)",
+    "email": "hamed@example.com",
+    "default_org_group_id": 1
+  },
+
+  "orgs": [
+    {
+      "org_group_id": 1,
+      "org_group_name": "H&H Group",
+      "entities": [
+        { "entity_id": 1, "entity_name": "H&H Communication Lab GmbH" }
+      ]
+    }
+  ],
+
+  "roles": [
+    "OrgAdmin",
+    "EntityAdmin",
+    "BUOwner",
+    "ServiceOwner",
+    "RiskOwner",
+    "ControlOwner",
+    "Auditor",
+    "Contributor",
+    "Viewer"
+  ],
+
+  "role_caps": {
+    "OrgAdmin": [
+      "view_dashboard","view_compliance","view_controls","view_risks","view_assets","view_providers","view_reports",
+      "submit_evidence","approve_evidence","edit_risks","edit_controls_links","manage_mappings","manage_frameworks","manage_policies","manage_org"
+    ],
+    "EntityAdmin": [
+      "view_dashboard","view_compliance","view_controls","view_risks","view_assets","view_providers","view_reports",
+      "submit_evidence","approve_evidence","edit_risks","edit_controls_links","manage_mappings","manage_frameworks","manage_policies"
+    ],
+    "BUOwner": [
+      "view_dashboard","view_compliance","view_controls","view_risks","view_assets","view_providers",
+      "submit_evidence","edit_risks","edit_controls_links"
+    ],
+    "ServiceOwner": [
+      "view_dashboard","view_controls","view_providers","submit_evidence","approve_evidence"
+    ],
+    "RiskOwner": [
+      "view_dashboard","view_risks","view_assets","submit_evidence","edit_risks"
+    ],
+    "ControlOwner": [
+      "view_dashboard","view_controls","view_compliance","submit_evidence","approve_evidence","edit_controls_links"
+    ],
+    "Auditor": [
+      "view_dashboard","view_compliance","view_controls","view_risks","view_assets","view_providers","view_reports","approve_evidence"
+    ],
+    "Contributor": [
+      "view_dashboard","view_compliance","view_controls","view_risks","view_assets","submit_evidence"
+    ],
+    "Viewer": [
+      "view_dashboard","view_compliance","view_controls","view_risks","view_assets","view_providers"
+    ]
+  },
+
+  "assignments": [
+    { "role": "OrgAdmin",     "scope_type": "org_group", "scope_id": 1,   "scope_label": "H&H Group" },
+    { "role": "ControlOwner", "scope_type": "entity",    "scope_id": 1,   "scope_label": "H&H Communication Lab GmbH" },
+    { "role": "RiskOwner",    "scope_type": "bu",        "scope_id": 10,  "scope_label": "R&D" },
+    { "role": "Contributor",  "scope_type": "asset_group","scope_id": 100,"scope_label": "HQ Data Center" },
+    { "role": "Auditor",      "scope_type": "service",   "scope_id": 2,   "scope_label": "Email (Microsoft 365)" }
+  ],
+
+  "effective_permissions": [
+    {
+      "scope_key": "org_group:1",
+      "effective_role": "OrgAdmin",
+      "caps": "@role_caps.OrgAdmin",
+      "derived_from": ["org_group:1:OrgAdmin"]
+    },
+    {
+      "scope_key": "entity:1",
+      "effective_role": "ControlOwner",
+      "caps": [
+        "view_dashboard","view_compliance","view_controls","submit_evidence","approve_evidence","edit_controls_links",
+        "view_risks","view_assets","view_providers"
+      ],
+      "derived_from": ["entity:1:ControlOwner","org_group:1:OrgAdmin"]
+    },
+    {
+      "scope_key": "bu:10",
+      "effective_role": "RiskOwner",
+      "caps": [
+        "view_dashboard","view_risks","view_assets","submit_evidence","edit_risks",
+        "view_controls","view_compliance"
+      ],
+      "derived_from": ["bu:10:RiskOwner","entity:1:ControlOwner","org_group:1:OrgAdmin"]
+    },
+    {
+      "scope_key": "asset_group:100",
+      "effective_role": "Contributor",
+      "caps": [
+        "view_dashboard","view_assets","view_controls","view_risks","submit_evidence","view_compliance"
+      ],
+      "derived_from": ["asset_group:100:Contributor","entity:1:ControlOwner"]
+    },
+    {
+      "scope_key": "asset:1000",
+      "effective_role": "Contributor",
+      "caps": [
+        "view_dashboard","view_assets","view_controls","view_risks","submit_evidence","view_compliance"
+      ],
+      "derived_from": ["asset_group:100:Contributor","entity:1:ControlOwner"]
+    },
+    {
+      "scope_key": "service:2",
+      "effective_role": "Auditor",
+      "caps": [
+        "view_dashboard","view_controls","view_providers","view_reports","view_compliance","approve_evidence"
+      ],
+      "derived_from": ["service:2:Auditor","org_group:1:OrgAdmin"]
+    }
+  ],
+
+  "scopes_index": [
+    { "type": "org_group",   "id": 1,   "label": "H&H Group", "aliases": ["H&H Group","group:1","org:1"] },
+
+    { "type": "entity",      "id": 1,   "label": "H&H Communication Lab GmbH", "aliases": ["H&H","entity:1"] },
+
+    { "type": "bu",          "id": 10,  "label": "R&D",        "parent": "entity:1", "aliases": ["Research","rnd"] },
+    { "type": "bu",          "id": 11,  "label": "Operations", "parent": "entity:1" },
+
+    { "type": "site",        "id": 200, "label": "Nuremberg DC", "parent": "entity:1" },
+    { "type": "site",        "id": 201, "label": "Ulm Office",   "parent": "entity:1" },
+
+    { "type": "asset_group", "id": 100, "label": "HQ Data Center", "parent": "site:200" },
+    { "type": "asset_group", "id": 101, "label": "Remote Offices", "parent": "site:201" },
+
+    { "type": "asset",       "id": 1000, "label": "vm-app-01",  "parent": "asset_group:100" },
+    { "type": "asset",       "id": 1001, "label": "db-prod-01", "parent": "asset_group:100" },
+
+    { "type": "asset_type",  "id": 20,  "label": "Virtual Machine" },
+    { "type": "asset_type",  "id": 21,  "label": "Database Server" },
+
+    { "type": "service",     "id": 1,   "label": "ERP Cloud (SAP S/4HANA)", "parent": "entity:1" },
+    { "type": "service",     "id": 2,   "label": "Email (Microsoft 365)",   "parent": "entity:1" },
+
+    { "type": "tag",         "id": 300, "label": "PII" },
+    { "type": "tag",         "id": 301, "label": "Critical" }
+  ],
+
+  "scope_parents": {
+    "entity:1":       ["org_group:1","entity:1"],
+    "bu:10":          ["org_group:1","entity:1","bu:10"],
+    "site:200":       ["org_group:1","entity:1","site:200"],
+    "asset_group:100":["org_group:1","entity:1","site:200","asset_group:100"],
+    "asset:1000":     ["org_group:1","entity:1","site:200","asset_group:100","asset:1000"],
+    "service:1":      ["org_group:1","entity:1","service:1"],
+    "service:2":      ["org_group:1","entity:1","service:2"]
+  },
+
+  "ui_defaults": {
+    "default_scope": "entity:1",
+    "default_versions": [1, 2]
+  },
+
+  "menu_caps": {
+    "/":                    ["view_dashboard"],
+    "/risk-view":           ["view_risks"],
+    "/assetgroups/tree":    ["view_assets"],
+    "/threats":             ["view_risks"],
+    "/vulnerabilities":     ["view_risks"],
+    "/risk-dashboard":      ["view_reports"],
+    "/tags":                ["view_assets"],
+    "/persons":             ["manage_org"],
+    "/asset-types/manage":  ["manage_org"]
+  },
+
+  "framework_versions": [
+  { "id": 1, "code": "ISO27001:2022", "label": "ISO/IEC 27001:2022" },
+  { "id": 2, "code": "GDPR",          "label": "GDPR (EU 2016/679)" },
+  { "id": 3, "code": "ISO27002:2022", "label": "ISO/IEC 27002:2022" }
+]
+
+}

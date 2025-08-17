@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import ContentView from '../components/ContentView';
 import Footer from '../components/Footer';
 import { UiContext } from '../store/ui/UiProvider.jsx';
+import ScopeBreadcrumbs from '../components/navigation/ScopeBreadcrumbs';
 
 const COLLAPSED = 72;
 const EXPANDED = 240;
@@ -41,6 +42,7 @@ export default function MainView({ children }) {
           overflow: 'hidden',
         }}
       >
+        <ScopeBreadcrumbs />
         <ContentView footer={<Footer />} sx={{ flex: 1, width: '100%' }}>
           {children}
         </ContentView>
