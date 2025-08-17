@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 
+
 const heatmapData = [
   [1, 2, 3, 4, 5],
   [2, 4, 6, 8, 10],
@@ -9,13 +10,16 @@ const heatmapData = [
   [5, 10, 15, 20, 25],
 ];
 
-const getColor = (value) => {
-  if (value >= 15) return '#f44336'; // red
-  if (value >= 6) return '#ffeb3b';  // yellow
-  return '#4caf50';                 // green
+const getColor = (t, value) => {
+  // AFTER
+  if (value >= 15) return t.palette.graph.riskHigh;
+  if (value >= 6)  return t.palette.graph.riskMed;
+  return t.palette.graph.riskLow;
+
 };
 
 const RiskHeatmap = () => (
+  
   <Box sx={{ width: '100%', maxWidth: '600px', mx: 'auto', mt: 1 }}>
     <Typography variant="h6" mb={1}>
       Risk Heatmap
@@ -48,7 +52,7 @@ const RiskHeatmap = () => (
             <Box
               key={`cell-${rowIndex}-${colIndex}`}
               sx={{
-                backgroundColor: getColor(value),
+                backgroundColor: (t) => getColor(t, value),
                 height: 50,
                 borderRadius: 1,
                 display: 'flex',

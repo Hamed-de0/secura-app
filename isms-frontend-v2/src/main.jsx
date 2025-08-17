@@ -1,15 +1,17 @@
-import React,{ StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import { ThemeProvider, CssBaseline } from '@mui/material'
-import theme from './config/theme'
-import App from './app/App.jsx'
+// src/main.jsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './app/App.jsx';
+import ColorModeProvider from './theme/ColorModeProvider.jsx';
+import UiProvider from './store/ui/UiProvider.jsx';
 
-createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <ColorModeProvider>
+      <UiProvider>
       <App />
-    </ThemeProvider>
-  </React.StrictMode>,
-)
+
+      </UiProvider>
+    </ColorModeProvider>
+  </React.StrictMode>
+);

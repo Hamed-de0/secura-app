@@ -1,8 +1,18 @@
-import React, { useState } from 'react';
-import {
-  Drawer, Toolbar, Box, IconButton, Tooltip, List, ListItemButton,
-  ListItemIcon, ListItemText, Divider, Collapse
-} from '@mui/material';
+import React, { useContext } from 'react';
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Tooltip, Box, Divider, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { UiContext } from '../store/ui/UiProvider.jsx';
+import { NavLink, useLocation } from 'react-router-dom';
+import SpaceDashboardIcon from '@mui/icons-material/SpaceDashboard';
+import RuleIcon from '@mui/icons-material/Rule';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import Inventory2Icon from '@mui/icons-material/Inventory2';
+import HandshakeIcon from '@mui/icons-material/Handshake';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import GroupIcon from '@mui/icons-material/Group';
+import SettingsIcon from '@mui/icons-material/Settings';
 import {
   Dashboard as DashboardIcon,
   Devices as AssetsIcon,
@@ -21,89 +31,99 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material';
 
-const drawerWidth = 240;
+const COLLAPSED = 72;
+const EXPANDED = 240;
 
-const Sidebar = () => {
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const [collapsed, setCollapsed] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+const DrawerPaper = styled('div')(({ theme }) => ({
+  backgroundColor: theme.palette.surface?.rail ?? theme.palette.background.paper,
+  borderRight: `1px solid ${theme.palette.divider}`,
+  overflowX: 'hidden',
+  transition: theme.transitions.create('width', { duration: 200 }),
+  height: '100%',
+}));
 
-  const menuItems = [
-    { icon: <DashboardIcon color="primary" />, label: 'Dashboard', route: '/home' },
-    { icon: <AssetsIcon color="info" />, label: 'Assets', route: '/assetgroups/tree' },
-    { icon: <ThreatsIcon color="error" />, label: 'Threats', route: '/threats' },
-    { icon: <VulnerabilitiesIcon color="warning" />, label: 'Vulnerabilities', route: '/vulnerabilities' },
-    { icon: <ControlsIcon color="success" />, label: 'Controls', route: '/controls' },
-    { icon: <PersonsIcon color="secondary" />, label: 'Persons', route: '/persons' },
-    { icon: <AnalysisIcon color="action" />, label: 'Analysis', route: '/risk-dashboard' },
-    { icon: <TagsIcon color="default" />, label: 'Tags', route: '/tags' },
-    { icon: <RiskScenariosIcon color="primary" />, label: 'Risk Scenarios', route: '/risk-scenarios' },
-    { icon: <RiskAssessmentIcon color="primary" />, label: 'Risk Contexts', route: '/risk-scenarios-context' },
-    { icon: <ReportsIcon color="secondary" />, label: 'Reports', route: '/risk-view' },
-  ];
+const NAV_ITEMS = [
+  { label: 'Dashboard',  icon: <SpaceDashboardIcon />, to: '/dashboard' },
+  { label: 'Compliance', icon: <RuleIcon />,           to: '/compliance/versions/1' }, // adjust default version
+  { label: 'Controls',   icon: <VerifiedUserIcon />,   to: '/controls' },
+  { label: 'Risks',      icon: <WarningAmberIcon />,   to: '/risk-view' },
+  { label: 'Assets',     icon: <Inventory2Icon />,     to: '/assets' },
+  { label: 'Providers',  icon: <HandshakeIcon />,      to: '/providers' },
+];
 
+const REPORTS = [
+  { label: 'Reports', icon: <BarChartIcon />, to: '/reports' },
+];
+
+const ADMIN = [
+  { label: 'Tags',    icon: <LocalOfferIcon />, to: '/tags' },
+  { label: 'Persons', icon: <GroupIcon />,      to: '/persons' },
+  { label: 'Settings',icon: <SettingsIcon />,   to: '/settings' },
+];
+
+
+export default function Sidebar() {
+  const { sidebarCollapsed } = useContext(UiContext);
+  const { pathname } = useLocation();
+  const width = sidebarCollapsed ? COLLAPSED : EXPANDED;
+
+  const renderItem = (item) => {
+    const active = pathname.startsWith(item.to);
+    const content = (
+      <ListItemButton
+        component={NavLink}
+        to={item.to}
+        selected={active}
+        sx={{
+          px: 1.5,
+          minHeight: 44,
+          '&.Mui-selected': {
+            bgcolor: (t) => t.palette.action.selected,
+          },
+        }}
+        aria-current={active ? 'page' : undefined}
+      >
+        <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+          {item.icon}
+        </ListItemIcon>
+        {!sidebarCollapsed && (
+          <ListItemText
+            primary={item.label}
+            primaryTypographyProps={{ noWrap: true }}
+          />
+        )}
+      </ListItemButton>
+    );
+    return sidebarCollapsed
+      ? (
+        <Tooltip title={item.label} placement="right" arrow enterDelay={600} key={item.to}>
+          {content}
+        </Tooltip>
+      ) : <Box key={item.to}>{content}</Box>;
+  };
 
   return (
     <Drawer
       variant="permanent"
+      PaperProps={{ component: DrawerPaper, style: { width } }}
       sx={{
-        width: collapsed ? 70 : drawerWidth,
+        width,
         flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: collapsed ? 70 : drawerWidth,
-          transition: 'width 0.3s',
-          overflowX: 'hidden',
-          boxSizing: 'border-box',
-          backgroundColor: theme.palette.background.paper,
-          p: 1,
-        },
+        '& .MuiDrawer-paper': { width }, // ensure width applies
       }}
     >
-      <Toolbar />
-      <Box display="flex" justifyContent="center" mb={2}>
-        <IconButton onClick={() => setCollapsed(!collapsed)}>
-          <MenuIcon />
-        </IconButton>
+      {/* Optional logo / app label */}
+      <Box sx={{ height: 64, display: 'flex', alignItems: 'center', px: 1.5 }}>
+        {!sidebarCollapsed && <Typography variant="subtitle2" noWrap>ISMS / GRC</Typography>}
       </Box>
-
-      <List>
-        {menuItems.map((item) => (
-          <Tooltip key={item.label} title={collapsed ? item.label : ''} placement="right">
-            <ListItemButton onClick={() => navigate(item.route)} sx={{ px: 2 }}>
-              <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 2 }}>{item.icon}</ListItemIcon>
-              {!collapsed && <ListItemText primary={item.label} />}
-            </ListItemButton>
-          </Tooltip>
-        ))}
-      </List>
-
-      <Divider sx={{ my: 1 }} />
-
-      <Tooltip title={collapsed ? 'Settings' : ''} placement="right">
-        <ListItemButton onClick={() => setSettingsOpen(!settingsOpen)} sx={{ px: 2 }}>
-          <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 2 }}>
-            <Settings />
-          </ListItemIcon>
-          {!collapsed && <ListItemText primary="Settings" />}
-          {!collapsed && (settingsOpen ? <ExpandLess /> : <ExpandMore />)}
-        </ListItemButton>
-      </Tooltip>
-
-      <Collapse in={settingsOpen && !collapsed} timeout="auto" unmountOnExit>
-        <List component="div" disablePadding>
-          <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/settings/asset-types')}>
-            <ListItemIcon><Tune /></ListItemIcon>
-            <ListItemText primary="Asset Types" />
-          </ListItemButton>
-          <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/settings/asset-groups')}>
-            <ListItemIcon><Tune /></ListItemIcon>
-            <ListItemText primary="Asset Groups" />
-          </ListItemButton>
-        </List>
-      </Collapse>
+      <Divider />
+      <List sx={{ py: 0 }}>{NAV_ITEMS.map(renderItem)}</List>
+      <Divider sx={{ my: 0.5 }} />
+      <List sx={{ py: 0 }}>{REPORTS.map(renderItem)}</List>
+      <Box sx={{ flexGrow: 1 }} />
+      <Divider />
+      <List sx={{ py: 0, mb: 1 }}>{ADMIN.map(renderItem)}</List>
     </Drawer>
   );
-};
+}
 
-export default Sidebar;
