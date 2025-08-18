@@ -1,17 +1,21 @@
 import { useMemo } from 'react';
 import { MOCK_MODE } from '../../lib/mock/mockMode';
 import data from '../../mock/activities.json';
+const LS_ACTIVITIES = 'activities_local';
+function readLocal() { try { return JSON.parse(localStorage.getItem(LS_ACTIVITIES) || '[]'); } catch { return []; } }
 
 export function useActivities(scope, filters) {
   return useMemo(() => {
     if (!MOCK_MODE) return { data: [], isLoading: false };
-    const list = data.events || [];
+    const list = [...(data.events || []), ...readLocal()];
     const sKey = scope ? `${scope.type}:${scope.id}` : null;
 
     const withinScope = (ev) => {
       if (!sKey) return true;
-      // simple startsWith-style match: exact match or same entity for mock
-      return ev.scope === sKey;
+           const isLocal = (ev?.id || '').startsWith('loc-');
+     // Show local user actions regardless of scope so the user gets instant feedback
+     if (isLocal) return true;
+     return ev.scope === sKey;
     };
 
     const match = (ev) => {

@@ -2,14 +2,14 @@ import React, { createContext, useEffect, useMemo, useState } from 'react';
 
 // shape we’ll use app-wide
 export const ScopeContext = createContext({
-  scope: { type: 'entity', id: 1 },     // default
+  scope: { type: 'org_group', id: 1 },     // default
   setScope: () => {},
   versions: [],                         // selected framework version ids
   setVersions: () => {},
 });
 
 export default function ScopeProvider({ children }) {
-  const [scope, setScope] = useState({ type: 'entity', id: 1 });
+  const [scope, setScope] = useState({ type: 'org_group', id: 1 });
   const [versions, setVersions] = useState([1, 2]); // sane defaults for now
 
   // Optional: initialize from mock defaults if present in localStorage (later we’ll read mock file)

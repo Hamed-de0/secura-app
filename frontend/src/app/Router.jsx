@@ -24,6 +24,7 @@ import ControlsAtScope from '../features/controls/pages/ControlsAtScope.jsx';
 import RiskView from '../features/risks/pages/RiskView.jsx';
 import ProvidersPage from '../features/providers/pages/ProvidersPage.jsx';
 import ActivitiesPage from '../features/activities/pages/ActivitiesPage.jsx';
+import MappingManager from '../features/mapping/pages/MappingManager.jsx';
 
 
 // Add others progressively...
@@ -59,21 +60,30 @@ function AppRouter() {
 
       <Route path="/persons" element={
         <RequireCaps caps={['manage_org']}>
-          <PersonPage />
+          <MainView><PersonPage /></MainView>
         </RequireCaps>
       } />
 
       <Route path="/asset-types/manage" element={
         <RequireCaps caps={['manage_org']}>
-          <AssetTypePage />
+          <MainView><AssetTypePage /></MainView>
         </RequireCaps>
       } />
 
       <Route path="/risk-dashboard" element={
         <RequireCaps caps={['view_reports']}>
-          <RiskDashboard />
+          <MainView><RiskDashboard /></MainView>
         </RequireCaps>
       } />
+
+      <Route
+        path="/mapping"
+        element={
+          <RequireCaps caps={['manage_mappings']}>
+            <MainView><MappingManager /></MainView>
+          </RequireCaps>
+        }
+      />
 
       {/* Future structure - just plug in your page modules */}
       {/* 

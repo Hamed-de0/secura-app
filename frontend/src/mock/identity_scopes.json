@@ -182,7 +182,9 @@
     "/asset-types/manage":  ["manage_org"],
     "/controls":            ["view_controls"],
     "/providers":           ["view_providers"],
-    "/activities":          ["view_controls"]
+    "/activities":          ["view_controls"],
+    "/mapping":             ["manage_mappings"]
+
 
 
 

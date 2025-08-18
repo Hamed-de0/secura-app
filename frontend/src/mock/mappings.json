@@ -1,0 +1,11 @@
+{
+  "version_id": 1,
+  "requirements": {
+    "101": [ { "control_id": 3, "weight": 60 }, { "control_id": 22, "weight": 40 } ],
+    "102": [ { "control_id": 9, "weight": 100 } ],
+    "133": [ { "control_id": 22, "weight": 100 } ],
+    "201": [],
+    "205": [ { "control_id": 73, "weight": 100 } ],
+    "301": [ { "control_id": 101, "weight": 100 } ]
+  }
+}

@@ -14,6 +14,7 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import GroupIcon from '@mui/icons-material/Group';
 import SettingsIcon from '@mui/icons-material/Settings';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
+import LinkIcon from '@mui/icons-material/Link';
 import { ScopeContext } from '../store/scope/ScopeProvider.jsx';
 import { useEffectiveCaps, useMenuCaps } from '../lib/mock/useRbac';
 import BugReportIcon from '@mui/icons-material/BugReport';
@@ -51,6 +52,8 @@ const ADMIN = [
   { label: 'Tags', icon: <LocalOfferIcon />, to: '/tags' },
   { label: 'Persons', icon: <GroupIcon />, to: '/persons' },
   { label: 'Settings', icon: <SettingsIcon />, to: '/settings' },
+  { label: 'Mapping Manager', icon: <LinkIcon />, to: '/mapping' },
+
 ];
 
 

@@ -9,17 +9,19 @@ import EmptyState from "../../../components/ui/EmptyState.jsx";
 import ErrorState from "../../../components/ui/ErrorState.jsx";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import ControlImpactDrawer from '../components/ControlImpactDrawer.jsx';
-
+import { useAssuranceOverlay } from '../../evidence/hooks';
 
 export default function ControlsAtScope() {
   const { scope } = useContext(ScopeContext);
   const { data: controls, isLoading } = useEffectiveControls(scope);
+  const { map: statusOverlay } = useAssuranceOverlay();
   const [selected, setSelected] = useState(null);
   const [source, setSource] = useState(null);
   const [assurance, setAssurance] = useState(null);
   const [params, setParams] = useSearchParams();
   const initialQ = params.get("q") || "";
   const [q, setQ] = useState(initialQ);
+
   React.useEffect(() => {
     const cur = params.get("q") || "";
     if (cur !== q)
@@ -34,25 +36,33 @@ export default function ControlsAtScope() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
-  const filtered = useMemo(() => {
+  const enriched = useMemo(() => {
     const list = Array.isArray(controls) ? controls : [];
+    // apply local assurance overrides for display
+    return list.map(c => {
+      const ov = statusOverlay?.[String(c.control_id)];
+      return ov ? { ...c, assurance_status: ov.assurance_status } : c;
+    });
+  }, [controls, statusOverlay]);
+
+  const filtered = useMemo(() => {
+    const list = enriched;
     return list.filter((c) => {
       if (source && c.source !== source) return false;
       if (assurance && (c.assurance_status || "").toLowerCase() !== assurance)
         return false;
       if (q) {
         const needle = q.toLowerCase();
-        const hay = `${c.code ?? ""} ${c.title ?? ""} ${
-          c.notes ?? ""
-        }`.toLowerCase();
+        const hay = `${c.code ?? ""} ${c.title ?? ""} ${c.notes ?? ""
+          }`.toLowerCase();
         return hay.includes(needle);
       }
       return true;
     });
-  }, [controls, source, assurance, q]);
+  }, [enriched, source, assurance, q]);
 
   const quickCounts = useMemo(() => {
-    const list = Array.isArray(controls) ? controls : [];
+    const list = enriched;
     const bySource = list.reduce((acc, c) => {
       acc[c.source] = (acc[c.source] || 0) + 1;
       return acc;
@@ -63,54 +73,54 @@ export default function ControlsAtScope() {
       return acc;
     }, {});
     return { bySource, byAssurance };
-  }, [controls]);
+  }, [enriched]);
 
   return (
     <>
-    <Box sx={{ p: 2 }}>
-      <ControlsFilters
-        source={source}
-        setSource={setSource}
-        assurance={assurance}
-        setAssurance={setAssurance}
-        q={q}
-        setQ={setQ}
-        total={(controls || []).length}
-      />
-
-      <Stack direction="row" spacing={1} sx={{ mb: 1 }} flexWrap="wrap">
-        {Object.entries(quickCounts.bySource).map(([k, v]) => (
-          <Chip key={k} size="small" label={`${k}: ${v}`} />
-        ))}
-        {Object.entries(quickCounts.byAssurance).map(([k, v]) => (
-          <Chip key={k} size="small" label={`${k}: ${v}`} />
-        ))}
-      </Stack>
-
-      {isLoading && <Skeleton variant="rounded" height={520} />}
-      {!isLoading && Array.isArray(controls) && controls.error && (
-        <ErrorState message={String(controls.error)} />
-      )}
-      {!isLoading && !controls?.error && filtered.length === 0 && (
-        <EmptyState
-          icon={<FilterAltIcon />}
-          title="No controls match your filters"
-          description="Try clearing filters or change the scope."
+      <Box sx={{ p: 2 }}>
+        <ControlsFilters
+          source={source}
+          setSource={setSource}
+          assurance={assurance}
+          setAssurance={setAssurance}
+          q={q}
+          setQ={setQ}
+          total={(controls || []).length}
         />
-      )}
-      {!isLoading && !controls?.error && filtered.length > 0 && (
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <EffectiveControlsGrid 
-            rows={filtered} 
-            loading={false} 
-            onRowClick={(row) => setSelected(row)}
-            />
+
+        <Stack direction="row" spacing={1} sx={{ mb: 1 }} flexWrap="wrap">
+          {Object.entries(quickCounts.bySource).map(([k, v]) => (
+            <Chip key={k} size="small" label={`${k}: ${v}`} />
+          ))}
+          {Object.entries(quickCounts.byAssurance).map(([k, v]) => (
+            <Chip key={k} size="small" label={`${k}: ${v}`} />
+          ))}
+        </Stack>
+
+        {isLoading && <Skeleton variant="rounded" height={520} />}
+        {!isLoading && Array.isArray(controls) && controls.error && (
+          <ErrorState message={String(controls.error)} />
+        )}
+        {!isLoading && !controls?.error && filtered.length === 0 && (
+          <EmptyState
+            icon={<FilterAltIcon />}
+            title="No controls match your filters"
+            description="Try clearing filters or change the scope."
+          />
+        )}
+        {!isLoading && !controls?.error && filtered.length > 0 && (
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <EffectiveControlsGrid
+                rows={filtered}
+                loading={false}
+                onRowClick={(row) => setSelected(row)}
+              />
+            </Grid>
           </Grid>
-        </Grid>
-      )}
-    </Box>
-    <ControlImpactDrawer open={!!selected} onClose={() => setSelected(null)} control={selected} />
-      </>
+        )}
+      </Box>
+      <ControlImpactDrawer open={!!selected} onClose={() => setSelected(null)} control={selected} />
+    </>
   );
 }
