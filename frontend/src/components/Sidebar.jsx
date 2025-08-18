@@ -13,6 +13,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import GroupIcon from '@mui/icons-material/Group';
 import SettingsIcon from '@mui/icons-material/Settings';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
 import { ScopeContext } from '../store/scope/ScopeProvider.jsx';
 import { useEffectiveCaps, useMenuCaps } from '../lib/mock/useRbac';
 import BugReportIcon from '@mui/icons-material/BugReport';
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
 
 const REPORTS = [
   { label: 'Reports', icon: <BarChartIcon />, to: '/main-dashboard' },
+  { label: 'Activities', icon: <FactCheckIcon />, to: '/activities' },
 ];
 
 const ADMIN = [

@@ -5,6 +5,9 @@ import { useEffectiveControls } from "../hooks";
 import ControlsFilters from "../components/ControlsFilters.jsx";
 import EffectiveControlsGrid from "../components/EffectiveControlsGrid.jsx";
 import { useSearchParams } from "react-router-dom";
+import EmptyState from "../../../components/ui/EmptyState.jsx";
+import ErrorState from "../../../components/ui/ErrorState.jsx";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
 
 export default function ControlsAtScope() {
   const { scope } = useContext(ScopeContext);
@@ -81,9 +84,18 @@ export default function ControlsAtScope() {
         ))}
       </Stack>
 
-      {isLoading ? (
-        <Skeleton variant="rounded" height={520} />
-      ) : (
+      {isLoading && <Skeleton variant="rounded" height={520} />}
+      {!isLoading && Array.isArray(controls) && controls.error && (
+        <ErrorState message={String(controls.error)} />
+      )}
+      {!isLoading && !controls?.error && filtered.length === 0 && (
+        <EmptyState
+          icon={<FilterAltIcon />}
+          title="No controls match your filters"
+          description="Try clearing filters or change the scope."
+        />
+      )}
+      {!isLoading && !controls?.error && filtered.length > 0 && (
         <Grid container spacing={2}>
           <Grid item xs={12}>
             <EffectiveControlsGrid rows={filtered} loading={false} />

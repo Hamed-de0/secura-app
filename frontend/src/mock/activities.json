@@ -1,0 +1,56 @@
+{
+  "events": [
+    {
+      "id": "ev-1001",
+      "ts": "2025-08-14T09:12:00Z",
+      "user": "anna@hh-lab.example",
+      "scope": "entity:1",
+      "type": "assurance_change",
+      "entity": { "kind": "control", "id": 73, "code": "A.12.3", "title": "Backups" },
+      "from": "verified",
+      "to": "evidenced",
+      "notes": "Q2 restore test report attached (SAP)."
+    },
+    {
+      "id": "ev-1002",
+      "ts": "2025-08-13T15:30:00Z",
+      "user": "mark@hh-lab.example",
+      "scope": "entity:1",
+      "type": "evidence_upload",
+      "entity": { "kind": "control", "id": 73, "code": "A.12.3", "title": "Backups" },
+      "file": "sap_restore_test_Q2.pdf",
+      "size_kb": 812
+    },
+    {
+      "id": "ev-1003",
+      "ts": "2025-08-12T11:05:00Z",
+      "user": "sofia@hh-lab.example",
+      "scope": "bu:10",
+      "type": "mapping_added",
+      "entity": { "kind": "requirement", "id": 205, "code": "A.12.4", "title": "Logging and monitoring" },
+      "control": { "id": 73, "code": "A.12.3" },
+      "weight": 100
+    },
+    {
+      "id": "ev-1004",
+      "ts": "2025-08-11T08:20:00Z",
+      "user": "audit@hh-lab.example",
+      "scope": "service:2",
+      "type": "assurance_change",
+      "entity": { "kind": "control", "id": 22, "code": "A.9.1", "title": "Access control" },
+      "from": "implemented",
+      "to": "verified"
+    },
+    {
+      "id": "ev-1005",
+      "ts": "2025-08-10T17:45:00Z",
+      "user": "ops@hh-lab.example",
+      "scope": "asset_group:100",
+      "type": "risk_update",
+      "entity": { "kind": "risk", "id": 501, "title": "Ransomware on ERP" },
+      "field": "residual_level",
+      "from": 5,
+      "to": 4
+    }
+  ]
+}

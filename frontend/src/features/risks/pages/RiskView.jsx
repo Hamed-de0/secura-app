@@ -7,7 +7,10 @@ import RiskTable from "../components/RiskTable.jsx";
 import RiskDetailDrawer from "../components/RiskDetailDrawer.jsx";
 import RiskMetrics from "../components/RiskMetrics.jsx";
 import RiskHeatmapPanel from "../components/RiskHeatmapPanel.jsx";
-import RiskAppetiteStrip from '../components/RiskAppetiteStrip.jsx';
+import RiskAppetiteStrip from "../components/RiskAppetiteStrip.jsx";
+import EmptyState from "../../../components/ui/EmptyState.jsx";
+import ErrorState from "../../../components/ui/ErrorState.jsx";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 
 export default function RiskView() {
   const { scope } = useContext(ScopeContext);
@@ -38,7 +41,10 @@ export default function RiskView() {
   return (
     <Box sx={{ p: 2 }}>
       <RiskMetrics risks={risks} />
-      <RiskAppetiteStrip risks={risks} targetLevel={appetite?.target_level ?? 2} />
+      <RiskAppetiteStrip
+        risks={risks}
+        targetLevel={appetite?.target_level ?? 2}
+      />
       <RiskFilters
         q={q}
         setQ={setQ}
@@ -47,9 +53,19 @@ export default function RiskView() {
         level={level}
         setLevel={setLevel}
       />
-      {isLoading ? (
-        <Skeleton variant="rounded" height={520} />
-      ) : (
+
+      {isLoading && <Skeleton variant="rounded" height={520} />}
+      {!isLoading && Array.isArray(risks) && risks.error && (
+        <ErrorState message={String(risks.error)} />
+      )}
+      {!isLoading && !risks?.error && filtered.length === 0 && (
+        <EmptyState
+          icon={<SearchOffIcon />}
+          title="No risks found"
+          description="Adjust filters or change the scope."
+        />
+      )}
+      {!isLoading && !risks?.error && filtered.length > 0 && (
         <Grid container spacing={2}>
           <Grid item xs={12} md={8}>
             <RiskTable
@@ -63,6 +79,7 @@ export default function RiskView() {
           </Grid>
         </Grid>
       )}
+
       <RiskDetailDrawer
         open={!!selected}
         onClose={() => setSelected(null)}

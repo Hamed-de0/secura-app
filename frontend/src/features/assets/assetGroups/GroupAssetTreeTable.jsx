@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import GroupAssetTreeRow from './GroupAssetTreeRow';
 
-const GroupAssetTreeTable = ({ tree, onRefresh }) => (
+const GroupAssetTreeTable = ({ tree, onRefresh, onPreview }) => (
   <Box sx={{ width: '100%' }}>
     <TableContainer sx={{ width: '100%' }}>
   <Table size="small" sx={{ width: '100%', tableLayout: 'fixed' }}>
@@ -20,9 +20,15 @@ const GroupAssetTreeTable = ({ tree, onRefresh }) => (
       </TableRow>
     </TableHead>
     <TableBody>
-      {tree.map(group => (
-        <GroupAssetTreeRow key={`group-${group.id}`} group={group} depth={0} onRefresh={onRefresh} />
-      ))}
+            {tree.map(group => (
+        <GroupAssetTreeRow
+          key={`group-${group.id}`}
+          group={group}
+          depth={0}
+          onRefresh={onRefresh}
+          onPreview={onPreview}
+        />
+            ))}
     </TableBody>
   </Table>
   </TableContainer>

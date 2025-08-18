@@ -1,20 +1,19 @@
-import React, { useState } from 'react';
-import {
-  TableRow, TableCell, IconButton, Menu, MenuItem
-} from '@mui/material';
-import FolderIcon from '@mui/icons-material/Folder';
-import SlideshowIcon from '@mui/icons-material/Slideshow';
-import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowRight from '@mui/icons-material/KeyboardArrowRight';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { useNavigate } from 'react-router-dom';
-import AddAssetGroupDialog from './AddAssetGroupDialog';
-import AssignTagModal from '../assetTags/AssignTagModal';
-import { deleteAssetGroup, deleteAssetCascade } from '../api';
+import React, { useState } from "react";
+import { TableRow, TableCell, IconButton, Menu, MenuItem } from "@mui/material";
+import FolderIcon from "@mui/icons-material/Folder";
+import SlideshowIcon from "@mui/icons-material/Slideshow";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { useNavigate } from "react-router-dom";
+import AddAssetGroupDialog from "./AddAssetGroupDialog";
+import AssignTagModal from "../assetTags/AssignTagModal";
+import { deleteAssetGroup, deleteAssetCascade } from "../api";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
-const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
+const GroupAssetTreeRow = ({ group, depth = 0, onRefresh, onPreview }) => {
   const [expandedMap, setExpandedMap] = useState({});
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [menuTarget, setMenuTarget] = useState(null);
@@ -26,7 +25,7 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
 
   const toggleExpand = (type, id) => {
     const key = `${type}-${id}`;
-    setExpandedMap(prev => ({ ...prev, [key]: !prev[key] }));
+    setExpandedMap((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const openMenu = (e, target) => {
@@ -73,57 +72,87 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
 
     return (
       <React.Fragment key={`asset-${asset.id}`}>
-        <TableRow onContextMenu={(e) => openMenu(e, { type: 'asset', data: asset })}>
+        <TableRow
+          onContextMenu={(e) => openMenu(e, { type: "asset", data: asset })}
+        >
           <TableCell sx={{ pl: depth * 2 }}>
             {hasChildren ? (
-              <IconButton size="small" onClick={() => toggleExpand("asset", asset.id)}>
+              <IconButton
+                size="small"
+                onClick={() => toggleExpand("asset", asset.id)}
+              >
                 {isExpanded ? <KeyboardArrowDown /> : <KeyboardArrowRight />}
               </IconButton>
             ) : (
-              <span style={{ display: 'inline-block', width: 32 }} />
+              <span style={{ display: "inline-block", width: 32 }} />
             )}
-            <InsertDriveFileIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#64b5f6' }} />
+            <InsertDriveFileIcon
+              sx={{ mr: 1, verticalAlign: "middle", color: "#64b5f6" }}
+            />
             {asset.name}
           </TableCell>
           <TableCell>Asset</TableCell>
-          <TableCell>{asset.description || '-'}</TableCell>
+          <TableCell>{asset.description || "-"}</TableCell>
           <TableCell align="right">
             <IconButton size="small" onClick={() => handleEditAsset(asset)}>
               <EditIcon />
             </IconButton>
-            <IconButton size="small" onClick={() => handleDeleteAsset(asset.id)}>
+            <IconButton
+              size="small"
+              title="Preview in right pane"
+              onClick={() => onPreview?.("asset", asset.id)}
+            >
+              <VisibilityIcon />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => handleDeleteAsset(asset.id)}
+            >
               <DeleteIcon />
             </IconButton>
-            <IconButton size='small' onClick={() => navigate(`/assets/edit/${asset.id}`)}>
-            <SlideshowIcon />
-          </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => navigate(`/assets/edit/${asset.id}`)}
+            >
+              <SlideshowIcon />
+            </IconButton>
           </TableCell>
         </TableRow>
 
-        {isExpanded && asset.children?.map(child => renderAssetRow(child, depth + 1))}
+        {isExpanded &&
+          asset.children?.map((child) => renderAssetRow(child, depth + 1))}
       </React.Fragment>
     );
   };
 
   const isExpanded = !!expandedMap[`group-${group.id}`];
-  const hasChildren = (group.children?.length || 0) > 0 || (group.assets?.length || 0) > 0;
+  const hasChildren =
+    (group.children?.length || 0) > 0 || (group.assets?.length || 0) > 0;
 
   return (
     <>
-      <TableRow onContextMenu={(e) => openMenu(e, { type: 'group', data: group })}>
+      <TableRow
+        onContextMenu={(e) => openMenu(e, { type: "group", data: group })}
+      >
         <TableCell sx={{ pl: depth * 2 }}>
           {hasChildren ? (
-            <IconButton size="small" onClick={() => toggleExpand("group", group.id)}>
+            <IconButton
+              size="small"
+              onClick={() => toggleExpand("group", group.id)}
+            >
               {isExpanded ? <KeyboardArrowDown /> : <KeyboardArrowRight />}
             </IconButton>
           ) : (
-            <span style={{ display: 'inline-block', width: 32 }} />
+            <span style={{ display: "inline-block", width: 32 }} />
           )}
-          <FolderIcon fontSize="small" sx={{ mr: 1, verticalAlign: 'middle', color: '#fbc02d' }} />
+          <FolderIcon
+            fontSize="small"
+            sx={{ mr: 1, verticalAlign: "middle", color: "#fbc02d" }}
+          />
           <strong>{group.name}</strong>
         </TableCell>
         <TableCell>Group</TableCell>
-        <TableCell>{group.description || '-'}</TableCell>
+        <TableCell>{group.description || "-"}</TableCell>
         <TableCell align="right">
           <IconButton size="small" onClick={() => handleEditGroup(group)}>
             <EditIcon />
@@ -131,72 +160,98 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
           <IconButton size="small" onClick={() => handleDeleteGroup(group.id)}>
             <DeleteIcon />
           </IconButton>
-          
+          <IconButton
+            size="small"
+            title="Preview in right pane"
+            onClick={() => onPreview?.("asset_group", group.id)}
+          >
+            <VisibilityIcon />
+          </IconButton>
         </TableCell>
       </TableRow>
 
       {/* Show sub-groups first */}
-      {isExpanded && group.children?.map(child => (
-        <GroupAssetTreeRow
-          key={`group-${child.id}`}
-          group={child}
-          depth={depth + 1}
-          onRefresh={onRefresh}
-        />
-      ))}
+      {isExpanded &&
+        group.children?.map((child) => (
+          <GroupAssetTreeRow
+            key={`group-${child.id}`}
+            group={child}
+            depth={depth + 1}
+            onRefresh={onRefresh}
+            onPreview={onPreview}
+          />
+        ))}
 
       {/* Then show assets of this group */}
-      {isExpanded && group.assets?.map(asset => renderAssetRow(asset, depth + 1))}
+      {isExpanded &&
+        group.assets?.map((asset) => renderAssetRow(asset, depth + 1))}
 
       {/* Right-click Menu */}
       <Menu
         open={Boolean(menuAnchor)}
         anchorEl={menuAnchor}
         onClose={closeMenu}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
       >
-        {menuTarget?.type === 'group' && [
-          <MenuItem key={`add-subgroup-${menuTarget.data.id}`} onClick={() => {
-            setAddGroupParent(menuTarget.data);
-            setAddGroupOpen(true);
-            closeMenu();
-          }}>
+        {menuTarget?.type === "group" && [
+          <MenuItem
+            key={`add-subgroup-${menuTarget.data.id}`}
+            onClick={() => {
+              setAddGroupParent(menuTarget.data);
+              setAddGroupOpen(true);
+              closeMenu();
+            }}
+          >
             Add Sub-Group
           </MenuItem>,
-          <MenuItem key={`add-asset-${menuTarget.data.id}`} onClick={() => {
-            navigate(`/assets/new?parent_id=${menuTarget.data.id}&group_id=${menuTarget.data.id}`);
-            closeMenu();
-          }}>
+          <MenuItem
+            key={`add-asset-${menuTarget.data.id}`}
+            onClick={() => {
+              navigate(
+                `/assets/new?parent_id=${menuTarget.data.id}&group_id=${menuTarget.data.id}`
+              );
+              closeMenu();
+            }}
+          >
             Add Asset to Group
           </MenuItem>,
-          <MenuItem key={`add-tag-to-group-${menuTarget.data.id}`} onClick={() => {          
-            setAssignTagOpen(true);
-            closeMenu();
-          }}>
+          <MenuItem
+            key={`add-tag-to-group-${menuTarget.data.id}`}
+            onClick={() => {
+              setAssignTagOpen(true);
+              closeMenu();
+            }}
+          >
             Assign Tag
-          </MenuItem>
-        ]}
-        {menuTarget?.type === 'asset' && (
-          <MenuItem key={`add-subasset-${menuTarget.data.id}`} onClick={() => {
-            navigate(`/assets/new?parent_id=${menuTarget.data.id}&group_id=${menuTarget.data.group_id}`);
-            closeMenu();
-          }}>
-            Add Related Asset
           </MenuItem>,
-          <MenuItem key={`add-tag-to-asset-${menuTarget.data.id}`} onClick={() => {          
-            setAssignTagOpen(true);
-            closeMenu();
-          }}>
-            Assign Tag
-          </MenuItem>
-          
-          
-        )}
-        
-          
+        ]}
+        {menuTarget?.type === "asset" &&
+          ((
+            <MenuItem
+              key={`add-subasset-${menuTarget.data.id}`}
+              onClick={() => {
+                navigate(
+                  `/assets/new?parent_id=${menuTarget.data.id}&group_id=${menuTarget.data.group_id}`
+                );
+                closeMenu();
+              }}
+            >
+              Add Related Asset
+            </MenuItem>
+          ),
+          (
+            <MenuItem
+              key={`add-tag-to-asset-${menuTarget.data.id}`}
+              onClick={() => {
+                setAssignTagOpen(true);
+                closeMenu();
+              }}
+            >
+              Assign Tag
+            </MenuItem>
+          ))}
       </Menu>
-      
 
       {/* Add Group Dialog */}
       <AddAssetGroupDialog
@@ -211,7 +266,6 @@ const GroupAssetTreeRow = ({ group, depth = 0, onRefresh }) => {
         onClose={() => setAssignTagOpen(false)}
         target={menuTarget}
       />
-
     </>
   );
 };

@@ -1,0 +1,33 @@
+{
+  "asset_group:1": {
+  "effective_controls": [
+    { "control_id": 73, "code": "A.12.3", "title": "Backups", "source": "provider", "assurance_status": "evidenced", "notes": "Quarterly restore tests" },
+    { "control_id": 22, "code": "A.9.1",  "title": "Access control", "source": "provider", "assurance_status": "verified" }
+  ],
+  "related_risks": [
+    { "id": 501, "title": "Ransomware on ERP", "owner": "Ops", "status": "Analyzing", "likelihood": 4, "impact": 5, "residual_level": 4, "residual_score": 12 }
+  ],
+  "impacted_requirements": [
+    { "version_id": 1, "items": [
+      { "requirement_id": 205, "code": "A.12.4", "title": "Logging & monitoring", "contribution": 0.20, "via": ["A.12.3"] }
+    ]},
+    { "version_id": 2, "items": [
+      { "requirement_id": 901, "code": "Art.5",  "title": "Principles", "contribution": 0.08, "via": ["A.9.1","A.12.3"] }
+    ]}
+  ]
+},
+
+  "asset:40": {
+    "effective_controls": [
+      { "control_id": 101, "code": "A.14.2", "title": "Secure development", "source": "direct", "assurance_status": "verified" }
+    ],
+    "related_risks": [
+      { "id": 502, "title": "Privilege escalation", "owner": "R&D", "status": "Proposed", "likelihood": 3, "impact": 4, "residual_level": 3, "residual_score": 8 }
+    ],
+    "impacted_requirements": [
+      { "version_id": 1, "items": [
+        { "requirement_id": 301, "code": "A.14.2", "title": "Secure development", "contribution": 0.49, "via": ["A.14.2"] }
+      ]}
+    ]
+  }
+}

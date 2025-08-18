@@ -23,6 +23,8 @@ import ComplianceExplorer from '../features/compliance/pages/ComplianceExplorer.
 import ControlsAtScope from '../features/controls/pages/ControlsAtScope.jsx';
 import RiskView from '../features/risks/pages/RiskView.jsx';
 import ProvidersPage from '../features/providers/pages/ProvidersPage.jsx';
+import ActivitiesPage from '../features/activities/pages/ActivitiesPage.jsx';
+
 
 // Add others progressively...
 
@@ -52,9 +54,9 @@ function AppRouter() {
       <Route path="/risk-view" element={<MainView><RiskView /></MainView>} />
       <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} />
       <Route path="/providers" element={<MainView><ProvidersPage /></MainView>} />
+      <Route path="/activities" element={<MainView><ActivitiesPage /></MainView>} />
 
 
-      
       <Route path="/persons" element={
         <RequireCaps caps={['manage_org']}>
           <PersonPage />

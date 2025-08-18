@@ -181,7 +181,9 @@
     "/persons":             ["manage_org"],
     "/asset-types/manage":  ["manage_org"],
     "/controls":            ["view_controls"],
-    "/providers":           ["view_providers"]
+    "/providers":           ["view_providers"],
+    "/activities":          ["view_controls"]
+
 
 
   },
