@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import {
-  Box, Grid, Typography, Paper, Avatar
+  Box, Grid, Typography, Paper, Avatar, Skeleton
 } from '@mui/material';
 import { Pie, Line } from 'react-chartjs-2';
 import DevicesIcon from '@mui/icons-material/Devices';
@@ -14,6 +14,10 @@ import { ScopeContext } from '../../store/scope/ScopeProvider.jsx';
 import { useCoverageSummary, useCoverageVersion } from '../../features/coverage/hooks';
 import { useEffectiveControls } from '../../features/controls/hooks';
 
+import { useFrameworkVersions } from '../../lib/mock/useRbac';
+import CoverageCard from './components/CoverageCard.jsx';
+import WeakestRequirementsTable from './components/WeakestRequirementsTable.jsx';
+import ProviderSummary from './components/ProviderSummary.jsx';
 
 import { getSummary } from './api';
 
@@ -21,24 +25,25 @@ import { getSummary } from './api';
 
 const MainDashboard = () => {
 
-  const [summary, setSummary] = useState(null);
 
   const { scope, versions } = useContext(ScopeContext);
-
-  const { data: summary_ } = useCoverageSummary(scope, versions);
-  const { data: controls } = useEffectiveControls(scope);
-
-  // (optional) one specific version’s detail
   const firstVersion = versions?.[0];
-  const { data: vDetail } = useCoverageVersion(firstVersion, scope);
+  const { data: summary, isLoading: loadingSummary } = useCoverageSummary(scope, versions);
+  const { data: vDetail, isLoading: loadingDetail } = useCoverageVersion(firstVersion, scope);
+  const { data: controls, isLoading: loadingControls } = useEffectiveControls(scope);
+  const { data: allVersions } = useFrameworkVersions();
 
+  const codeById = new Map((allVersions || []).map(v => [v.id, v.code]));
+
+
+  
   useEffect(() => {
     console.log('[DASH] scope', scope, 'versions', versions);
   }, [scope, versions]);
 
   useEffect(() => {
-    console.log('[DASH] coverage summary', summary_);
-  }, [summary_]);
+    console.log('[DASH] coverage summary', summary);
+  }, [summary]);
 
   useEffect(() => {
     console.log('[DASH] effective controls', controls);
@@ -48,12 +53,7 @@ const MainDashboard = () => {
     console.log('[DASH] version detail', firstVersion, vDetail);
   }, [firstVersion, vDetail]);
 
-  useEffect(() => {
-    getSummary().then(setSummary).catch(error => {
-      console.error("Error fetching summary data:", error);
-    }
-    )
-  }, []);
+  
 
   const dashboardCards = summary ? [
     {
@@ -90,7 +90,7 @@ const MainDashboard = () => {
     labels: ['High', 'Medium', 'Low'],
     datasets: [
       {
-        data: [summary.risk_levels.high, summary.risk_levels.medium, summary.risk_levels.low],
+        data: [summary.risk_levels?.high, summary.risk_levels?.medium, summary.risk_levels?.low],
         backgroundColor: ['#f44336', '#ffca28', '#4caf50'],
         borderWidth: 0,
       },
@@ -119,15 +119,53 @@ const MainDashboard = () => {
     ],
   };
 
+    
+
+ 
   return (
     <Box sx={{ p: 4 }}>
       <Typography variant="h4" gutterBottom>
-        ISMS Dashboard
+        ISMS Dashboard 1q
       </Typography>
       <Typography variant="body1" sx={{ mb: 4 }}>
         Overview of your information security program
       </Typography>
+      <Box sx={{ p: 2 }}>
+      <Grid container spacing={2}>
+        {/* Coverage summary cards */}
+        {(loadingSummary ? Array.from({ length: (versions?.length || 2) }) : summary || []).map((item, idx) => (
+          <Grid item xs={12} sm={6} md={4} key={item?.version_id || idx}>
+            {loadingSummary ? (
+              <Skeleton variant="rounded" height={140} />
+            ) : (
+              <CoverageCard
+                code={codeById.get(item.version_id) || `Version ${item.version_id}`}
+                score={item.score}
+                onClick={() => {/* navigate to /compliance/versions/:id?scope=... later */}}
+              />
+            )}
+          </Grid>
+        ))}
 
+        {/* Weakest requirements (first selected version) */}
+        <Grid item xs={12} md={8}>
+          {loadingDetail ? (
+            <Skeleton variant="rounded" height={420} />
+          ) : (
+            <WeakestRequirementsTable versionDetail={vDetail} loading={loadingDetail} />
+          )}
+        </Grid>
+
+        {/* Provider summary */}
+        <Grid item xs={12} md={4}>
+          {loadingControls ? (
+            <Skeleton variant="rounded" height={180} />
+          ) : (
+            <ProviderSummary controls={controls} />
+          )}
+        </Grid>
+      </Grid>
+    </Box>
       <Grid container spacing={4}>
         {dashboardCards.map((card, index) => (
           <Grid key={index} item xs={12} sm={6} md={4} lg={3}>
@@ -158,9 +196,9 @@ const MainDashboard = () => {
                 <Typography variant="h6">Risk Levels Breakdown</Typography>
                 <Pie data={riskPieData} />
                 <Box sx={{ mt: 1 }}>
-                  <Typography variant="body2"><strong>High:</strong> {summary?.risk_levels.high}</Typography>
-                  <Typography variant="body2"><strong>Medium:</strong> {summary?.risk_levels.medium}</Typography>
-                  <Typography variant="body2"><strong>Low:</strong> {summary?.risk_levels.low}</Typography>
+                  <Typography variant="body2"><strong>High:</strong> {summary?.risk_levels?.high}</Typography>
+                  <Typography variant="body2"><strong>Medium:</strong> {summary?.risk_levels?.medium}</Typography>
+                  <Typography variant="body2"><strong>Low:</strong> {summary?.risk_levels?.low}</Typography>
                 </Box>
               </Paper>
             )}

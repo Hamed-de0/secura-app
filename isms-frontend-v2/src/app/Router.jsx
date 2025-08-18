@@ -18,7 +18,9 @@ import RiskScenarioContextView from '../features/RiskScenarioContexts/RiskScenar
 import AssetTypePage from '../features/assets/assetTypes/AssetTypePage'
 import RisksEffectiveView from '../features/dashboards/RiskEffectiveView'
 import ISMSDashboard from '../features/dashboards/ISMSDashboard'
-
+import MainDashboard from '../features/dashboards/MainDashboard.jsx';
+import ComplianceExplorer from '../features/compliance/pages/ComplianceExplorer.jsx';
+import ControlsAtScope from '../features/controls/pages/ControlsAtScope.jsx';
 // Add others progressively...
 
 function AppRouter() {
@@ -27,6 +29,8 @@ function AppRouter() {
       {/* <Route path="/" element={<MainView><Dashboard /></MainView>} /> */}
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
       <Route path="/home" element={<MainView><Dashboard /></MainView>} />
+      <Route path="/main-dashboard" element={<MainView><MainDashboard /></MainView>} />
+      <Route path="/compliance/versions/:versionId" element={<MainView><ComplianceExplorer /></MainView>} />
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />
       <Route path="/assets/edit/:id" element={<MainView><AssetEditPage /></MainView>} />
       <Route path="/assets/new" element={<MainView><AssetEditPage /></MainView>} />
@@ -42,6 +46,7 @@ function AppRouter() {
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
       {/* <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} /> */}
       <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} />
+      <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} />
 
       <Route path="/persons" element={
         <RequireCaps caps={['manage_org']}>

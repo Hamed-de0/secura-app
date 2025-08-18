@@ -41,7 +41,7 @@ const NAV_ITEMS = [
 ];
 
 const REPORTS = [
-  { label: 'Reports', icon: <BarChartIcon />, to: '/reports' },
+  { label: 'Reports', icon: <BarChartIcon />, to: '/main-dashboard' },
 ];
 
 const ADMIN = [

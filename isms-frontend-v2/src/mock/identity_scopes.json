@@ -127,15 +127,17 @@
   ],
 
   "scopes_index": [
-    { "type": "org_group",   "id": 1,   "label": "H&H Group", "aliases": ["H&H Group","group:1","org:1"] },
+    { "type": "org_group",   "id": 1,   "label": "Volaris Group", "aliases": ["Volaris Group","group:1","org:1"] },
 
     { "type": "entity",      "id": 1,   "label": "H&H Communication Lab GmbH", "aliases": ["H&H","entity:1"] },
+    { "type": "entity",      "id": 2,   "label": "Across Systems GmbH", "aliases": ["Across","entity:2"] },
 
     { "type": "bu",          "id": 10,  "label": "R&D",        "parent": "entity:1", "aliases": ["Research","rnd"] },
     { "type": "bu",          "id": 11,  "label": "Operations", "parent": "entity:1" },
 
     { "type": "site",        "id": 200, "label": "Nuremberg DC", "parent": "entity:1" },
     { "type": "site",        "id": 201, "label": "Ulm Office",   "parent": "entity:1" },
+    { "type": "site",        "id": 202, "label": "Karlsbad Office",   "parent": "entity:2" },
 
     { "type": "asset_group", "id": 100, "label": "HQ Data Center", "parent": "site:200" },
     { "type": "asset_group", "id": 101, "label": "Remote Offices", "parent": "site:201" },
@@ -177,7 +179,9 @@
     "/risk-dashboard":      ["view_reports"],
     "/tags":                ["view_assets"],
     "/persons":             ["manage_org"],
-    "/asset-types/manage":  ["manage_org"]
+    "/asset-types/manage":  ["manage_org"],
+    "/controls":            ["view_controls"]
+
   },
 
   "framework_versions": [

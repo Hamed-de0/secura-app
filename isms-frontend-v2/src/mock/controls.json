@@ -1,0 +1,9 @@
+{
+  "effective_controls": [
+    { "control_id": 73,  "code": "A.12.3", "title": "Backup",              "source": "provider", "assurance_status": "evidenced",  "notes": "ERP backups quarterly tested" },
+    { "control_id": 22,  "code": "A.9.1",  "title": "Access control",      "source": "provider", "assurance_status": "verified" },
+    { "control_id": 9,   "code": "A.5.2",  "title": "Policy review",       "source": "direct",   "assurance_status": "implemented" },
+    { "control_id": 101, "code": "A.14.2", "title": "Secure development",  "source": "direct",   "assurance_status": "verified" },
+    { "control_id": 3,   "code": "A.5.1",  "title": "Security policy",     "source": "baseline", "assurance_status": "planning" }
+  ]
+}
