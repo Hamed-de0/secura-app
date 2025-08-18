@@ -4,7 +4,7 @@ import { Chip, Stack } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { getSourceChipProps, getAssuranceChipProps } from '../../../theme/chips';
 
-export default function EffectiveControlsGrid({ rows = [], loading }) {
+export default function EffectiveControlsGrid({ rows = [], loading, onRowClick }) {
   const theme = useTheme();
 
   const columns = [
@@ -29,6 +29,7 @@ export default function EffectiveControlsGrid({ rows = [], loading }) {
       columns={columns}
       loading={loading}
       disableColumnMenu
+      onRowClick={(params) => onRowClick?.(params.row)}
       pageSizeOptions={[10, 25, 50]}
       initialState={{
         pagination: { paginationModel: { pageSize: 10 } },

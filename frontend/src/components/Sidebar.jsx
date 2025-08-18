@@ -36,7 +36,7 @@ const NAV_ITEMS = [
   { label: 'Compliance', icon: <RuleIcon />, to: '/compliance/versions/1' }, // adjust default version
   { label: 'Controls', icon: <VerifiedUserIcon />, to: '/controls' },
   { label: 'Risks', icon: <WarningAmberIcon />, to: '/risk-view' },
-  { label: 'Assets', icon: <Inventory2Icon />, to: '/assets' },
+  { label: 'Assets', icon: <Inventory2Icon />, to: '/assetgroups/tree' },
   { label: 'Providers', icon: <HandshakeIcon />, to: '/providers' },
 ];
 

@@ -21,6 +21,9 @@ import ISMSDashboard from '../features/dashboards/ISMSDashboard'
 import MainDashboard from '../features/dashboards/MainDashboard.jsx';
 import ComplianceExplorer from '../features/compliance/pages/ComplianceExplorer.jsx';
 import ControlsAtScope from '../features/controls/pages/ControlsAtScope.jsx';
+import RiskView from '../features/risks/pages/RiskView.jsx';
+import ProvidersPage from '../features/providers/pages/ProvidersPage.jsx';
+
 // Add others progressively...
 
 function AppRouter() {
@@ -45,9 +48,13 @@ function AppRouter() {
       <Route path="/risk-scenarios/new" element={<MainView><RiskScenarioForm /></MainView>} />
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
       {/* <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} /> */}
-      <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} />
+      {/* <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} /> */}
+      <Route path="/risk-view" element={<MainView><RiskView /></MainView>} />
       <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} />
+      <Route path="/providers" element={<MainView><ProvidersPage /></MainView>} />
 
+
+      
       <Route path="/persons" element={
         <RequireCaps caps={['manage_org']}>
           <PersonPage />

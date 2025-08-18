@@ -180,7 +180,9 @@
     "/tags":                ["view_assets"],
     "/persons":             ["manage_org"],
     "/asset-types/manage":  ["manage_org"],
-    "/controls":            ["view_controls"]
+    "/controls":            ["view_controls"],
+    "/providers":           ["view_providers"]
+
 
   },
 
