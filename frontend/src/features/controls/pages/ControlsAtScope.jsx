@@ -8,11 +8,13 @@ import { useSearchParams } from "react-router-dom";
 import EmptyState from "../../../components/ui/EmptyState.jsx";
 import ErrorState from "../../../components/ui/ErrorState.jsx";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import ControlImpactDrawer from '../components/ControlImpactDrawer.jsx';
+
 
 export default function ControlsAtScope() {
   const { scope } = useContext(ScopeContext);
   const { data: controls, isLoading } = useEffectiveControls(scope);
-
+  const [selected, setSelected] = useState(null);
   const [source, setSource] = useState(null);
   const [assurance, setAssurance] = useState(null);
   const [params, setParams] = useSearchParams();
@@ -64,6 +66,7 @@ export default function ControlsAtScope() {
   }, [controls]);
 
   return (
+    <>
     <Box sx={{ p: 2 }}>
       <ControlsFilters
         source={source}
@@ -98,10 +101,16 @@ export default function ControlsAtScope() {
       {!isLoading && !controls?.error && filtered.length > 0 && (
         <Grid container spacing={2}>
           <Grid item xs={12}>
-            <EffectiveControlsGrid rows={filtered} loading={false} />
+            <EffectiveControlsGrid 
+            rows={filtered} 
+            loading={false} 
+            onRowClick={(row) => setSelected(row)}
+            />
           </Grid>
         </Grid>
       )}
     </Box>
+    <ControlImpactDrawer open={!!selected} onClose={() => setSelected(null)} control={selected} />
+      </>
   );
 }

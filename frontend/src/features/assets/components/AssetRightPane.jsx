@@ -5,6 +5,7 @@ import { useAssetEffective } from '../hooks';
 import EffectiveControlsGrid from '../../controls/components/EffectiveControlsGrid.jsx';
 import RiskTable from '../../risks/components/RiskTable.jsx';
 import { useFrameworkVersions } from '../../../lib/mock/useRbac';
+import { useNavigate } from 'react-router-dom';
 
 function a11yProps(i){ return { id:`asset-tab-${i}`, 'aria-controls': `asset-tabpanel-${i}` }; }
 
@@ -14,7 +15,7 @@ export default function AssetRightPane() {
   const { data: allVersions } = useFrameworkVersions();
   const vCode = new Map((allVersions || []).map(v => [v.id, v.code]));
   const [tab, setTab] = useState(0);
-
+  const navigate = useNavigate()
   if (!scope) return null;
 
   const impacted = useMemo(() => {
@@ -40,7 +41,11 @@ export default function AssetRightPane() {
 
       <Box role="tabpanel" id="asset-tabpanel-0" hidden={tab!==0} sx={{ p:2, flex:1, overflow:'auto', minHeight: 380 }}>
         {
-          tab == 0 && (<EffectiveControlsGrid rows={data?.effective_controls || []} loading={false} />)
+          tab == 0 && (<EffectiveControlsGrid 
+            rows={data?.effective_controls || []} 
+            loading={false}
+            onRowClick={(row) => navigate(`/controls?q=${encodeURIComponent(row.code || row.title || '')}`)}
+            />)
         }
       </Box>
 

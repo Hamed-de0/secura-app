@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Grid, Typography, Paper, Avatar, Skeleton
 } from '@mui/material';
@@ -24,7 +25,7 @@ import { getSummary } from './api';
 
 
 const MainDashboard = () => {
-
+  const navigate = useNavigate();
 
   const { scope, versions } = useContext(ScopeContext);
   const firstVersion = versions?.[0];
@@ -86,38 +87,9 @@ const MainDashboard = () => {
     }
   ] : [];
 
-  const riskPieData = summary ? {
-    labels: ['High', 'Medium', 'Low'],
-    datasets: [
-      {
-        data: [summary.risk_levels?.high, summary.risk_levels?.medium, summary.risk_levels?.low],
-        backgroundColor: ['#f44336', '#ffca28', '#4caf50'],
-        borderWidth: 0,
-      },
-    ],
-  } : {};
 
 
-
-  const trendLineData = {
-    labels: ['Aug', 'Sep', 'Feb', 'Apr', 'Jun', 'Jan'],
-    datasets: [
-      {
-        label: 'Mitigated',
-        data: [5, 10, 20, 30, 40, 50],
-        fill: false,
-        borderColor: '#e91e63',
-        tension: 0.4,
-      },
-      {
-        label: 'Open',
-        data: [40, 45, 30, 28, 20, 15],
-        fill: false,
-        borderColor: '#2196f3',
-        tension: 0.4,
-      },
-    ],
-  };
+  
 
     
 
@@ -141,7 +113,7 @@ const MainDashboard = () => {
               <CoverageCard
                 code={codeById.get(item.version_id) || `Version ${item.version_id}`}
                 score={item.score}
-                onClick={() => {/* navigate to /compliance/versions/:id?scope=... later */}}
+                onClick={() => navigate(`/compliance/versions/${item.version_id}`)}
               />
             )}
           </Grid>
@@ -183,44 +155,7 @@ const MainDashboard = () => {
         ))}
       </Grid>
 
-      <Box sx={{ mt: 4, textAlign: 'center', backgroundColor: '#fff', p: 3, borderRadius: 2, border: '1px solid #acaaaaff' }}>
-
-        <Grid container spacing={2} mb={3}>
-          {/* Left Chart */}
-          <Grid item xs={12} md={3} size={4}>
-
-            {!riskPieData?.datasets ? (
-              <p>Loading risk data...</p>
-            ) : (
-              <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-                <Typography variant="h6">Risk Levels Breakdown</Typography>
-                <Pie data={riskPieData} />
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="body2"><strong>High:</strong> {summary?.risk_levels?.high}</Typography>
-                  <Typography variant="body2"><strong>Medium:</strong> {summary?.risk_levels?.medium}</Typography>
-                  <Typography variant="body2"><strong>Low:</strong> {summary?.risk_levels?.low}</Typography>
-                </Box>
-              </Paper>
-            )}
-
-
-          </Grid>
-
-          {/* Right Chart */}
-          <Grid item xs={12} md={8} size={8}>
-            <Paper elevation={3} sx={{ p: 2, height: '100%' }}>
-              <Typography variant="h6">Mitigation Trend</Typography>
-              <Box sx={{ height: 280 }}> {/* Optional: control fixed chart height */}
-                <Line data={trendLineData} options={{ maintainAspectRatio: false }} />
-              </Box>
-              <Box textAlign="right" mt={1}>
-                <Typography variant="body2" color="primary" sx={{ cursor: 'pointer' }}>View All</Typography>
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
-
-      </Box>
+      
       <Box sx={{ mt: 4, textAlign: 'center' }}>
         <Typography variant="h5" gutterBottom>
           Security Posture
