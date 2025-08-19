@@ -148,6 +148,22 @@ export default function useGridView({
     return `${location.pathname}?${params.toString()}`;
   }
 
+  function toShareParam() {
+    return serializeViewParam(snapshot);
+  }
+
+  function applySnapshot(nextSnapshot) {
+    const next = sanitizeSnapshot(
+      mergeSnapshot(base, nextSnapshot || {}),
+      columnIds
+    );
+    setSnapshot(next);
+    const vparam = serializeViewParam(next);
+    const params = new URLSearchParams(location.search);
+    params.set("v", vparam);
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  }
+
   return {
     // View
     sortingModel,
@@ -168,6 +184,8 @@ export default function useGridView({
     defaultViewId,
     setDefaultViewId,
     toShareableUrl,
+    toShareParam,
+    applySnapshot,
     deleteView: (id) => deleteViewById(key, id),
     renameView: (id, name) => _updateView(key, id, { name }),
     // Column order state

@@ -76,3 +76,24 @@ export function buildColumns(theme) {
     },
   ];
 }
+
+
+export const presets = [
+  {
+    id: 'assurance-focus',
+    name: 'Assurance focus',
+    snapshot: {
+      columns: { visible: ['code','title','assurance_status','source'], order: ['code','title','assurance_status','source'] },
+      sort: [{ field: 'assurance_status', sort: 'desc' }],
+      density: 'compact',
+    },
+  },
+  {
+    id: 'source-mapping',
+    name: 'Source & mapping',
+    snapshot: {
+      columns: { visible: ['code','title','source'], order: ['code','title','source'] },
+      sort: [{ field: 'code', sort: 'asc' }],
+    },
+  },
+];

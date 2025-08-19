@@ -14,7 +14,7 @@ import { useAssuranceOverlay } from '../../evidence/hooks';
 // NEW
 import SavedViewBar from '../../../components/SavedViewBar.jsx';
 import useGridView from '../../../lib/views/useGridView';
-import { buildColumns, defaultViewPreset, columnsList } from '../../controls/columns.jsx';
+import { buildColumns, defaultViewPreset, columnsList, presets } from '../../controls/columns.jsx';
 import { useTheme } from '@mui/material/styles';
 
 export default function ControlsAtScope() {
@@ -68,7 +68,7 @@ export default function ControlsAtScope() {
   return (
     <>
       <Box sx={{ mb: 1 }}>
-        <SavedViewBar title="Controls" gridView={gridView} columnsList={columnsList} />
+        <SavedViewBar title="Controls" gridView={gridView} columnsList={columnsList} presets={presets} />
         <ControlsFilters
           source={source} setSource={setSource}
           assurance={assurance} setAssurance={setAssurance}

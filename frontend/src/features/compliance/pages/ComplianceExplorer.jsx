@@ -12,7 +12,7 @@ import { useParams } from 'react-router-dom';
 // NEW
 import SavedViewBar from '../../../components/SavedViewBar.jsx';
 import useGridView from '../../../lib/views/useGridView';
-import { buildColumns, defaultViewPreset, columnsList } from '../../compliance/columns.jsx';
+import { buildColumns, defaultViewPreset, columnsList, presets } from '../../compliance/columns.jsx';
 
 export default function ComplianceExplorer() {
 const { versionId } = useParams();
@@ -36,7 +36,7 @@ const { data: rows, isLoading, isError, error } = useVersionRequirements(version
   
   return (
     <Box>
-      <SavedViewBar title="Requirements" gridView={gridView} columnsList={columnsList} />
+      <SavedViewBar title="Requirements" gridView={gridView} columnsList={columnsList} presets={presets} />
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <RequirementsTable

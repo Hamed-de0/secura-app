@@ -26,3 +26,23 @@ export const defaultViewPreset = {
 };
 
 export function buildColumns() { return Object.values(allColumns); }
+
+export const presets = [
+  {
+    id: 'coverage',
+    name: 'Coverage view',
+    snapshot: {
+      columns: { visible: ['code','title','mapped_count','hits_count'], order: ['code','title','mapped_count','hits_count'] },
+      sort: [{ field: 'mapped_count', sort: 'desc' }],
+      density: 'compact',
+    },
+  },
+  {
+    id: 'scoring',
+    name: 'Scoring view',
+    snapshot: {
+      columns: { visible: ['code','title','score'], order: ['code','title','score'] },
+      sort: [{ field: 'score', sort: 'desc' }],
+    },
+  },
+];

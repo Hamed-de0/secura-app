@@ -27,3 +27,25 @@ export const defaultViewPreset = {
 };
 
 export function buildColumns() { return Object.values(allColumns); }
+
+
+export const presets = [
+  {
+    id: 'open-high',
+    name: 'Open & High residual',
+    snapshot: {
+      columns: { visible: ['title','status','residual_level','owner'], order: ['title','status','residual_level','owner'] },
+      sort: [{ field: 'residual_level', sort: 'desc' }],
+      filters: { status: 'Open' },
+      density: 'compact',
+    },
+  },
+  {
+    id: 'owner-focus',
+    name: 'Owner focus',
+    snapshot: {
+      columns: { visible: ['title','owner','status'], order: ['title','owner','status'] },
+      sort: [{ field: 'owner', sort: 'asc' }],
+    },
+  },
+];

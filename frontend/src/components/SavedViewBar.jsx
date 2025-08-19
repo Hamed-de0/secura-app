@@ -19,6 +19,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  TextareaAutosize
 } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import LinkIcon from "@mui/icons-material/Link";
@@ -30,6 +31,9 @@ import DeleteIcon from "@mui/icons-material/DeleteOutline";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ManageSearchIcon from "@mui/icons-material/ManageSearch";
+import TuneIcon from '@mui/icons-material/Tune';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 /**
  * Generic Saved View bar shown above lists/grids
@@ -38,7 +42,7 @@ import ManageSearchIcon from "@mui/icons-material/ManageSearch";
  *  - gridView: object from useGridView()
  *  - columnsList?: [{ id, label }] to allow in-bar column toggling
  */
-export default function SavedViewBar({ title, gridView, columnsList = [] }) {
+export default function SavedViewBar({ title, gridView, columnsList = [], presets = [] }) {
   const {
     views,
     useView,
@@ -63,6 +67,10 @@ export default function SavedViewBar({ title, gridView, columnsList = [] }) {
   const [colsOpen, setColsOpen] = React.useState(false);
   const [manageOpen, setManageOpen] = React.useState(false);
   const [editing, setEditing] = React.useState({}); // id -> name
+  const [presetsAnchor, setPresetsAnchor] = React.useState(null);
+  const [importOpen, setImportOpen] = React.useState(false);
+  const [importText, setImportText] = React.useState('');
+
 
   function copyLink() {
     const url = toShareableUrl();
@@ -153,6 +161,27 @@ export default function SavedViewBar({ title, gridView, columnsList = [] }) {
         >
           Manage
         </Button>
+
+        
+        {presets.length > 0 && (
+          <>
+            <Button size="small" variant="text" startIcon={<TuneIcon/>} onClick={(e)=> setPresetsAnchor(e.currentTarget)}>Presets</Button>
+            <Menu anchorEl={presetsAnchor} open={!!presetsAnchor} onClose={()=> setPresetsAnchor(null)}>
+              {presets.map(p => (
+                <MenuItem key={p.id} onClick={()=> { applySnapshot(p.snapshot); setPresetsAnchor(null); }}>
+                  {p.name}
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
+        )}
+
+        <Tooltip title="Export JSON snapshot">
+          <IconButton size="small" onClick={() => { navigator.clipboard?.writeText(JSON.stringify(snapshot, null, 2)); }}><FileDownloadIcon/></IconButton>
+        </Tooltip>
+        <Tooltip title="Import JSON or ?v= param">
+          <IconButton size="small" onClick={() => setImportOpen(true)}><FileUploadIcon/></IconButton>
+        </Tooltip>
       </Stack>
 
       {/* Save dialog */}
@@ -280,6 +309,41 @@ export default function SavedViewBar({ title, gridView, columnsList = [] }) {
           <Button onClick={()=> setManageOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Import dialog */}
+      <Dialog open={importOpen} onClose={()=> setImportOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Import view</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ mb: 1 }}>Paste a JSON snapshot or a full URL containing <code>?v=</code> (or just the <code>v</code> value).</Typography>
+          <TextareaAutosize minRows={6} style={{ width: '100%' }} value={importText} onChange={(e)=> setImportText(e.target.value)} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={()=> setImportOpen(false)}>Cancel</Button>
+          <Button onClick={()=> {
+            try {
+              const text = importText.trim();
+              // try URL with v=
+              let v = '';
+              try { const u = new URL(text); v = u.searchParams.get('v') || ''; } catch {}
+              if (!v && text.startsWith('{')) {
+                // raw JSON snapshot
+                const json = JSON.parse(text);
+                applySnapshot(json);
+              } else {
+                // try plain v param
+                const { parseViewParam } = require('../lib/views/urlParam');
+                const snap = parseViewParam(v || text);
+                if (snap) applySnapshot(snap);
+              }
+              setImportOpen(false);
+              setImportText('');
+            } catch (e) {
+              console.warn('Import failed', e);
+            }
+          }}>Import</Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 }

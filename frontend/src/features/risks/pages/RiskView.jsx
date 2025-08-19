@@ -15,7 +15,7 @@ import SearchOffIcon from "@mui/icons-material/SearchOff";
 // NEW
 import SavedViewBar from '../../../components/SavedViewBar.jsx';
 import useGridView from '../../../lib/views/useGridView';
-import { buildColumns, defaultViewPreset, columnsList } from '../../risks/columns.jsx';
+import { buildColumns, defaultViewPreset, columnsList, presets } from '../../risks/columns.jsx';
 
 export default function RiskView() {
   const { scope } = useContext(ScopeContext);
@@ -56,7 +56,7 @@ export default function RiskView() {
   
   return (
     <Box>
-      <SavedViewBar title="Risks" gridView={gridView} columnsList={columnsList} />
+      <SavedViewBar title="Risks" gridView={gridView} columnsList={columnsList} presets={presets} />
       <RiskAppetiteStrip />
       <Grid container spacing={2}>
         <Grid item xs={12} md={8}>

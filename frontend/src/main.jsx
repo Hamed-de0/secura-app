@@ -6,7 +6,10 @@ import ColorModeProvider from './theme/ColorModeProvider.jsx';
 import UiProvider from './store/ui/UiProvider.jsx';
 import ScopeProvider from './store/scope/ScopeProvider.jsx';
 import QueryProvider from './app/QueryProvider.jsx';
-
+import { parseViewParam } from './lib/views/urlParam';
+if (typeof window !== 'undefined') {
+  window.__parseViewParam = parseViewParam;
+}
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ColorModeProvider>
