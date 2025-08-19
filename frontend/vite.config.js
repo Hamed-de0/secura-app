@@ -9,4 +9,9 @@ export default defineConfig({
     hmr: {host: "127.0.0.1"}
   },
   plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    css: true,
+  },
 })
