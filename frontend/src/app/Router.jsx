@@ -26,6 +26,12 @@ import ProvidersPage from '../features/providers/pages/ProvidersPage.jsx';
 import ActivitiesPage from '../features/activities/pages/ActivitiesPage.jsx';
 import MappingManager from '../features/mapping/pages/MappingManager.jsx';
 import MyWork from '../features/mywork/pages/MyWork.jsx';
+import Attestations from '../features/attestations/pages/Attestations.jsx';
+import EvidenceInbox from '../features/evidence/pages/EvidenceInbox.jsx';
+import Exceptions from '../features/exceptions/pages/Exceptions.jsx';
+import Providers from '../features/providers/pages/Providers.jsx';
+import Reporting from '../features/reporting/pages/Reporting.jsx';
+import SoABuilder from '../features/soa/pages/SoABuilder.jsx';
 
 
 // Add others progressively...
@@ -33,6 +39,7 @@ import MyWork from '../features/mywork/pages/MyWork.jsx';
 function AppRouter() {
   return (
     <Routes>
+
       {/* <Route path="/" element={<MainView><Dashboard /></MainView>} /> */}
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
       <Route path="/home" element={<MainView><Dashboard /></MainView>} />
@@ -60,6 +67,12 @@ function AppRouter() {
       <Route path="/activities" element={<MainView><ActivitiesPage /></MainView>} />
       <Route path="/my-work" element={<MainView><MyWork /></MainView>} />
     
+      <Route path="/attestations" element={<MainView><Attestations /></MainView>} />
+      <Route path="/evidence" element={<MainView><EvidenceInbox /></MainView>} />
+      <Route path="/exceptions" element={<MainView><Exceptions /></MainView>} />
+      <Route path="/providers" element={<MainView><Providers /></MainView>} />
+      <Route path="/reporting" element={<MainView><Reporting /></MainView>} />
+      <Route path="/soa" element={<MainView><SoABuilder /></MainView>} />
 
       <Route path="/persons" element={
         <RequireCaps caps={['manage_org']}>
