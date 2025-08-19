@@ -1,62 +1,43 @@
-function read(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+import LocalStorageProvider from './providers/LocalStorageProvider';
+// import HttpProvider from './providers/HttpProvider';
+
+function selectProvider() {
+  // Flip here later to HttpProvider when backend is ready
+  return LocalStorageProvider;
 }
 
-function write(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+export function listSavedViews(scopeKey) {
+  return selectProvider().list(scopeKey);
 }
 
-function defaultKey(key) { return `${key}::default`; }
-
-export function listSavedViews(key) {
-  return read(`views:${key}`);
+export function saveView(scopeKey, { name, snapshot }) {
+  return selectProvider().save(scopeKey, { name, snapshot });
 }
 
-export function saveView(key, { name, snapshot }) {
-  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-  const entry = { id, name, snapshot, createdAt: new Date().toISOString() };
-  const all = listSavedViews(key);
-  write(`views:${key}`, [entry, ...all]);
-  return id;
+export function updateView(scopeKey, id, patch) {
+  return selectProvider().update(scopeKey, id, patch);
 }
 
-export function deleteView(key, id) {
-  const all = listSavedViews(key).filter((v) => v.id !== id);
-  write(`views:${key}`, all);
+export function deleteViewById(scopeKey, id) {
+  return selectProvider().delete(scopeKey, id);
 }
 
-export function getDefaultView(key) {
-  try {
-    const id = localStorage.getItem(defaultKey(key));
-    if (!id) return null;
-    return listSavedViews(key).find((v) => v.id === id)?.snapshot || null;
-  } catch {
-    return null;
-  }
+export function getDefaultViewId(scopeKey) {
+  return selectProvider().getDefaultId(scopeKey);
 }
 
-export function setDefaultView(key, idOrNull) {
-  if (!idOrNull) return localStorage.removeItem(defaultKey(key));
-  try { localStorage.setItem(defaultKey(key), idOrNull); } catch {}
+export function setDefaultView(scopeKey, idOrNull) {
+  return selectProvider().setDefaultId(scopeKey, idOrNull);
 }
 
-export function getDefaultViewId(key) {
-  try { return localStorage.getItem(defaultKey(key)); } catch { return null; }
+export function loadViewById(scopeKey, id) {
+  return selectProvider().get(scopeKey, id);
 }
 
-export function updateView(key, id, patch) {
-  const all = listSavedViews(key);
-  const idx = all.findIndex(v => v.id === id);
-  if (idx === -1) return;
-  all[idx] = { ...all[idx], ...patch };
-  write(`views:${key}`, all);
-}
-
-export function deleteViewById(key, id) {
-  deleteView(key, id);
+// Back-compat helper used by useGridView
+export function getDefaultView(scopeKey) {
+  const id = getDefaultViewId(scopeKey);
+  if (!id) return null;
+  const entry = loadViewById(scopeKey, id);
+  return entry ? entry.snapshot : null;
 }
