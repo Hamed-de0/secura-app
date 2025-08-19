@@ -35,7 +35,7 @@ const DrawerPaper = styled('div')(({ theme }) => ({
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: <SpaceDashboardIcon />, to: '/dashboard' },
-  { label: 'Dashboard 2', icon: <SpaceDashboardIcon />, to: '/main-dashboard' },
+  // { label: 'Dashboard 2', icon: <SpaceDashboardIcon />, to: '/main-dashboard' },
   { label: 'Compliance', icon: <RuleIcon />, to: '/compliance/versions/1' }, // adjust default version
   { label: 'Controls', icon: <VerifiedUserIcon />, to: '/controls' },
   { label: 'Risks', icon: <WarningAmberIcon />, to: '/risk-view' },

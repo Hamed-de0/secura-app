@@ -25,6 +25,7 @@ import RiskView from '../features/risks/pages/RiskView.jsx';
 import ProvidersPage from '../features/providers/pages/ProvidersPage.jsx';
 import ActivitiesPage from '../features/activities/pages/ActivitiesPage.jsx';
 import MappingManager from '../features/mapping/pages/MappingManager.jsx';
+import MyWork from '../features/mywork/pages/MyWork.jsx';
 
 
 // Add others progressively...
@@ -57,7 +58,8 @@ function AppRouter() {
       <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} />
       <Route path="/providers" element={<MainView><ProvidersPage /></MainView>} />
       <Route path="/activities" element={<MainView><ActivitiesPage /></MainView>} />
-
+      <Route path="/my-work" element={<MainView><MyWork /></MainView>} />
+    
 
       <Route path="/persons" element={
         <RequireCaps caps={['manage_org']}>
