@@ -30,10 +30,15 @@ export default function useGridView({
   filterSchema = {},
   columnIds = [],
   syncQueryParamQ = false,
+  scopeKey = '' 
 }) {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+
+    // Effective storage key (per page - optional scope)
+    const storageKey = React.useMemo(() => (scopeKey ? `${key}::${scopeKey}` : key), [key, scopeKey]);
+
 
   // 1) establish base snapshot from defaults
   const base = React.useMemo(
@@ -60,9 +65,9 @@ export default function useGridView({
 
   // 3) fallback to default saved view
   const defaultSaved = React.useMemo(() => {
-    const snap = getDefaultView(key);
+    const snap = getDefaultView(storageKey);
     return sanitizeSnapshot(mergeSnapshot(base, snap || null), columnIds);
-  }, [base, key, columnIds]);
+  }, [base, storageKey, columnIds]);
 
   const initial = searchParams.get("v") ? urlSnapshot : defaultSaved;
   const [snapshot, setSnapshot] = React.useState(initial);
@@ -115,11 +120,11 @@ export default function useGridView({
   }, [filters]);
 
   // views management
-  const views = listSavedViews(key);
-  const defaultViewId = getDefaultViewId(key);
+  const views = listSavedViews(storageKey);
+  const defaultViewId = getDefaultViewId(storageKey);
 
   function saveCurrentAs(name) {
-    return saveView(key, { name, snapshot });
+    return saveView(storageKey, { name, snapshot });
   }
 
   function useView(id) {
@@ -138,7 +143,7 @@ export default function useGridView({
   }
 
   function setDefaultViewId(idOrNull) {
-    setDefaultView(key, idOrNull);
+    setDefaultView(storageKey, idOrNull);
   }
 
   function toShareableUrl() {
@@ -146,6 +151,30 @@ export default function useGridView({
     const params = new URLSearchParams(location.search);
     params.set("v", vparam);
     return `${location.pathname}?${params.toString()}`;
+  }
+
+  
+  function toShareParam() { return serializeViewParam(snapshot); }
+
+  function applySnapshot(nextSnapshot) {
+    const next = sanitizeSnapshot(mergeSnapshot(base, nextSnapshot || {}), columnIds);
+    setSnapshot(next);
+    const vparam = serializeViewParam(next);
+    const params = new URLSearchParams(location.search);
+    params.set('v', vparam);
+    // keep existing params like scope/versions intact
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  }
+
+  function resetFilters() {
+    const next = { ...snapshot, filters: { ...filterSchema } };
+    applySnapshot(next);
+    if (syncQueryParamQ) {
+      const params = new URLSearchParams(location.search);
+      const qv = next.filters?.q ?? '';
+      if (qv) params.set('q', qv); else params.delete('q');
+      navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+    }
   }
 
   function toShareParam() {
@@ -184,6 +213,7 @@ export default function useGridView({
     defaultViewId,
     setDefaultViewId,
     toShareableUrl,
+    resetFilters,
     toShareParam,
     applySnapshot,
     deleteView: (id) => deleteViewById(key, id),

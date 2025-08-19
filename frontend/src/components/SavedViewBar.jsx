@@ -34,7 +34,8 @@ import ManageSearchIcon from "@mui/icons-material/ManageSearch";
 import TuneIcon from '@mui/icons-material/Tune';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-
+import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
+import { parseViewParam } from '../lib/views/urlParam';
 /**
  * Generic Saved View bar shown above lists/grids
  * Props:
@@ -43,19 +44,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
  *  - columnsList?: [{ id, label }] to allow in-bar column toggling
  */
 export default function SavedViewBar({ title, gridView, columnsList = [], presets = [] }) {
-  const {
-    views,
-    useView,
-    saveCurrentAs,
-    defaultViewId,
-    setDefaultViewId,
-    toShareableUrl,
-    columnVisibilityModel,
-    onColumnVisibilityModelChange,
-    deleteView,
-    renameView,
-    snapshot,
-    setColumnOrder,
+  const { views, useView, saveCurrentAs, defaultViewId, setDefaultViewId, toShareableUrl, toShareParam, columnVisibilityModel, onColumnVisibilityModelChange, deleteView, renameView, snapshot, setColumnOrder, applySnapshot, resetFilters
   } = gridView;
 
   const [anchorEl, setAnchorEl] = React.useState(null);
@@ -161,7 +150,9 @@ export default function SavedViewBar({ title, gridView, columnsList = [], preset
         >
           Manage
         </Button>
-
+                <Tooltip title="Reset filters to defaults">
+          <IconButton size="small" onClick={resetFilters}><FilterAltOffIcon/></IconButton>
+        </Tooltip>
         
         {presets.length > 0 && (
           <>
@@ -319,7 +310,7 @@ export default function SavedViewBar({ title, gridView, columnsList = [], preset
         </DialogContent>
         <DialogActions>
           <Button onClick={()=> setImportOpen(false)}>Cancel</Button>
-          <Button onClick={()=> {
+                    <Button onClick={()=> {
             try {
               const text = importText.trim();
               // try URL with v=
@@ -331,7 +322,6 @@ export default function SavedViewBar({ title, gridView, columnsList = [], preset
                 applySnapshot(json);
               } else {
                 // try plain v param
-                const { parseViewParam } = require('../lib/views/urlParam');
                 const snap = parseViewParam(v || text);
                 if (snap) applySnapshot(snap);
               }
