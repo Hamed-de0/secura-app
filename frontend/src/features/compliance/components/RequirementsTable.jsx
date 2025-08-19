@@ -2,17 +2,29 @@ import React from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Typography } from '@mui/material';
 
-export default function RequirementsTable({ rows, onRowClick, loading }) {
-  const columns = [
+export default function RequirementsTable({
+  rows,
+  onRowClick,
+  loading,
+  columns: extColumns,
+  columnVisibilityModel,
+  onColumnVisibilityModelChange,
+  sortingModel,
+  onSortingModelChange,
+  paginationModel,
+  onPaginationModelChange,
+  density,
+}) {
+  const fallbackColumns = [
     { field: 'code', headerName: 'Code', width: 110 },
     { field: 'title', headerName: 'Requirement', flex: 1, minWidth: 260 },
-    { field: 'score', headerName: 'Score', width: 110,
-      valueFormatter: ({ value }) => `${Math.round((value ?? 0)*100)}%` },
+    { field: 'score', headerName: 'Score', width: 110, valueFormatter: ({ value }) => `${Math.round((value ?? 0)*100)}%` },
     { field: 'hits_count', headerName: 'Hits', width: 90 },
     { field: 'mapped_count', headerName: 'Mapped', width: 110 }
   ];
 
-  const _rows = (rows || []).map(r => ({ id: r.requirement_id, ...r }));
+  const columns = extColumns?.length ? extColumns : fallbackColumns;
+  const _rows = (rows || []).map(r => ({ id: r.requirement_id ?? r.id, ...r }));
 
   return (
     <Box sx={{ height: 560, width: '100%' }}>
@@ -23,7 +35,14 @@ export default function RequirementsTable({ rows, onRowClick, loading }) {
         onRowClick={(params) => onRowClick?.(params.row)}
         loading={loading}
         disableColumnMenu
-        pageSizeOptions={[10, 25]}
+        pageSizeOptions={[10, 25, 50, 100]}
+        sortModel={sortingModel}
+        onSortModelChange={onSortingModelChange}
+        columnVisibilityModel={columnVisibilityModel}
+        onColumnVisibilityModelChange={onColumnVisibilityModelChange}
+        paginationModel={paginationModel}
+        onPaginationModelChange={onPaginationModelChange}
+        density={density}
         initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
       />
     </Box>

@@ -1,5 +1,5 @@
 import React, { useContext, useMemo, useState } from "react";
-import { Box, Grid, Skeleton, Stack, Chip, Typography } from "@mui/material";
+import { Box, Grid, Skeleton } from "@mui/material";
 import { ScopeContext } from "../../../store/scope/ScopeProvider.jsx";
 import { useEffectiveControls } from "../hooks";
 import ControlsFilters from "../components/ControlsFilters.jsx";
@@ -11,114 +11,88 @@ import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import ControlImpactDrawer from '../components/ControlImpactDrawer.jsx';
 import { useAssuranceOverlay } from '../../evidence/hooks';
 
+// NEW
+import SavedViewBar from '../../../components/SavedViewBar.jsx';
+import useGridView from '../../../lib/views/useGridView';
+import { buildColumns, defaultViewPreset, columnsList } from '../../controls/columns.jsx';
+import { useTheme } from '@mui/material/styles';
+
 export default function ControlsAtScope() {
+  const theme = useTheme();
   const { scope } = useContext(ScopeContext);
-  const { data: controls, isLoading } = useEffectiveControls(scope);
-  const { map: statusOverlay } = useAssuranceOverlay();
+  const { data: controls, isLoading, isError, error } = useEffectiveControls(scope);
+  const [params, setParams] = useSearchParams();
   const [selected, setSelected] = useState(null);
+
+  const q = params.get('q') ?? '';
   const [source, setSource] = useState(null);
   const [assurance, setAssurance] = useState(null);
-  const [params, setParams] = useSearchParams();
-  const initialQ = params.get("q") || "";
-  const [q, setQ] = useState(initialQ);
 
-  React.useEffect(() => {
-    const cur = params.get("q") || "";
-    if (cur !== q)
-      setParams(
-        (p) => {
-          const n = new URLSearchParams(p);
-          n.set("q", q);
-          return n;
-        },
-        { replace: true }
-      );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q]);
+  // grid view state (persist/share) — mirror ?q= for compatibility
+  const gridView = useGridView({
+    key: 'controls/effective@v1',
+    defaults: defaultViewPreset,
+    filterSchema: { q: '', source: null, assurance: null },
+    columnIds: columnsList.map(c => c.id),
+    syncQueryParamQ: true,
+  });
 
-  const enriched = useMemo(() => {
-    const list = Array.isArray(controls) ? controls : [];
-    // apply local assurance overrides for display
-    return list.map(c => {
-      const ov = statusOverlay?.[String(c.control_id)];
-      return ov ? { ...c, assurance_status: ov.assurance_status } : c;
-    });
-  }, [controls, statusOverlay]);
-
+  // derive rows
+  const items = controls || [];
   const filtered = useMemo(() => {
-    const list = enriched;
-    return list.filter((c) => {
-      if (source && c.source !== source) return false;
-      if (assurance && (c.assurance_status || "").toLowerCase() !== assurance)
-        return false;
-      if (q) {
-        const needle = q.toLowerCase();
-        const hay = `${c.code ?? ""} ${c.title ?? ""} ${c.notes ?? ""
-          }`.toLowerCase();
-        return hay.includes(needle);
+    const _q = (q || '').toLowerCase();
+    const list = items.filter(r => {
+      if (source && r.source !== source) return false;
+      if (assurance && (r.assurance_status ?? '').toLowerCase() !== assurance) return false;
+      if (_q) {
+        const hay = `${r.code ?? ''} ${r.title ?? ''}`.toLowerCase();
+        if (!hay.includes(_q)) return false;
       }
       return true;
     });
-  }, [enriched, source, assurance, q]);
+    return list;
+  }, [items, source, assurance, q]);
 
-  const quickCounts = useMemo(() => {
-    const list = enriched;
-    const bySource = list.reduce((acc, c) => {
-      acc[c.source] = (acc[c.source] || 0) + 1;
-      return acc;
-    }, {});
-    const byAssurance = list.reduce((acc, c) => {
-      const k = (c.assurance_status || "unknown").toLowerCase();
-      acc[k] = (acc[k] || 0) + 1;
-      return acc;
-    }, {});
-    return { bySource, byAssurance };
-  }, [enriched]);
+  // keep gridView.filters in sync with local filters (so snapshots include them)
+  React.useEffect(() => { gridView.setFilters({ q, source, assurance }); }, [q, source, assurance]);
+
+  if (isLoading) return <Skeleton variant="rounded" height={360} />;
+  if (isError) return <ErrorState icon={FilterAltIcon} title="Failed to load" description={error?.message || 'Error'} />;
+  if (!items || items.length === 0) return <EmptyState title="No controls" description="Nothing to show at this scope." />;
+
+  // build registry columns once
+    const columns = React.useMemo(() => buildColumns(theme), [theme]);
+
+  // const columns = React.useMemo(() => buildColumns(), []);
 
   return (
     <>
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ mb: 1 }}>
+        <SavedViewBar title="Controls" gridView={gridView} columnsList={columnsList} />
         <ControlsFilters
-          source={source}
-          setSource={setSource}
-          assurance={assurance}
-          setAssurance={setAssurance}
-          q={q}
-          setQ={setQ}
-          total={(controls || []).length}
+          source={source} setSource={setSource}
+          assurance={assurance} setAssurance={setAssurance}
+          q={q} setQ={(val)=> { params.set('q', val); setParams(params, { replace: true }); }}
+          total={filtered.length}
         />
-
-        <Stack direction="row" spacing={1} sx={{ mb: 1 }} flexWrap="wrap">
-          {Object.entries(quickCounts.bySource).map(([k, v]) => (
-            <Chip key={k} size="small" label={`${k}: ${v}`} />
-          ))}
-          {Object.entries(quickCounts.byAssurance).map(([k, v]) => (
-            <Chip key={k} size="small" label={`${k}: ${v}`} />
-          ))}
-        </Stack>
-
-        {isLoading && <Skeleton variant="rounded" height={520} />}
-        {!isLoading && Array.isArray(controls) && controls.error && (
-          <ErrorState message={String(controls.error)} />
-        )}
-        {!isLoading && !controls?.error && filtered.length === 0 && (
-          <EmptyState
-            icon={<FilterAltIcon />}
-            title="No controls match your filters"
-            description="Try clearing filters or change the scope."
-          />
-        )}
-        {!isLoading && !controls?.error && filtered.length > 0 && (
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <EffectiveControlsGrid
-                rows={filtered}
-                loading={false}
-                onRowClick={(row) => setSelected(row)}
-              />
-            </Grid>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <EffectiveControlsGrid
+              rows={filtered}
+              loading={false}
+              onRowClick={(row) => setSelected(row)}
+              // controlled state
+              columns={columns}
+              columnVisibilityModel={gridView.columnVisibilityModel}
+              onColumnVisibilityModelChange={gridView.onColumnVisibilityModelChange}
+              sortingModel={gridView.sortingModel}
+              onSortingModelChange={gridView.onSortingModelChange}
+              paginationModel={gridView.paginationModel}
+              onPaginationModelChange={gridView.onPaginationModelChange}
+              density={gridView.density}
+            />
           </Grid>
-        )}
+        </Grid>
       </Box>
       <ControlImpactDrawer open={!!selected} onClose={() => setSelected(null)} control={selected} />
     </>

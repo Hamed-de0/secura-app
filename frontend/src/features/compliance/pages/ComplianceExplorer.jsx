@@ -1,94 +1,59 @@
-import React, { useContext, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Box, Grid, Skeleton, Typography } from "@mui/material";
-import { ScopeContext } from "../../../store/scope/ScopeProvider.jsx";
-import { useCoverageVersion } from "../../coverage/hooks"; // returns mock in MOCK_MODE
-import { useVersionRequirements, useRequirementDetail } from "../hooks";
-import RequirementsTable from "../components/RequirementsTable.jsx";
-import RequirementDrawer from "../components/RequirementDrawer.jsx";
-import EmptyState from "../../../components/ui/EmptyState.jsx";
-import ErrorState from "../../../components/ui/ErrorState.jsx";
-import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
+import React, { useMemo, useState } from 'react';
+import { Box, Grid, Skeleton } from '@mui/material';
+import RequirementsTable from '../components/RequirementsTable.jsx';
+import RequirementDrawer from '../components/RequirementDrawer.jsx';
+import EmptyState from '../../../components/ui/EmptyState.jsx';
+import ErrorState from '../../../components/ui/ErrorState.jsx';
+import ArticleIcon from '@mui/icons-material/Article';
+import { useVersionRequirements } from '../hooks';
+import { useParams } from 'react-router-dom';
+// hooks
+
+// NEW
+import SavedViewBar from '../../../components/SavedViewBar.jsx';
+import useGridView from '../../../lib/views/useGridView';
+import { buildColumns, defaultViewPreset, columnsList } from '../../compliance/columns.jsx';
 
 export default function ComplianceExplorer() {
-  const { versionId: versionIdParam } = useParams();
-  const versionId = Number(versionIdParam);
-  const { scope } = useContext(ScopeContext);
-  const { data: versionDetail, isLoading: loadingDetail } = useCoverageVersion(
-    versionId,
-    scope
-  );
-  const { data: reqRows } = useVersionRequirements(versionId);
+const { versionId } = useParams();
+const versionNum = Number(versionId);
+const { data: rows, isLoading, isError, error } = useVersionRequirements(versionNum);
+  const [selected, setSelected] = useState(null);
 
-  const [selectedReqId, setSelectedReqId] = useState(null);
-  const { data: selectedReq } = useRequirementDetail(versionId, selectedReqId);
+  const gridView = useGridView({
+    key: 'compliance/requirements@v1',
+    defaults: defaultViewPreset,
+    filterSchema: {},
+    columnIds: columnsList.map(c => c.id),
+  });
 
-  if (!versionId) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Select a framework version.
-        </Typography>
-      </Box>
-    );
-  }
+  if (isLoading) return <Skeleton variant="rounded" height={360} />;
+  if (isError) return <ErrorState icon={ArticleIcon} title="Failed to load" description={error?.message || 'Error'} />;
+  if (!rows || rows.length === 0) return <EmptyState title="No requirements" description="Nothing to show for this version." />;
+
+  const columns = React.useMemo(() => buildColumns(), []);
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box>
+      <SavedViewBar title="Requirements" gridView={gridView} columnsList={columnsList} />
       <Grid container spacing={2}>
-        <Grid item xs={12} md={8}>
-          {loadingDetail && <Skeleton variant="rounded" height={560} />}
-          {!loadingDetail && Array.isArray(reqRows) && reqRows.error && (
-            <ErrorState message={String(reqRows.error)} />
-          )}
-          {!loadingDetail &&
-            !reqRows?.error &&
-            (!reqRows || reqRows.length === 0) && (
-              <EmptyState
-                icon={<LibraryBooksIcon />}
-                title="No requirements to show"
-                description="Pick a different version or change the scope."
-              />
-            )}
-          {!loadingDetail && !reqRows?.error && reqRows?.length > 0 && (
-            <RequirementsTable
-              rows={reqRows}
-              loading={false}
-              onRowClick={(row) => setSelectedReqId(row.requirement_id)}
-            />
-          )}
-        </Grid>
-        
-        <Grid item xs={12} md={4}>
-          {loadingDetail ? (
-            <Skeleton variant="rounded" height={180} />
-          ) : (
-            <Box
-              sx={{ p: 2, border: 1, borderColor: "divider", borderRadius: 1 }}
-            >
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Version snapshot
-              </Typography>
-              <Typography variant="body2">Version ID: {versionId}</Typography>
-              <Typography variant="body2">
-                Scope: {scope.type}:{scope.id}
-              </Typography>
-              <Typography variant="body2">
-                Score: {Math.round((versionDetail?.score ?? 0) * 100)}%
-              </Typography>
-              <Typography variant="body2">
-                Requirements: {versionDetail?.requirements?.length ?? 0}
-              </Typography>
-            </Box>
-          )}
+        <Grid item xs={12}>
+          <RequirementsTable
+            rows={rows}
+            onRowClick={(row) => setSelected(row)}
+            loading={false}
+            columns={columns}
+            columnVisibilityModel={gridView.columnVisibilityModel}
+            onColumnVisibilityModelChange={gridView.onColumnVisibilityModelChange}
+            sortingModel={gridView.sortingModel}
+            onSortingModelChange={gridView.onSortingModelChange}
+            paginationModel={gridView.paginationModel}
+            onPaginationModelChange={gridView.onPaginationModelChange}
+            density={gridView.density}
+          />
         </Grid>
       </Grid>
-
-      <RequirementDrawer
-        open={!!selectedReqId}
-        onClose={() => setSelectedReqId(null)}
-        requirement={selectedReq}
-      />
+      <RequirementDrawer open={!!selected} onClose={()=> setSelected(null)} requirement={selected} />
     </Box>
   );
 }

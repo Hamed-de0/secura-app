@@ -12,79 +12,74 @@ import EmptyState from "../../../components/ui/EmptyState.jsx";
 import ErrorState from "../../../components/ui/ErrorState.jsx";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 
+// NEW
+import SavedViewBar from '../../../components/SavedViewBar.jsx';
+import useGridView from '../../../lib/views/useGridView';
+import { buildColumns, defaultViewPreset, columnsList } from '../../risks/columns.jsx';
+
 export default function RiskView() {
   const { scope } = useContext(ScopeContext);
-  const { data: risks, isLoading } = useRisksAtScope(scope);
-  const { data: appetite } = useRiskAppetite();
-
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState(null);
-  const [level, setLevel] = useState(null);
+  const { data: risks, isLoading, isError, error } = useRisksAtScope(scope);
   const [selected, setSelected] = useState(null);
 
-  const filtered = useMemo(() => {
-    const list = Array.isArray(risks) ? risks : [];
-    return list.filter((r) => {
-      if (status && r.status !== status) return false;
-      if (level && Number(r.residual_level) !== Number(level)) return false;
-      if (q) {
-        const needle = q.toLowerCase();
-        const hay = `${r.title} ${r.owner} ${r.category} ${(r.tags || []).join(
-          " "
-        )}`.toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState(null);
+  const [level, setLevel] = useState(null);
+
+  const gridView = useGridView({
+    key: 'risks/list@v1',
+    defaults: defaultViewPreset,
+    filterSchema: { q: '', status: null, level: null },
+    columnIds: columnsList.map(c => c.id),
+  });
+
+  React.useEffect(() => { gridView.setFilters({ q, status, level }); }, [q, status, level]);
+
+  const rows = useMemo(() => {
+    const items = risks || [];
+    const _q = (q || '').toLowerCase();
+    return items.filter(r => {
+      if (_q && !(`${r.title ?? ''} ${r.owner ?? ''}`.toLowerCase().includes(_q))) return false;
+      if (status && (r.status ?? '') !== status) return false;
+      if (level && (Number(r.residual_level) !== Number(level))) return false;
       return true;
     });
   }, [risks, q, status, level]);
 
+  if (isLoading) return <Skeleton variant="rounded" height={360} />;
+  if (isError) return <ErrorState icon={SearchOffIcon} title="Failed to load" description={error?.message || 'Error'} />;
+  if (!risks || risks.length === 0) return <EmptyState title="No risks" description="Nothing to show at this scope." />;
+
+  const columns = React.useMemo(() => buildColumns(), []);
+
   return (
-    <Box sx={{ p: 2 }}>
-      <RiskMetrics risks={risks} />
-      <RiskAppetiteStrip
-        risks={risks}
-        targetLevel={appetite?.target_level ?? 2}
-      />
-      <RiskFilters
-        q={q}
-        setQ={setQ}
-        status={status}
-        setStatus={setStatus}
-        level={level}
-        setLevel={setLevel}
-      />
-
-      {isLoading && <Skeleton variant="rounded" height={520} />}
-      {!isLoading && Array.isArray(risks) && risks.error && (
-        <ErrorState message={String(risks.error)} />
-      )}
-      {!isLoading && !risks?.error && filtered.length === 0 && (
-        <EmptyState
-          icon={<SearchOffIcon />}
-          title="No risks found"
-          description="Adjust filters or change the scope."
-        />
-      )}
-      {!isLoading && !risks?.error && filtered.length > 0 && (
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={8}>
-            <RiskTable
-              rows={filtered}
-              loading={false}
-              onRowClick={(row) => setSelected(row)}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <RiskHeatmapPanel />
-          </Grid>
+    <Box>
+      <SavedViewBar title="Risks" gridView={gridView} columnsList={columnsList} />
+      <RiskAppetiteStrip />
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={8}>
+          <RiskFilters q={q} setQ={setQ} status={status} setStatus={setStatus} level={level} setLevel={setLevel} />
+          <RiskTable
+            rows={rows}
+            loading={false}
+            onRowClick={(row) => setSelected(row)}
+            columns={columns}
+            columnVisibilityModel={gridView.columnVisibilityModel}
+            onColumnVisibilityModelChange={gridView.onColumnVisibilityModelChange}
+            sortingModel={gridView.sortingModel}
+            onSortingModelChange={gridView.onSortingModelChange}
+            paginationModel={gridView.paginationModel}
+            onPaginationModelChange={gridView.onPaginationModelChange}
+            density={gridView.density}
+          />
         </Grid>
-      )}
+        <Grid item xs={12} md={4}>
+          <RiskMetrics />
+          <RiskHeatmapPanel />
+        </Grid>
+      </Grid>
 
-      <RiskDetailDrawer
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        risk={selected}
-      />
+      <RiskDetailDrawer open={!!selected} onClose={() => setSelected(null)} risk={selected} />
     </Box>
   );
 }
