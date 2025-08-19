@@ -18,7 +18,7 @@ import RiskScenarioContextView from '../features/RiskScenarioContexts/RiskScenar
 import AssetTypePage from '../features/assets/assetTypes/AssetTypePage'
 import RisksEffectiveView from '../features/dashboards/RiskEffectiveView'
 import ISMSDashboard from '../features/dashboards/ISMSDashboard'
-import MainDashboard from '../features/dashboards/MainDashboard.jsx';
+// import MainDashboard from '../features/dashboards/MainDashboard.jsx';
 import ComplianceExplorer from '../features/compliance/pages/ComplianceExplorer.jsx';
 import ControlsAtScope from '../features/controls/pages/ControlsAtScope.jsx';
 import RiskView from '../features/risks/pages/RiskView.jsx';
@@ -32,6 +32,7 @@ import Exceptions from '../features/exceptions/pages/Exceptions.jsx';
 import Providers from '../features/providers/pages/Providers.jsx';
 import Reporting from '../features/reporting/pages/Reporting.jsx';
 import SoABuilder from '../features/soa/pages/SoABuilder.jsx';
+import MainDashboard from '../features/dashboards/pages/MainDashboard.jsx';
 
 
 // Add others progressively...
@@ -42,9 +43,9 @@ function AppRouter() {
 
       {/* <Route path="/" element={<MainView><Dashboard /></MainView>} /> */}
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
-      <Route path="/home" element={<MainView><Dashboard /></MainView>} />
-      <Route path="/dashboard" element={<MainView><Dashboard /></MainView>} />
-      <Route path="/main-dashboard" element={<MainView><MainDashboard /></MainView>} />
+      <Route path="/main-dashboard" element={<MainView><Dashboard /></MainView>} />
+      <Route path="/overview" element={<MainView><MainDashboard /></MainView>} />
+      <Route path="/dashboard" element={<MainView><ISMSDashboard /></MainView>} />
       <Route path="/compliance/versions/:versionId" element={<MainView><ComplianceExplorer /></MainView>} />
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />
       <Route path="/assets/edit/:id" element={<MainView><AssetEditPage /></MainView>} />

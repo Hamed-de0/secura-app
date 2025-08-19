@@ -209,7 +209,7 @@ export default function ISMSDashboard() {
 
   // ===== Layout =====
   return (
-    <Box p={3}>
+    <Box p={3} pt={0}>
       {/* HERO */}
       <Stack direction={{ xs: "column", md: "row" }} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between" mb={3} gap={2}>
         <Stack>
