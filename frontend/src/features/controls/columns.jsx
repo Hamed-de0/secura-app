@@ -35,7 +35,7 @@ export const defaultViewPreset = {
 
 
 export function buildColumns(theme) {
-  return [
+  const cols = [
     {
       field: 'code',
       headerName: 'Code',
@@ -75,6 +75,7 @@ export function buildColumns(theme) {
       ),
     },
   ];
+  return Object.freeze([...cols]);
 }
 
 

@@ -26,7 +26,7 @@ export const defaultViewPreset = {
   filters: { q: '', status: null, level: null },
 };
 
-export function buildColumns() { return Object.values(allColumns); }
+export function buildColumns() { return Object.freeze([...Object.values(allColumns)]); }
 
 
 export const presets = [

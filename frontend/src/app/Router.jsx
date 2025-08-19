@@ -35,6 +35,7 @@ function AppRouter() {
       {/* <Route path="/" element={<MainView><Dashboard /></MainView>} /> */}
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
       <Route path="/home" element={<MainView><Dashboard /></MainView>} />
+      <Route path="/dashboard" element={<MainView><Dashboard /></MainView>} />
       <Route path="/main-dashboard" element={<MainView><MainDashboard /></MainView>} />
       <Route path="/compliance/versions/:versionId" element={<MainView><ComplianceExplorer /></MainView>} />
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />

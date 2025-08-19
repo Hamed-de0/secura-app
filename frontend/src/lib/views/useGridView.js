@@ -14,6 +14,8 @@ import {
   getDefaultViewId,
 } from "./storage";
 import { updateView as _updateView, deleteViewById } from "./storage";
+import rafThrottle from "../utils/rafThrottle";
+
 /**
  * useGridView — single source of truth for persisted/sharable grid & filter state
  *
@@ -23,6 +25,7 @@ import { updateView as _updateView, deleteViewById } from "./storage";
  *  - filterSchema: object of default filter values (e.g., { q: '', status: null })
  *  - columnIds: array of allowed column ids for sanitization
  *  - syncQueryParamQ?: if true, mirror filters.q <-> URL ?q= for backward compat
+ *  - scopeKey?: optional per-scope storage suffix
  */
 export default function useGridView({
   key,
@@ -30,15 +33,17 @@ export default function useGridView({
   filterSchema = {},
   columnIds = [],
   syncQueryParamQ = false,
-  scopeKey = '' 
+  scopeKey = "",
 }) {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-    // Effective storage key (per page - optional scope)
-    const storageKey = React.useMemo(() => (scopeKey ? `${key}::${scopeKey}` : key), [key, scopeKey]);
-
+  // Effective storage key (per page - optional scope)
+  const storageKey = React.useMemo(
+    () => (scopeKey ? `${key}::${scopeKey}` : key),
+    [key, scopeKey]
+  );
 
   // 1) establish base snapshot from defaults
   const base = React.useMemo(
@@ -72,18 +77,42 @@ export default function useGridView({
   const initial = searchParams.get("v") ? urlSnapshot : defaultSaved;
   const [snapshot, setSnapshot] = React.useState(initial);
 
-  // sync ?q= legacy param with filters.q if requested
+  // sync ?q= legacy param with filters.q if requested (read-once)
   React.useEffect(() => {
     if (!syncQueryParamQ) return;
     const q = searchParams.get("q") ?? "";
     setSnapshot((s) => ({ ...s, filters: { ...s.filters, q } }));
-    // do not push q from state to URL here; we only read it at load time
-  }, []); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // binders for MUI DataGrid
+  // --- Throttled URL updater (keeps existing params like scope/versions) ---
+  const updateUrlV = React.useMemo(
+    () =>
+      rafThrottle((vparam, qValue) => {
+        const params = new URLSearchParams(location.search);
+        params.set("v", vparam);
+        if (syncQueryParamQ) {
+          if (typeof qValue === "string" && qValue.length > 0)
+            params.set("q", qValue);
+          else params.delete("q");
+        }
+        navigate(`${location.pathname}?${params.toString()}`, {
+          replace: true,
+        });
+      }),
+    [navigate, location.pathname, location.search, syncQueryParamQ]
+  );
+
+  // --- DataGrid controlled models & handlers (stable) ---
   const sortingModel = snapshot.sort;
-  const onSortingModelChange = (model) =>
-    setSnapshot((s) => ({ ...s, sort: model }));
+  const onSortingModelChange = React.useCallback(
+    (model) => {
+      setSnapshot((s) =>
+        sanitizeSnapshot({ ...s, sort: Array.isArray(model) ? model : [] }, columnIds)
+      );
+    },
+    [columnIds]
+  );
 
   const columnVisibilityModel = React.useMemo(() => {
     const model = {};
@@ -92,19 +121,37 @@ export default function useGridView({
     return model;
   }, [snapshot.columns.visible, columnIds]);
 
-  const onColumnVisibilityModelChange = (model) => {
-    const visible = Object.entries(model)
-      .filter(([, v]) => v)
-      .map(([k]) => k);
-    setSnapshot((s) => ({ ...s, columns: { ...s.columns, visible } }));
-  };
+  const onColumnVisibilityModelChange = React.useCallback(
+    (model) => {
+      const visible = Object.entries(model)
+        .filter(([, v]) => !!v)
+        .map(([k]) => k);
+      setSnapshot((s) =>
+        sanitizeSnapshot(
+          { ...s, columns: { ...s.columns, visible } },
+          columnIds
+        )
+      );
+    },
+    [columnIds]
+  );
 
   const paginationModel = { pageSize: snapshot.pagination.pageSize, page: 0 };
-  const onPaginationModelChange = (model) =>
-    setSnapshot((s) => ({
-      ...s,
-      pagination: { pageSize: model.pageSize || s.pagination.pageSize },
-    }));
+  const onPaginationModelChange = React.useCallback(
+    (model) =>
+      setSnapshot((s) =>
+        sanitizeSnapshot(
+          {
+            ...s,
+            pagination: {
+              pageSize: model?.pageSize ?? s.pagination.pageSize,
+            },
+          },
+          columnIds
+        )
+      ),
+    [columnIds]
+  );
 
   const [density, setDensity] = React.useState(snapshot.density);
   React.useEffect(() => {
@@ -123,26 +170,28 @@ export default function useGridView({
   const views = listSavedViews(storageKey);
   const defaultViewId = getDefaultViewId(storageKey);
 
-  function saveCurrentAs(name) {
-    return saveView(storageKey, { name, snapshot });
-  }
+  const saveCurrentAs = React.useCallback(
+    function saveCurrentAs(name) {
+      return saveView(storageKey, { name, snapshot });
+    },
+    [storageKey, snapshot]
+  );
 
-  function useView(id) {
-    const entry = views.find((v) => v.id === id);
-    if (!entry) return;
-    const next = sanitizeSnapshot(
-      mergeSnapshot(base, entry.snapshot),
-      columnIds
-    );
-    setSnapshot(next);
-    // update URL v param to reflect selection
-    const vparam = serializeViewParam(next);
-    const params = new URLSearchParams(location.search);
-    params.set("v", vparam);
-    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
-  }
+  const useView = React.useCallback(
+    function useView(id) {
+      const entry = views.find((v) => v.id === id);
+      if (!entry) return;
+      const next = sanitizeSnapshot(
+        mergeSnapshot(base, entry.snapshot),
+        columnIds
+      );
+      setSnapshot(next);
+      updateUrlV(serializeViewParam(next), next.filters?.q ?? "");
+    },
+    [views, base, columnIds, updateUrlV]
+  );
 
-  function setDefaultViewId(idOrNull) {
+  function setDefaultViewIdFn(idOrNull) {
     setDefaultView(storageKey, idOrNull);
   }
 
@@ -151,30 +200,6 @@ export default function useGridView({
     const params = new URLSearchParams(location.search);
     params.set("v", vparam);
     return `${location.pathname}?${params.toString()}`;
-  }
-
-  
-  function toShareParam() { return serializeViewParam(snapshot); }
-
-  function applySnapshot(nextSnapshot) {
-    const next = sanitizeSnapshot(mergeSnapshot(base, nextSnapshot || {}), columnIds);
-    setSnapshot(next);
-    const vparam = serializeViewParam(next);
-    const params = new URLSearchParams(location.search);
-    params.set('v', vparam);
-    // keep existing params like scope/versions intact
-    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
-  }
-
-  function resetFilters() {
-    const next = { ...snapshot, filters: { ...filterSchema } };
-    applySnapshot(next);
-    if (syncQueryParamQ) {
-      const params = new URLSearchParams(location.search);
-      const qv = next.filters?.q ?? '';
-      if (qv) params.set('q', qv); else params.delete('q');
-      navigate(`${location.pathname}?${params.toString()}`, { replace: true });
-    }
   }
 
   function toShareParam() {
@@ -187,10 +212,12 @@ export default function useGridView({
       columnIds
     );
     setSnapshot(next);
-    const vparam = serializeViewParam(next);
-    const params = new URLSearchParams(location.search);
-    params.set("v", vparam);
-    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+    updateUrlV(serializeViewParam(next), next.filters?.q ?? "");
+  }
+
+  function resetFilters() {
+    const next = { ...snapshot, filters: { ...filterSchema } };
+    applySnapshot(next);
   }
 
   return {
@@ -211,19 +238,21 @@ export default function useGridView({
     saveCurrentAs,
     useView,
     defaultViewId,
-    setDefaultViewId,
+    setDefaultViewId: setDefaultViewIdFn,
     toShareableUrl,
     resetFilters,
     toShareParam,
     applySnapshot,
-    deleteView: (id) => deleteViewById(key, id),
-    renameView: (id, name) => _updateView(key, id, { name }),
+    deleteView: (id) => deleteViewById(storageKey, id),
+    renameView: (id, name) => _updateView(storageKey, id, { name }),
     // Column order state
     setColumnOrder: (orderIds) =>
-      setSnapshot((s) => ({
-        ...s,
-        columns: { ...s.columns, order: orderIds },
-      })),
+      setSnapshot((s) =>
+        sanitizeSnapshot(
+          { ...s, columns: { ...s.columns, order: orderIds } },
+          columnIds
+        )
+      ),
     orderColumns: (cols) => {
       const order = snapshot.columns?.order || [];
       const byId = new Map(cols.map((c) => [c.field, c]));
