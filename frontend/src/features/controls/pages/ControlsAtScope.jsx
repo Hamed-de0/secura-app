@@ -61,10 +61,10 @@ export default function ControlsAtScope() {
   if (!items || items.length === 0) return <EmptyState title="No controls" description="Nothing to show at this scope." />;
 
   // build registry columns once
-    const columns = React.useMemo(() => buildColumns(theme), [theme]);
+  const rawColumns = React.useMemo(() => buildColumns(theme), [theme]);
+  const columns = React.useMemo(() => gridView.orderColumns(rawColumns), [rawColumns, gridView.snapshot.columns.order]);
 
-  // const columns = React.useMemo(() => buildColumns(), []);
-
+  
   return (
     <>
       <Box sx={{ mb: 1 }}>

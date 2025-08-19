@@ -48,3 +48,15 @@ export function setDefaultView(key, idOrNull) {
 export function getDefaultViewId(key) {
   try { return localStorage.getItem(defaultKey(key)); } catch { return null; }
 }
+
+export function updateView(key, id, patch) {
+  const all = listSavedViews(key);
+  const idx = all.findIndex(v => v.id === id);
+  if (idx === -1) return;
+  all[idx] = { ...all[idx], ...patch };
+  write(`views:${key}`, all);
+}
+
+export function deleteViewById(key, id) {
+  deleteView(key, id);
+}

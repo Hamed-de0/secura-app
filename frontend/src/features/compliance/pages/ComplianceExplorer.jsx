@@ -31,8 +31,9 @@ const { data: rows, isLoading, isError, error } = useVersionRequirements(version
   if (isError) return <ErrorState icon={ArticleIcon} title="Failed to load" description={error?.message || 'Error'} />;
   if (!rows || rows.length === 0) return <EmptyState title="No requirements" description="Nothing to show for this version." />;
 
-  const columns = React.useMemo(() => buildColumns(), []);
-
+  const rawColumns = React.useMemo(() => buildColumns(), []);
+  const columns = React.useMemo(() => gridView.orderColumns(rawColumns), [rawColumns, gridView.snapshot.columns.order]);
+  
   return (
     <Box>
       <SavedViewBar title="Requirements" gridView={gridView} columnsList={columnsList} />

@@ -50,8 +50,10 @@ export default function RiskView() {
   if (isError) return <ErrorState icon={SearchOffIcon} title="Failed to load" description={error?.message || 'Error'} />;
   if (!risks || risks.length === 0) return <EmptyState title="No risks" description="Nothing to show at this scope." />;
 
-  const columns = React.useMemo(() => buildColumns(), []);
-
+  // const columns = React.useMemo(() => buildColumns(), []);
+  const rawColumns = React.useMemo(() => buildColumns(), []);
+  const columns = React.useMemo(() => gridView.orderColumns(rawColumns), [rawColumns, gridView.snapshot.columns.order]);
+  
   return (
     <Box>
       <SavedViewBar title="Risks" gridView={gridView} columnsList={columnsList} />
