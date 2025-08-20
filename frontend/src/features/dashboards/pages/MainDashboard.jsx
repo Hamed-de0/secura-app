@@ -33,13 +33,15 @@ import { computeKpis, pickTopTasks, pickDueEvidence } from "../aggregate.js";
 import { sampleEvidence } from "../../evidence/mocks";
 import { sampleTasks } from "../../mywork/mocks";
 import { sampleExceptions } from "../../exceptions/mocks";
+import { listControls, setControlsUseMocks } from '../../../api/services/controls.js';
 
 export default function MainDashboard() {
   const theme = useTheme();
   const [params] = useSearchParams();
   const location = useLocation();
   const nav = useNavigate();
-
+  setControlsUseMocks(true); // ensure mocks
+  listControls({ limit: 5, offset: 0 }).then(console.log);
   const scopeQuery = React.useMemo(() => {
     const sc = params.get("scope");
     const ver = params.get("versions");

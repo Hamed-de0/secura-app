@@ -12,15 +12,15 @@ import GppGoodIcon from '@mui/icons-material/GppGood';
 import 'chart.js/auto';
 
 import { ScopeContext } from '../../store/scope/ScopeProvider.jsx';
-import { useCoverageSummary, useCoverageVersion } from '../../features/coverage/hooks';
-import { useEffectiveControls } from '../../features/controls/hooks';
+import { useCoverageSummary, useCoverageVersion } from '../coverage/hooks.js';
+import { useEffectiveControls } from '../controls/hooks.js';
 
-import { useFrameworkVersions } from '../../lib/mock/useRbac';
+import { useFrameworkVersions } from '../../lib/mock/useRbac.js';
 import CoverageCard from './components/CoverageCard.jsx';
 import WeakestRequirementsTable from './components/WeakestRequirementsTable.jsx';
 import ProviderSummary from './components/ProviderSummary.jsx';
 
-import { getSummary } from './api';
+import { getSummary } from './api.js';
 
 
 

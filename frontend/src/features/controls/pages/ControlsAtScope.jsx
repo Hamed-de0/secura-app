@@ -24,13 +24,18 @@ import {
 
 import { addReqCounts } from "../adapters";
 import controlsMock from "../../../mock/controls.json"; // <-- catalog lookup
+import { setControlsUseMocks, listControls } from '/src/api/services/controls.js';
+import { setBaseURL } from '/src/api/httpClient.js';
+
 
 export default function ControlsAtScope() {
   // ---- Hooks (fixed order)
   const { scope, versions: scopeVersions } = useContext(ScopeContext);
   const versions = Array.isArray(scopeVersions) ? scopeVersions : [];
   const { data: controls, isLoading, isError, error } = useEffectiveControls(scope);
-
+  // setBaseURL('http://127.0.0.1:8001/'); // trailing slash OK
+  // setControlsUseMocks(false);           // switch to real API
+  // listControls({ limit: 10, offset: 0 }).then(console.log);
   const [params, setParams] = useSearchParams();
   const [selected, setSelected] = useState(null);
   const [source, setSource] = useState(null);
@@ -105,7 +110,6 @@ export default function ControlsAtScope() {
     gridView.setFilters({ q, source, assurance });
   }, [q, source, assurance]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  console.log('filtered', filtered);
   // ---- Render (single return → stable hooks)
   let body = null;
   if (isLoading) {
