@@ -1,0 +1,68 @@
+{
+  "brand": "ISMS / GRC",
+  "common": {
+    "overview": "Übersicht",
+    "myWork": "Meine Arbeit",
+    "controls": "Kontrollen",
+    "control": "Kontrolle",
+    "risks": "Risiken",
+    "risk": "Risiko",
+    "compliance": "Compliance",
+    "attestations": "Bestätigungen",
+    "evidence": "Nachweise",
+    "exceptions": "Ausnahmen",
+    "providers": "Anbieter",
+    "soa": "SoA-Builder",
+    "reporting": "Berichte"
+  },
+  "actions": {
+    "create": "Erstellen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "upload": "Hochladen",
+    "map": "Zuordnen"
+  },
+  "status": {
+    "pass": "Bestanden",
+    "fail": "Nicht bestanden",
+    "na": "k. A.",
+    "pending": "Ausstehend",
+    "approved": "Genehmigt",
+    "overdue": "Überfällig",
+    "running": "Laufend"
+  },
+  "grid": {
+    "code": "Code",
+    "title": "Titel",
+    "owner": "Verantwortlich",
+    "status": "Status",
+    "due": "Fällig",
+    "assignee": "Zuständig",
+    "provider": "Anbieter",
+    "inheritance": "Vererbung"
+  },
+  "header": {
+    "search": "Suchen…",
+    "create": "Erstellen",
+    "share": "Link kopieren",
+    "notifications": "Benachrichtigungen",
+    "shortcuts": "Kurzbefehle"
+  },
+  "dialogs": {
+    "uploadEvidence": "Nachweis anfordern / hochladen",
+    "createException": "Ausnahme erstellen",
+    "mapControl": "Kontrolle → Anforderungen zuordnen"
+  },
+  "dashboard": {
+    "controlsStatus": "Status der Kontrollen",
+    "coverageByFramework": "Abdeckung nach Framework",
+    "controlEffectiveness": "Wirksamkeit der Kontrollen (gestapelt)",
+    "evidenceDueSoon": "Bald fällige Nachweise"
+  },
+  "entities": {
+    "control": { "one": "Kontrolle", "other": "Kontrollen" },
+    "risk":    { "one": "Risiko",    "other": "Risiken" }
+  }
+}

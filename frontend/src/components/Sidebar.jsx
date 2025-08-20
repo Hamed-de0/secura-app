@@ -39,6 +39,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SpeedIcon from '@mui/icons-material/Speed';
 import { ScopeContext } from '../store/scope/ScopeProvider.jsx';
 import { useEffectiveCaps, useMenuCaps } from '../lib/mock/useRbac';
+import { useI18n } from '../store/i18n/I18nProvider.jsx';
 
 const COLLAPSED = 72;
 const EXPANDED = 240;
@@ -61,8 +62,8 @@ const writeOpen = (obj) => {
 
 /** IA: top-level and grouped items */
 const TOP = [
-  { label: 'Overview', icon: <SpeedIcon />, to: '/overview' },
-  { label: 'My Work', icon: <AssignmentTurnedInIcon />, to: '/my-work' },
+  { label: 'common.overview', icon: <SpeedIcon />, to: '/overview' },
+  { label: 'common.myWork', icon: <AssignmentTurnedInIcon />, to: '/my-work' },
 ];
 
 const GROUPS = [
@@ -127,6 +128,7 @@ export default function Sidebar() {
   const { sidebarCollapsed } = ui;
   const { pathname } = useLocation();
   const width = sidebarCollapsed ? COLLAPSED : EXPANDED;
+  const { t, label } = useI18n();
 
   // RBAC (kept, but we don't filter by default—flip lines below if needed)
   const { scope } = useContext(ScopeContext);
@@ -174,13 +176,13 @@ export default function Sidebar() {
           {item.icon}
         </ListItemIcon>
         {!sidebarCollapsed && (
-          <ListItemText primary={item.label} primaryTypographyProps={{ noWrap: true }} />
+          <ListItemText primary={t(item.label)} primaryTypographyProps={{ noWrap: true }} />
         )}
       </ListItemButton>
     );
 
     return sidebarCollapsed ? (
-      <Tooltip title={item.label} placement="right" arrow enterDelay={600} key={item.to}>
+      <Tooltip title={t(item.label)} placement="right" arrow enterDelay={600} key={item.to}>
         {content}
       </Tooltip>
     ) : (

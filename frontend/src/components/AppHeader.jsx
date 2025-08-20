@@ -18,7 +18,8 @@ import { useTheme } from '@mui/material/styles';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import { ColorModeContext } from '../theme/ColorModeProvider.jsx'; // ← adjust path if needed
-
+import { useI18n } from '../store/i18n/I18nProvider.jsx';
+import LangSwitch from '../components/LangSwitch.jsx';
 
 export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar }) {
   const [params] = useSearchParams();
@@ -31,6 +32,7 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
   const actions = useActions();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   const theme = useTheme();
+  const { tr } = useI18n();
 
   // preserve scope/version in links
   const scopeQuery = React.useMemo(() => {
@@ -124,6 +126,7 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
               {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
             </IconButton>
           </Tooltip>
+          <LangSwitch />
         </Toolbar>
       </AppBar>
 

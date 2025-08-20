@@ -1,0 +1,68 @@
+{
+  "brand": "ISMS / GRC",
+  "common": {
+    "overview": "Overview",
+    "myWork": "My Work",
+    "controls": "Controls",
+    "control": "Control",
+    "risks": "Risks",
+    "risk": "Risk",
+    "compliance": "Compliance",
+    "attestations": "Attestations",
+    "evidence": "Evidence",
+    "exceptions": "Exceptions",
+    "providers": "Providers",
+    "soa": "SoA Builder",
+    "reporting": "Reporting"
+  },
+  "actions": {
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "upload": "Upload",
+    "map": "Map"
+  },
+  "status": {
+    "pass": "Pass",
+    "fail": "Fail",
+    "na": "N/A",
+    "pending": "Pending",
+    "approved": "Approved",
+    "overdue": "Overdue",
+    "running": "Running"
+  },
+  "grid": {
+    "code": "Code",
+    "title": "Title",
+    "owner": "Owner",
+    "status": "Status",
+    "due": "Due",
+    "assignee": "Assignee",
+    "provider": "Provider",
+    "inheritance": "Inheritance"
+  },
+  "header": {
+    "search": "Search…",
+    "create": "Create",
+    "share": "Copy link",
+    "notifications": "Notifications",
+    "shortcuts": "Shortcuts"
+  },
+  "dialogs": {
+    "uploadEvidence": "Request / Upload evidence",
+    "createException": "Create exception",
+    "mapControl": "Map control → requirement(s)"
+  },
+  "dashboard": {
+    "controlsStatus": "Controls status",
+    "coverageByFramework": "Coverage by framework",
+    "controlEffectiveness": "Control effectiveness (stacked)",
+    "evidenceDueSoon": "Evidence due soon"
+  },
+  "entities": {
+    "control": { "one": "Control", "other": "Controls" },
+    "risk":    { "one": "Risk",    "other": "Risks" }
+  }
+}
