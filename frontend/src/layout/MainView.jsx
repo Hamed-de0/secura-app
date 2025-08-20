@@ -8,6 +8,7 @@ import { UiContext } from '../store/ui/UiProvider.jsx';
 import ScopeBreadcrumbs from '../components/navigation/ScopeBreadcrumbs';
 import AppFooter from '../components/AppFooter.jsx';
 import AppHeader from '../components/AppHeader.jsx';
+import ActionsProvider from '../features/actions/ActionsProvider.jsx';
 
 const COLLAPSED = 72;
 const EXPANDED = 240;
@@ -19,7 +20,8 @@ export default function MainView({ children }) {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <Sidebar /> {/* your existing sidebar */}
+      <ActionsProvider>
+        <Sidebar /> {/* your existing sidebar */}
       <Box sx={{ flex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <AppHeader
           sidebarCollapsed={ui.sidebarCollapsed}
@@ -32,6 +34,7 @@ export default function MainView({ children }) {
         </Box>
         <AppFooter />
       </Box>
+      </ActionsProvider>
     </Box>
   );
   /*

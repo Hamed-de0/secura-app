@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, {useContext} from 'react';
 import {
   AppBar, Toolbar, IconButton, Typography, Box, Stack, Button, Tooltip, Chip, Menu, MenuItem, Snackbar
 } from '@mui/material';
@@ -13,6 +13,12 @@ import SearchIcon from '@mui/icons-material/Search';
 import { useLocation, useNavigate, Link as RLink, useSearchParams } from 'react-router-dom';
 import CommandPalette from '../components/CommandPalette.jsx';
 import NotificationsMenu from '../components/NotificationsMenu.jsx';
+import {useActions, ACTIONS} from '../features/actions/ActionsProvider.jsx'
+import { useTheme } from '@mui/material/styles';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import { ColorModeContext } from '../theme/ColorModeProvider.jsx'; // ← adjust path if needed
+
 
 export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar }) {
   const [params] = useSearchParams();
@@ -22,6 +28,9 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
   const [snack, setSnack] = React.useState('');
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [notifEl, setNotifEl] = React.useState(null);
+  const actions = useActions();
+  const { mode, toggleColorMode } = useContext(ColorModeContext);
+  const theme = useTheme();
 
   // preserve scope/version in links
   const scopeQuery = React.useMemo(() => {
@@ -110,16 +119,27 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
           <IconButton size="small" aria-label="Account">
             <AccountCircle />
           </IconButton>
+          <Tooltip title={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}>
+            <IconButton onClick={toggleColorMode} edge="end" aria-label="toggle theme">
+              {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+            </IconButton>
+          </Tooltip>
         </Toolbar>
       </AppBar>
 
       {/* Create menu */}
       <Menu anchorEl={createEl} open={Boolean(createEl)} onClose={()=> setCreateEl(null)}>
-        <MenuItem onClick={()=> { setCreateEl(null); nav(`/exceptions${scopeQuery}`); }}>Create exception</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.EXCEPTION_CREATE)}}>Create exception</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.EVIDENCE_UPLOAD, { objectType: 'Control' })}}>Request evidence</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.MAPPING_CONTROL_TO_REQ)}}>Map a Control</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); nav(`/risk-view${scopeQuery}`); }}>New risk</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); nav(`/providers${scopeQuery}`); }}>New provider</MenuItem>
+
+        {/* <MenuItem onClick={()=> { setCreateEl(null); nav(`/exceptions${scopeQuery}`); }}>Create exception</MenuItem>
         <MenuItem onClick={()=> { setCreateEl(null); nav(`/evidence${scopeQuery}`); }}>Request evidence</MenuItem>
         <MenuItem onClick={()=> { setCreateEl(null); nav(`/attestations${scopeQuery}`); }}>New attestation</MenuItem>
         <MenuItem onClick={()=> { setCreateEl(null); nav(`/risk-view${scopeQuery}`); }}>New risk</MenuItem>
-        <MenuItem onClick={()=> { setCreateEl(null); nav(`/providers${scopeQuery}`); }}>New provider</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); nav(`/providers${scopeQuery}`); }}>New provider</MenuItem> */}
       </Menu>
 
       {/* Notifications */}
