@@ -6,6 +6,8 @@ import ContentView from '../components/ContentView';
 import Footer from '../components/Footer';
 import { UiContext } from '../store/ui/UiProvider.jsx';
 import ScopeBreadcrumbs from '../components/navigation/ScopeBreadcrumbs';
+import AppFooter from '../components/AppFooter.jsx';
+import AppHeader from '../components/AppHeader.jsx';
 
 const COLLAPSED = 72;
 const EXPANDED = 240;
@@ -13,7 +15,26 @@ const EXPANDED = 240;
 export default function MainView({ children }) {
   const { sidebarCollapsed } = useContext(UiContext);
   const railWidth = sidebarCollapsed ? COLLAPSED : EXPANDED;
+  const ui = React.useContext(UiContext);
 
+  return (
+    <Box sx={{ display: 'flex' }}>
+      <Sidebar /> {/* your existing sidebar */}
+      <Box sx={{ flex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <AppHeader
+          sidebarCollapsed={ui.sidebarCollapsed}
+          onToggleSidebar={ui.toggleSidebar}
+        />
+        <Box component="main" sx={{ p: 2, flex: 1 }}>
+          <ContentView sx={{ flex: 1, width: '100%' }}>
+          {children}
+        </ContentView>
+        </Box>
+        <AppFooter />
+      </Box>
+    </Box>
+  );
+  /*
   return (
     <Box
       sx={{
@@ -26,10 +47,10 @@ export default function MainView({ children }) {
     >
       <Header />
 
-      {/* Permanent rail lives at root level */}
+      
       <Sidebar />
       
-      {/* Main content accounts for rail width AppBar height */}
+      
       <Box
         component="main"
         sx={{
@@ -49,7 +70,8 @@ export default function MainView({ children }) {
       </Box>
     </Box>
 
-  )
+  ) 
+  */
 }
 
 
