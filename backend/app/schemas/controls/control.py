@@ -33,3 +33,10 @@ class ControlRead(ControlBase):
 
     class Config:
         from_attributes = True
+
+class ControlsPage(BaseModel):
+    data: List[ControlRead]
+    full_count: int
+
+    class Config:
+        from_attributes = True

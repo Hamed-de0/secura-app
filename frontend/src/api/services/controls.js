@@ -16,7 +16,6 @@ export function setControlsUseMocks(v) {
  */
 export async function listControls({ limit = 50, offset = 0, q = "", fields } = {}) {
   if (USE_MOCKS) {
-    // Filter + paginate from mock catalog
     const all = Array.isArray(catalog) ? catalog : (catalog?.controls || []);
     const filtered = q
       ? all.filter((c) => {
@@ -24,29 +23,15 @@ export async function listControls({ limit = 50, offset = 0, q = "", fields } = 
           return hay.includes(String(q).toLowerCase());
         })
       : all;
-    const page = filtered.slice(offset, offset + limit).map(adaptControl);
-    return { items: page, total: filtered.length, limit, offset };
+    const pageItems = filtered.slice(offset, offset + limit).map(adaptControl);
+    return { items: pageItems, total: filtered.length, limit, offset };
   }
 
   // ---- Real API call (FastAPI) ---------------------------------------------
-  // Endpoint: /controls/controls/
-  // If backend supports q/limit/offset -> will filter/limit server-side.
-  // If not, we fallback to client filtering below.
+  // Backend now returns: { data: [...], full_count: N }
   const params = buildSearchParams({ limit, offset, q, fields });
   const resp = await getJSON("controls/controls/", { searchParams: params });
-
-  // Adapt both array and envelope shapes
-  let page = adaptControlsPage(resp, { limit, offset });
-
-  // Client-side fallback search if server did not filter:
-  if (q && page.items.length && !String(JSON.stringify(resp)).toLowerCase().includes(q.toLowerCase())) {
-    const filtered = page.items.filter((c) => {
-      const hay = `${c.code ?? ""} ${c.title ?? ""}`.toLowerCase();
-      return hay.includes(q.toLowerCase());
-    });
-    page = { ...page, items: filtered, total: filtered.length, offset: 0 };
-  }
-  return page;
+  return adaptControlsPage(resp, { limit, offset });
 }
 
 /**

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from app.schemas.controls.control import ControlCreate, ControlRead, ControlUpdate
+from app.schemas.controls.control import ControlCreate, ControlRead, ControlUpdate, ControlsPage
 from app.crud.controls import control as crud_control
 from app.database import SessionLocal
 
@@ -28,9 +28,15 @@ def get_control(control_id: int, db: Session = Depends(get_db)):
     return db_control
 
 
-@router.get("/", response_model=list[ControlRead])
-def list_controls(db: Session = Depends(get_db)):
-    return crud_control.get_controls(db)
+@router.get("/", response_model=ControlsPage)
+def list_controls(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(25, ge=1, le=200),
+    sort_by: str = Query("id"),
+    sort_dir: str = Query("asc"),
+    db: Session = Depends(get_db)):
+    data, full_count = crud_control.get_controls(db, skip=offset, limit=limit, sort_by=sort_by, sort_dir=sort_dir)
+    return {"data": data, "full_count": full_count}
 
 
 @router.put("/{control_id}", response_model=ControlRead)
