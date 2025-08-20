@@ -3,7 +3,7 @@ import { Card, CardContent, Typography, Stack } from '@mui/material';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from '@mui/material/styles';
 
-export default function DonutLegendCard({ title, data, onSliceClick }) {
+export default function DonutLegendCard({ title, data, onSliceClick, sx }) {
   const theme = useTheme();
   const palette = [
     theme.palette.success.main,
@@ -13,13 +13,13 @@ export default function DonutLegendCard({ title, data, onSliceClick }) {
   ];
 
   const total = data.reduce((a, b) => a + (b.value || 0), 0);
-
   return (
-    <Card>
-      <CardContent>
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', ...sx }}>
+      <CardContent sx={{ display: 'flex', gap: 16, flexGrow: 1 }}>
         <Typography variant="subtitle1">{title}</Typography>
         <Stack direction="row" spacing={2} alignItems="center">
           <BoxChart>
+            
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -30,12 +30,14 @@ export default function DonutLegendCard({ title, data, onSliceClick }) {
                   onClick={(d)=> onSliceClick?.(d?.name)}
                 >
                   {data.map((entry, idx) => (
+                    // console.log('ch', entry, idx);
                     <Cell key={entry.name} fill={palette[idx % palette.length]} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(v, n) => [`${v} (${Math.round((v/total)*100)}%)`, n]} />
               </PieChart>
             </ResponsiveContainer>
+            
           </BoxChart>
           <Stack sx={{ minWidth: 160 }}>
             {data.map((d, i) => (

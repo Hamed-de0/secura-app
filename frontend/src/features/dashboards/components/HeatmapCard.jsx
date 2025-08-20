@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Card, CardContent, Typography, Stack } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 
-export default function HeatmapCard({ title, matrix }) {
+export default function HeatmapCard({ title, matrix, sx }) {
   const theme = useTheme();
   const { columns, rows, values } = matrix;
 
@@ -15,10 +15,10 @@ export default function HeatmapCard({ title, matrix }) {
   };
 
   return (
-    <Card>
-      <CardContent>
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', ...sx }}>
+      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <Typography variant="subtitle1">{title}</Typography>
-        <div style={{ overflowX:'auto', paddingTop: 8 }}>
+        <div style={{ overflowX:'auto', paddingTop: 8 , flexGrow: 1}}>
           <table style={{ borderCollapse:'collapse', width:'100%', minWidth: 520 }}>
             <thead>
               <tr>

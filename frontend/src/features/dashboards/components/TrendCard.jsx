@@ -3,7 +3,7 @@ import { Card, CardContent, Typography, Stack, ToggleButtonGroup, ToggleButton }
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from '@mui/material/styles';
 
-export default function TrendCard({ title, series, range, onRangeChange }) {
+export default function TrendCard({ title, series, range, onRangeChange, sx }) {
   const theme = useTheme();
 
   const points = React.useMemo(() => {
@@ -19,8 +19,8 @@ export default function TrendCard({ title, series, range, onRangeChange }) {
   }, [series]);
 
   return (
-    <Card>
-      <CardContent>
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', ...sx }}>
+      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="subtitle1">{title}</Typography>
           <ToggleButtonGroup
@@ -31,7 +31,8 @@ export default function TrendCard({ title, series, range, onRangeChange }) {
             <ToggleButton value="all">All</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
-        <div role="img" aria-label={`${title} stacked area trend`} style={{ width:'100%', height: 260 }}>
+                <div role="img" aria-label={`${title} stacked area trend`} style={{ flexGrow: 1, minHeight: 220 }}>
+
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={points}>
               <CartesianGrid strokeDasharray="3 3" />

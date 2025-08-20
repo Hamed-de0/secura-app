@@ -11,16 +11,24 @@ export default function KpiTile({
   variant = 'linear', // 'linear' | 'radial' | 'plain'
   progress, // 0..100
   color = 'primary',
+  sx: sxProp, 
 }) {
   return (
-    <Card onClick={onClick} role={onClick ? 'button' : undefined}
+    <Card
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
       sx={{
+        height: '100%',                  // NEW
+        display: 'flex',                 // NEW
+        flexDirection: 'column',         // NEW
         cursor: onClick ? 'pointer' : 'default',
         transition: 'transform .08s ease, box-shadow .2s',
         '&:hover': onClick ? { transform: 'translateY(-1px)', boxShadow: 4 } : undefined,
         borderTop: (t) => `3px solid ${t.palette[color]?.main || t.palette.primary.main}`,
-      }}>
-      <CardContent>
+        ...sxProp,                       // NEW
+      }}
+    >
+      <CardContent sx={{ flexGrow: 1 }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Box sx={{ fontSize: 28, color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
             {icon}
