@@ -1,0 +1,62 @@
+{
+  "version": { "id": 1, "code": "ISO 27001:2022" },
+  "kpis": {
+    "requirements_total": 93,
+    "mapped_requirements": 80,
+    "effective_requirements": 72,
+    "controls_total": 93,
+    "controls_implemented": 58,
+    "coverage_pct": 0.77,
+    "evidence_fresh_pct": 0.64
+  },
+  "by_clause": [
+    { "code": "5", "title": "Organizational controls", "coverage_pct": 0.82 },
+    { "code": "6", "title": "People controls",        "coverage_pct": 0.74 },
+    { "code": "7", "title": "Physical controls",      "coverage_pct": 0.71 },
+    { "code": "8", "title": "Technological controls", "coverage_pct": 0.68 }
+  ],
+  "status_distribution": [
+    { "status": "evidenced",   "count": 20 },
+    { "status": "verified",    "count": 15 },
+    { "status": "implemented", "count": 23 },
+    { "status": "planning",    "count": 35 }
+  ],
+  "top_gaps": [
+    {
+      "id": 101,
+      "code": "5.1",
+      "title": "Policies for information security",
+      "mapped_count": 1,
+      "hits_count": 0,
+      "severity": "high",
+      "gap_reason": "Control mapped but no current evidence"
+    },
+    {
+      "id": 134,
+      "code": "8.23",
+      "title": "Web filtering",
+      "mapped_count": 0,
+      "hits_count": 0,
+      "severity": "medium",
+      "gap_reason": "No control mapped"
+    },
+    {
+      "id": 142,
+      "code": "8.29",
+      "title": "Security testing during development",
+      "mapped_count": 1,
+      "hits_count": 0,
+      "severity": "medium",
+      "gap_reason": "Control in planning; not effective"
+    },
+    {
+      "id": 118,
+      "code": "6.5",
+      "title": "Responsibilities after termination or change of employment",
+      "mapped_count": 1,
+      "hits_count": 0,
+      "severity": "low",
+      "gap_reason": "Pending HR evidence upload"
+    }
+  ]
+}

@@ -33,6 +33,8 @@ import Providers from '../features/providers/pages/Providers.jsx';
 import Reporting from '../features/reporting/pages/Reporting.jsx';
 import SoABuilder from '../features/soa/pages/SoABuilder.jsx';
 import MainDashboard from '../features/dashboards/pages/MainDashboard.jsx';
+import ComplianceDashboard from '../features/compliance/pages/ComplianceDashboard.jsx';
+import ComplianceDashboardMulti from '../features/compliance/pages/ComplianceDashboardMulti.jsx';
 
 
 // Add others progressively...
@@ -47,6 +49,7 @@ function AppRouter() {
       <Route path="/overview" element={<MainView><MainDashboard /></MainView>} />
       <Route path="/dashboard" element={<MainView><ISMSDashboard /></MainView>} />
       <Route path="/compliance/versions/:versionId" element={<MainView><ComplianceExplorer /></MainView>} />
+      <Route path="/compliance/dashboard" element={<MainView><ComplianceDashboardMulti /></MainView>} />
       <Route path="/assetgroups/tree" element={<MainView><GroupAssetTreePage /></MainView>} />
       <Route path="/assets/edit/:id" element={<MainView><AssetEditPage /></MainView>} />
       <Route path="/assets/new" element={<MainView><AssetEditPage /></MainView>} />

@@ -85,7 +85,7 @@ const GROUPS = [
         to: '/exceptions',
         parent: '/risk-view',
       },
-      { label: 'Compliance', icon: <RuleIcon />, to: '/compliance' },
+      { label: 'Compliance', icon: <RuleIcon />, to: '/compliance/dashboard' },
       {
         label: 'Evidence',
         icon: <UploadFileIcon />,

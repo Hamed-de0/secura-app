@@ -2,99 +2,104 @@ import React from 'react';
 import { Chip } from '@mui/material';
 import { getSourceChipProps, getAssuranceChipProps } from '../../theme/chips';
 
-// Column IDs must be stable; labels can change safely
+/**
+ * Column defs are pure. We avoid valueGetter for code/title to prevent blank cells
+ * when columns are cloned/reordered by grid helpers. We render directly from row.
+ */
 export const allColumns = {
-  code: { field: 'code', headerName: 'Code', width: 120,
-    valueGetter: (p) => p.value ?? p.row?.code ?? p.row?.reference_code ?? '' },
-  title: { field: 'title', headerName: 'Control', flex: 1, minWidth: 260,
-    valueGetter: (p) => p.value ?? p.row?.title ?? p.row?.name ?? '' },
-  source: { field: 'source', headerName: 'Source', width: 140,
-    renderCell: ({ value }) => (
-      <Chip size="small" label={value} {...getSourceChipProps(value)} />
-    ) },
-  assurance_status: { field: 'assurance_status', headerName: 'Assurance', width: 160,
-    renderCell: ({ value }) => (
-      <Chip size="small" label={value ?? ''} {...getAssuranceChipProps(value)} />
-    ) },
+  code: {
+    field: 'code',
+    headerName: 'Code',
+    width: 120,
+    renderCell: (params) => {
+      const v = params?.row?.code ?? '';
+      return <span>{v}</span>;
+    },
+  },
+  title: {
+    field: 'title',
+    headerName: 'Control',
+    flex: 1,
+    minWidth: 260,
+    renderCell: (params) => {
+      const v = params?.row?.title ?? '';
+      return <span>{v}</span>;
+    },
+  },
+  assurance_status: {
+    field: 'assurance_status',
+    headerName: 'Assurance',
+    width: 160,
+    renderCell: (params) => {
+      const val = params?.row?.assurance_status ?? '';
+      const theme = params?.api?._context?.theme;
+      const chipProps = theme ? getAssuranceChipProps(val, theme) : {};
+      return <Chip size="small" label={val} {...chipProps} />;
+    },
+  },
+  source: {
+    field: 'source',
+    headerName: 'Source',
+    width: 140,
+    renderCell: (params) => {
+      const val = params?.row?.source ?? '';
+      const theme = params?.api?._context?.theme;
+      const chipProps = theme ? getSourceChipProps(val, theme) : {};
+      return <Chip size="small" label={val} {...chipProps} />;
+    },
+  },
+  req_count: {
+    field: 'req_count',
+    headerName: 'Req',
+    width: 90,
+    type: 'number',
+    renderCell: (params) => {
+      const n = Number(params?.row?.req_count ?? 0);
+      return <span>{Number.isFinite(n) ? n : 0}</span>;
+    },
+  },
 };
 
 export const columnsList = [
   { id: 'code', label: 'Code' },
   { id: 'title', label: 'Control' },
-  { id: 'source', label: 'Source' },
   { id: 'assurance_status', label: 'Assurance' },
+  { id: 'source', label: 'Source' },
+  { id: 'req_count', label: 'Req' },
 ];
 
-export const defaultViewPreset = {
-  columns: { visible: ['code', 'title', 'source', 'assurance_status'], order: ['code','title','source','assurance_status'] },
-  sort: [{ field: 'code', sort: 'asc' }],
-  pagination: { pageSize: 10 },
-  density: 'standard',
-  filters: { q: '', source: null, assurance: null },
-};
-
-
-export function buildColumns(theme) {
-  const cols = [
-    {
-      field: 'code',
-      headerName: 'Code',
-      width: 120,
-      valueGetter: (p) =>
-        p.value ?? p.row?.code ?? p.row?.reference_code ?? '',
-    },
-    {
-      field: 'title',
-      headerName: 'Control',
-      flex: 1,
-      minWidth: 260,
-      valueGetter: (p) => p.value ?? p.row?.title ?? p.row?.name ?? '',
-    },
-    {
-      field: 'source',
-      headerName: 'Source',
-      width: 140,
-      renderCell: ({ value }) => (
-        <Chip
-          size="small"
-          label={value}
-          {...getSourceChipProps(value, theme)}
-        />
-      ),
-    },
-    {
-      field: 'assurance_status',
-      headerName: 'Assurance',
-      width: 160,
-      renderCell: ({ value }) => (
-        <Chip
-          size="small"
-          label={value ?? ''}
-          {...getAssuranceChipProps(value, theme)}
-        />
-      ),
-    },
+export function buildColumns() {
+  return [
+    allColumns.code,
+    allColumns.title,
+    allColumns.assurance_status,
+    allColumns.source,
+    allColumns.req_count,
   ];
-  return Object.freeze([...cols]);
 }
 
+export const defaultViewPreset = {
+  columns: {
+    visible: ['code', 'title', 'assurance_status', 'source', 'req_count'],
+    order:   ['code', 'title', 'assurance_status', 'source', 'req_count'],
+  },
+  sort: [{ field: 'code', sort: 'asc' }],
+  density: 'compact',
+};
 
 export const presets = [
   {
-    id: 'assurance-focus',
-    name: 'Assurance focus',
-    snapshot: {
-      columns: { visible: ['code','title','assurance_status','source'], order: ['code','title','assurance_status','source'] },
-      sort: [{ field: 'assurance_status', sort: 'desc' }],
-      density: 'compact',
-    },
+    id: 'summary',
+    name: 'Summary',
+    snapshot: defaultViewPreset,
   },
   {
     id: 'source-mapping',
     name: 'Source & mapping',
     snapshot: {
-      columns: { visible: ['code','title','source'], order: ['code','title','source'] },
+      columns: { visible: ['code','title','source','req_count'], order: ['code','title','source','req_count'] },
       sort: [{ field: 'code', sort: 'asc' }],
+      density: 'compact',
     },
   },
 ];

@@ -1,0 +1,61 @@
+{
+  "thresholds": { "freshness_warn_pct": 0.7 },
+  "frameworks": [
+    {
+      "id": 1,
+      "version_id": 1,
+      "code": "ISO27001",
+      "name": "ISO/IEC 27001:2022",
+      "version_code": "2022",
+      "requirements_total": 93,
+      "mapped_requirements": 80,
+      "effective_requirements": 72,
+      "controls_total": 93,
+      "controls_implemented": 58,
+      "coverage_pct": 0.77,
+      "evidence_fresh_pct": 0.64
+    },
+    {
+      "id": 2,
+      "version_id": 2,
+      "code": "GDPR",
+      "name": "General Data Protection Regulation",
+      "version_code": "2016/679",
+      "requirements_total": 99,
+      "mapped_requirements": 70,
+      "effective_requirements": 55,
+      "controls_total": 93,
+      "controls_implemented": 47,
+      "coverage_pct": 0.56,
+      "evidence_fresh_pct": 0.60
+    },
+    {
+      "id": 3,
+      "version_id": 3,
+      "code": "DORA",
+      "name": "Digital Operational Resilience Act",
+      "version_code": "EU 2022/2554",
+      "requirements_total": 120,
+      "mapped_requirements": 92,
+      "effective_requirements": 78,
+      "controls_total": 93,
+      "controls_implemented": 61,
+      "coverage_pct": 0.65,
+      "evidence_fresh_pct": 0.71
+    },
+    {
+      "id": 4,
+      "version_id": 4,
+      "code": "BSI",
+      "name": "BSI Grundschutz",
+      "version_code": "Kompendium",
+      "requirements_total": 150,
+      "mapped_requirements": 110,
+      "effective_requirements": 98,
+      "controls_total": 93,
+      "controls_implemented": 70,
+      "coverage_pct": 0.73,
+      "evidence_fresh_pct": 0.69
+    }
+  ]
+}
