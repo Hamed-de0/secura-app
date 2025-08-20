@@ -10,7 +10,7 @@
       "score": 0.62,
       "requirements": [
         {
-          "requirement_id": 101,
+          "requirement_id": 109,
           "code": "A.5.1",
           "title": "Information security policies",
           "score": 0.35,
@@ -28,7 +28,7 @@
           ]
         },
         {
-          "requirement_id": 102,
+          "requirement_id": 110,
           "code": "A.5.2",
           "title": "Review of policies",
           "score": 0.48,

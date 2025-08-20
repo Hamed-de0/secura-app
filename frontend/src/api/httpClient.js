@@ -67,7 +67,6 @@ function createKy() {
   return ky.create({
     prefixUrl: BASE_URL,
     timeout: 30_000,
-    // Retries for transient failures (GET/HEAD by default, add others here if idempotent)
     retry: {
       limit: 2,
       methods: ["get", "head"],
@@ -77,35 +76,32 @@ function createKy() {
     hooks: {
       beforeRequest: [
         async (request) => {
-          // Attach auth + JSON header
+          // Attach auth
           if (AUTH_TOKEN) request.headers.set("Authorization", `Bearer ${AUTH_TOKEN}`);
-          if (!request.headers.has("Content-Type")) {
+          // Always accept JSON
+          request.headers.set("Accept", "application/json");
+          // Only set Content-Type for methods with a body
+          const m = request.method ? request.method.toUpperCase() : "GET";
+          if (!["GET", "HEAD"].includes(m) && !request.headers.has("Content-Type")) {
             request.headers.set("Content-Type", "application/json");
           }
-          request.headers.set("Accept", "application/json");
         },
       ],
       afterResponse: [
         async (request, options, response) => {
-          // Attempt a single refresh on 401
           if (response.status === 401 && refreshHandler && !options.__triedRefresh) {
             const newToken = await refreshHandler().catch(() => null);
             if (newToken) {
               AUTH_TOKEN = newToken;
-              // Re-run the original request once
               return api(request, { ...options, __triedRefresh: true });
             }
           }
-          // Pass-through on success
           if (response.ok) return response;
-
-          // Throw normalized error
           throw await normalizeError(new Error("HTTP error"), response);
         },
       ],
       beforeError: [
         async (error) => {
-          // Standardize all thrown errors as ApiError
           if (error instanceof ApiError) return error;
           const resp = error?.response;
           return await normalizeError(error, resp);
@@ -114,18 +110,16 @@ function createKy() {
     },
   });
 }
-
-// Initial instance
 let api = createKy();
 
 // ---- Convenience helpers ----------------------------------------------------
 export function buildSearchParams({
   limit,
   offset,
-  sort,   // e.g. "code:asc"
+  sort,
   q,
-  fields, // "code,title"
-  filter, // arbitrary object -> flattened
+  fields,
+  filter,
 } = {}) {
   const params = new URLSearchParams();
   if (Number.isFinite(limit)) params.set("limit", String(limit));
@@ -142,7 +136,6 @@ export function buildSearchParams({
   return params;
 }
 
-// JSON request wrappers (fetch with AbortSignal compatible)
 export async function getJSON(path, { searchParams, signal } = {}) {
   const resp = await api.get(path, { searchParams, signal });
   return resp.json();
@@ -161,7 +154,6 @@ export async function patchJSON(path, { json, searchParams, signal } = {}) {
 }
 export async function deleteJSON(path, { json, searchParams, signal } = {}) {
   const resp = await api.delete(path, { json, searchParams, signal });
-  // Some delete endpoints return no content
   if (resp.status === 204) return { ok: true };
   return resp.json().catch(() => ({ ok: resp.ok }));
 }

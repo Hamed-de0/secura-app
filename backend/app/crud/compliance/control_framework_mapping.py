@@ -1,10 +1,12 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 from typing import List, Optional
 from app.models.compliance.control_framework_mapping import ControlFrameworkMapping
-from app.schemas.compliance.control_framework_mapping import ControlFrameworkMappingCreate, ControlFrameworkMappingUpdate
+from app.schemas.compliance.control_framework_mapping import ControlFrameworkMappingOut, ControlFrameworkMappingCreate, ControlFrameworkMappingUpdate
 from app.models.compliance.framework_requirement import FrameworkRequirement
 from app.models.controls.control import Control
+from app.models.compliance.obligation_atom import ObligationAtom
 
 
 def create(db: Session, data: ControlFrameworkMappingCreate) -> ControlFrameworkMapping:
@@ -18,8 +20,44 @@ def delete(db: Session, id: int) -> bool:
     row = db.query(ControlFrameworkMapping).get(id)
     if not row: return False
     db.delete(row); db.commit(); return True
-def list_by_requirement(db: Session, framework_requirement_id: int) -> List[ControlFrameworkMapping]:
-    return db.query(ControlFrameworkMapping).filter_by(framework_requirement_id=framework_requirement_id).all()
+
+def list_by_requirement(db: Session, framework_requirement_id: int) -> List[ControlFrameworkMappingOut]:
+    cr = ControlFrameworkMapping
+    fr = FrameworkRequirement
+    oa = ObligationAtom
+    c = Control
+
+    stmt = (
+        select(
+            cr.id,
+            cr.framework_requirement_id,
+            cr.control_id,
+            cr.obligation_atom_id,
+            cr.relation_type,
+            cr.coverage_level,
+            cr.applicability,
+            cr.evidence_hint,
+            cr.rationale,
+            cr.weight,
+            cr.notes,
+            fr.title.label("framework_requirement_title"),
+            oa.obligation_text.label("obligation_atom_name"),
+            c.title_en.label("control_title"),
+            c.reference_code.label("control_code"),
+            fr.code.label("framework_requirement_code"),
+            oa.citation.label("obligation_atom_code")
+        )
+        .join(fr, fr.id == cr.framework_requirement_id)  # INNER JOIN
+        .outerjoin(oa, oa.id == cr.obligation_atom_id)  # LEFT JOIN
+        .outerjoin(c, c.id == cr.control_id)
+        .where(cr.framework_requirement_id == framework_requirement_id)
+        .order_by(cr.id.asc())
+    )
+
+    rows = db.execute(stmt).all()
+    return [ControlFrameworkMappingOut(**dict(r._mapping)) for r in rows]
+
+    # return db.query(ControlFrameworkMapping).filter_by(framework_requirement_id=framework_requirement_id).all()
 
 def list_by_control(db: Session, control_id: int) -> List[ControlFrameworkMapping]:
     return db.query(ControlFrameworkMapping).filter_by(control_id=control_id).all()

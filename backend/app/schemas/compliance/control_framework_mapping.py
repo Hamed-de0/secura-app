@@ -50,6 +50,13 @@ class ControlFrameworkMappingUpdate(BaseModel):
 
 class ControlFrameworkMappingOut(ControlFrameworkMappingBase):
     id: int
+    control_title: Optional[str]
+    control_code: Optional[str]
+    framework_requirement_title: Optional[str] = None
+    framework_requirement_code: Optional[str] = None
+    obligation_atom_name: Optional[str] = None
+    obligation_atom_code: Optional[str] = None
+
 
     class Config:
         from_attributes = True
