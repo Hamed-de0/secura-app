@@ -1,7 +1,7 @@
 // Requirements service (real backend).
 // Endpoint per version:
 //   GET /framework_requirements/versions/:version_id/requirements/
-// Returns: array [{ requirement_id, code, title, hits_count }]
+// Returns items; we adapt to include parent_id and sort_index for the tree.
 
 let coverageMock = null;
 try {
@@ -41,8 +41,15 @@ function adaptRequirement(item, version_id) {
     item.name ??
     item.text ??
     "";
+  const parent_id =
+    item.parent_id == null
+      ? null
+      : Number(item.parent_id);
+  const sort_index =
+    Number.isFinite(Number(item.sort_index)) ? Number(item.sort_index) : null;
+
   const hits_count = hitsFromMock(version_id, requirement_id);
-  return { requirement_id, code, title, hits_count };
+  return { requirement_id, code, title, parent_id, sort_index, hits_count };
 }
 
 function pickArray(resp) {
@@ -59,7 +66,7 @@ export async function listRequirements({
   offset,
 } = {}) {
   if (!version_id) throw new Error("version_id is required");
-  const path = `framework_requirements/versions/${version_id}/requirements/`; // <-- trailing slash
+  const path = `framework_requirements/versions/${version_id}/requirements/`;
 
   const params = buildSearchParams({
     q: q && q.length >= 2 ? q : "",

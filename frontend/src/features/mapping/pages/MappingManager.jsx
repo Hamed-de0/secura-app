@@ -11,10 +11,12 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import { useSearchParams } from "react-router-dom";
 
+import RequirementTree from "../components/RequirementTree";
 import { listFrameworkVersions } from "../../../api/services/frameworks";
 import { listRequirements } from "../../../api/services/requirements";
 import { listControls, getControl } from "../../../api/services/controls";
-import { getRequirementMappings, saveRequirementMappings } from "../../../api/services/mappings";
+import { getRequirementMappings, saveRequirementMappings, createCrosswalkMapping, deleteCrosswalkMapping } from "../../../api/services/mappings";
+import MappingDialog from "../components/MappingDialog";
 
 // --- helpers ----------------------------------------------------------------
 function sumWeights(items) {
@@ -36,6 +38,33 @@ export default function MappingManager() {
   const [versionId, setVersionId] = useState(qpVersion); // selected version
   const [loadingVersions, setLoadingVersions] = useState(true);
 
+  const [allControls, setAllControls] = useState([]);
+  const [allControlsLoading, setAllControlsLoading] = useState(false);
+
+  // ---- Modal Window for edit/new ---------------------------------------------
+  const [dlgOpen, setDlgOpen] = React.useState(false);
+  const [dlgMode, setDlgMode] = React.useState("create");
+  const [dlgCtx, setDlgCtx] = React.useState({
+    requirement: null,
+    control: null,
+    initial: null,
+    obligationAtoms: [],
+    remainingWeight: 100,
+  });
+
+  function openCreateDialog(control) {
+    const req = requirements.find(r => r.requirement_id === reqId) || null;
+    setDlgMode("create");
+    setDlgCtx({
+      requirement: req,
+      control,
+      initial: null,
+      obligationAtoms: [],     // plug atoms list here when you have it
+      remainingWeight: Math.max(0, 100 - totalWeight),
+    });
+    setDlgOpen(true);
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -44,12 +73,10 @@ export default function MappingManager() {
         const list = await listFrameworkVersions();
         if (cancelled) return;
         setVersions(list);
-        // pick initial version: query param or first
         const initial = qpVersion && list.some(v => v.id === qpVersion)
           ? qpVersion
           : (list[0]?.id || 0);
         setVersionId(initial);
-        // ensure URL reflects current version
         setParams((p) => {
           const n = new URLSearchParams(p);
           if (initial) n.set("version", String(initial));
@@ -61,6 +88,29 @@ export default function MappingManager() {
         if (!cancelled) setLoadingVersions(false);
       }
     })();
+
+    (async () => {
+      setAllControlsLoading(true);
+      try {
+        const BATCH = 500;
+        let acc = [];
+        let offset = 0;
+        for (;;) {
+          const page = await listControls({ limit: BATCH, offset, q: "", sort: 'id' });
+          if (cancelled) return;
+          acc = acc.concat(page.items);
+          // stop when we have everything
+          if (acc.length >= (page.total ?? acc.length) || page.items.length === 0) break;
+          offset += BATCH;
+        }
+        setAllControls(acc);
+        // initialize total; rows will be computed by the filter effect below
+        setCatTotal(acc.length);
+      } finally {
+        if (!cancelled) setAllControlsLoading(false);
+      }
+    })();
+
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once
@@ -69,7 +119,6 @@ export default function MappingManager() {
   const [rq, setRq] = useState("");
   const [requirements, setRequirements] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(false);
-
   const [reqId, setReqId] = useState(qpReq || 0);
 
   useEffect(() => {
@@ -84,7 +133,6 @@ export default function MappingManager() {
       const items = await listRequirements({ version_id: versionId, q: rq.trim() });
       if (cancelled) return;
       setRequirements(items);
-      // If current reqId not in new list, select first
       if (!items.some((r) => r.requirement_id === reqId)) {
         setReqId(items[0]?.requirement_id || 0);
       }
@@ -120,10 +168,16 @@ export default function MappingManager() {
       setLoadingMap(true);
       try {
         const items = await getRequirementMappings({ requirement_id: reqId });
+        // If your GET already includes control_code/title, getControl calls aren’t needed.
+        const enriched = items.map((x) => ({
+          ...x,
+          code: x.code || x.control_code || `#${x.control_id}`,
+          title: x.title || x.control_title || "",
+        }));
         
         if (!cancelled) {
-          setServerSet(items);
-          setDraftSet(items);
+          setServerSet(enriched);
+          setDraftSet(enriched);
         }
       } finally {
         if (!cancelled) setLoadingMap(false);
@@ -136,14 +190,10 @@ export default function MappingManager() {
   const dirty = useMemo(() => JSON.stringify(draftSet) !== JSON.stringify(serverSet), [draftSet, serverSet]);
   const over = totalWeight > 100;
 
-  // ---- right: controls catalog (unchanged; server-side list) ---------------
-  const [cqRaw, setCqRaw] = useState("");
+  // ---- right: controls catalog (server) ------------------------------------
   const [cq, setCq] = useState("");
   const [source, setSource] = useState("all");
-  useEffect(() => {
-    const id = setTimeout(() => setCq(cqRaw.trim()), 400);
-    return () => clearTimeout(id);
-  }, [cqRaw]);
+  
 
   const [catPage, setCatPage] = useState({ page: 0, pageSize: 10 });
   const [catRows, setCatRows] = useState([]);
@@ -151,24 +201,50 @@ export default function MappingManager() {
   const [catLoading, setCatLoading] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setCatLoading(true);
-      try {
-        const limit = catPage.pageSize;
-        const offset = catPage.page * catPage.pageSize;
-        const page = await listControls({ limit, offset, q: cq.length >= 2 ? cq : "" });
-        const items = page.items.filter((i) => source === "all" || i.source === source);
-        if (!cancelled) {
-          setCatRows(items);
-          setCatTotal(page.total);
-        }
-      } finally {
-        if (!cancelled) setCatLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [catPage.page, catPage.pageSize, cq, source]);
+    // Filter in-memory by code OR title/name; case-insensitive
+    const ql = (cq || "").toLowerCase();
+
+    let items = allControls;
+
+    if (ql.length >= 2) {
+      items = items.filter(c => {
+        const code = String(c.code || c.reference_code || "").toLowerCase();
+        const name = String(c.title || c.control_title || c.title_en || "").toLowerCase();
+        return code.includes(ql) || name.includes(ql);
+      });
+    }
+
+    if (source !== "all") {
+      items = items.filter(c => (c.source || "").toLowerCase() === source.toLowerCase());
+    }
+
+    // Update total & current page slice
+    setCatTotal(items.length);
+    const start = catPage.page * catPage.pageSize;
+    const end = start + catPage.pageSize;
+    setCatRows(items.slice(start, end));
+  }, [allControls, cq, source, catPage.page, catPage.pageSize]);
+
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   (async () => {
+  //     setCatLoading(true);
+  //     try {
+  //       const limit = catPage.pageSize;
+  //       const offset = catPage.page * catPage.pageSize;
+  //       const page = await listControls({ limit, offset, q: cq.length >= 2 ? cq : "" });
+  //       const items = page.items.filter((i) => source === "all" || i.source === source);
+  //       if (!cancelled) {
+  //         setCatRows(items);
+  //         setCatTotal(page.total);
+  //       }
+  //       // console.log(items.total,  items)
+  //     } finally {
+  //       if (!cancelled) setCatLoading(false);
+  //     }
+  //   })();
+  //   return () => { cancelled = true; };
+  // }, [catPage.page, catPage.pageSize, cq, source]);
 
   // ---- actions --------------------------------------------------------------
   function addControlToDraft(control) {
@@ -179,8 +255,15 @@ export default function MappingManager() {
     const next = distinctById([...draftSet, { control_id: id, weight, code: control.code, title: control.title }]);
     setDraftSet(next);
   }
-  function removeFromDraft(id) {
-    setDraftSet(draftSet.filter((x) => x.control_id !== id));
+  async function removeFromDraft(id) {
+    console.log('id for delete', id, reqId);
+    await deleteCrosswalkMapping({mapping_id: id}).catch(console.log);
+    const fresh = await getRequirementMappings({requirement_id: reqId});
+    setDraftSet(fresh);
+    setServerSet(fresh);
+    console.log('successfully deleted.')
+    
+    
   }
   function updateWeight(id, newWeight) {
     const w = Math.max(0, Math.min(100, Number(newWeight) || 0));
@@ -191,13 +274,11 @@ export default function MappingManager() {
     try {
       const items = draftSet.map(({ control_id, weight }) => ({ control_id, weight }));
       const saved = await saveRequirementMappings({ version_id: versionId, requirement_id: reqId, items });
-      // re-enrich after save
-      const enriched = await Promise.all(
-        saved.map(async (x) => {
-          const c = await getControl(x.control_id).catch(() => null);
-          return { ...x, code: c?.code ?? `#${x.control_id}`, title: c?.title ?? "" };
-        })
-      );
+      const enriched = saved.map((x) => ({
+        ...x,
+        code: x.code || x.control_code || `#${x.control_id}`,
+        title: x.title || x.control_title || "",
+      }));
       setServerSet(enriched);
       setDraftSet(enriched);
     } finally {
@@ -214,12 +295,21 @@ export default function MappingManager() {
       headerName: "Weight %",
       width: 130,
       renderCell: (p) => (
-        <TextField
+        <Chip
           size="small"
-          type="number"
-          inputProps={{ min: 0, max: 100, style: { textAlign: "right", width: 80 } }}
-          value={p.row.weight}
-          onChange={(e) => updateWeight(p.row.control_id, e.target.value)}
+          label={`${p.row.weight}%`}
+          onClick={() => {
+            const req = requirements.find(r => r.requirement_id === reqId) || null;
+            setDlgMode("edit");
+            setDlgCtx({
+              requirement: req,
+              control: { control_id: p.row.control_id, code: p.row.code, title: p.row.title },
+              initial: p.row,         // contains mapping_id, weight, relation_type, etc.
+              obligationAtoms: [],    // supply if you have
+              remainingWeight: Math.max(0, 100 - (totalWeight - (p.row.weight || 0))),
+            });
+            setDlgOpen(true);
+          }}
         />
       ),
     },
@@ -230,7 +320,7 @@ export default function MappingManager() {
       sortable: false,
       filterable: false,
       renderCell: (p) => (
-        <IconButton size="small" onClick={() => removeFromDraft(p.row.control_id)}>
+        <IconButton size="small" onClick={() => removeFromDraft(p.row.mapping_id)}>
           <DeleteOutlineIcon fontSize="small" />
         </IconButton>
       ),
@@ -253,7 +343,7 @@ export default function MappingManager() {
       sortable: false,
       filterable: false,
       renderCell: (p) => (
-        <IconButton size="small" onClick={() => addControlToDraft(p.row)}>
+        <IconButton size="small" onClick={() => openCreateDialog(p.row)}>
           <AddCircleOutlineIcon fontSize="small" />
         </IconButton>
       ),
@@ -273,14 +363,12 @@ export default function MappingManager() {
             label="Framework version"
             value={versionId || ""}
             onChange={(e) => {
-                console.log(versions);
               const v = Number(e.target.value);
               setVersionId(v);
               setReqId(0); // force re-select from new requirements list
             }}
             sx={{ minWidth: 260 }}
           >
-            {() => console.log('loadingVersions', versions)}
             {loadingVersions && <MenuItem disabled value="">Loading…</MenuItem>}
             {!loadingVersions && versions.length === 0 && <MenuItem disabled value="">No versions</MenuItem>}
             {versions.map((v) => (
@@ -289,76 +377,49 @@ export default function MappingManager() {
               </MenuItem>
             ))}
           </TextField>
+
+          {/* Search for requirements (filters the tree) */}
+          <TextField
+            size="small"
+            placeholder="Search requirements…"
+            value={rq}
+            onChange={(e) => setRq(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ minWidth: 280 }}
+          />
         </Stack>
       </Stack>
 
       <Grid container spacing={2}>
-        {/* LEFT: Requirements */}
-        <Grid item xs={12} md={3} size={4}>
+        {/* LEFT: Requirements Tree */}
+        <Grid item xs={12} md={3} size={5} maxHeight={400} mb={5}>
           <Card>
             <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                <Typography variant="subtitle2">Requirements</Typography>
-                <TextField
-                  size="small"
-                  placeholder="Search…"
-                  value={rq}
-                  onChange={(e) => setRq(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Stack>
-
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Requirements</Typography>
               {!versionId ? (
                 <Typography variant="body2" color="text.secondary">Select a framework version to load requirements.</Typography>
               ) : loadingReqs ? (
                 <LinearProgress />
               ) : (
-                <Box sx={{ maxHeight: 520, overflow: "auto" }}>
-                  {requirements.map((r) => {
-                    const active = r.requirement_id === reqId;
-                    return (
-                      <Box
-                        key={r.requirement_id}
-                        onClick={() => {
-                            setReqId(r.requirement_id)
-                        }}
-                        sx={{
-                          p: 1,
-                          borderRadius: 1,
-                          cursor: "pointer",
-                          bgcolor: active ? "action.selected" : "transparent",
-                          ":hover": { bgcolor: "action.hover" },
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {r.code}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                          {r.title}
-                        </Typography>
-                        {r.hits_count > 0 && (
-                          <Chip size="small" color="success" variant="outlined" sx={{ ml: 1 }} label={`effective ${r.hits_count}`} />
-                        )}
-                      </Box>
-                    );
-                  })}
-                  {requirements.length === 0 && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No requirements found.</Typography>
-                  )}
-                </Box>
+                <RequirementTree
+                  requirements={requirements}
+                  selectedId={reqId}
+                  onSelect={(id) => setReqId(id)}
+                  query={rq}
+                />
               )}
             </CardContent>
           </Card>
         </Grid>
 
         {/* MIDDLE: Mappings editor */}
-        <Grid item xs={12} md={5} size={8}>
+        <Grid item xs={12} md={5} size={7} maxHeight={350}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
@@ -373,7 +434,7 @@ export default function MappingManager() {
                   <Button
                     size="small"
                     startIcon={<RestartAltIcon />}
-                    disabled={JSON.stringify(draftSet) === JSON.stringify(serverSet)}
+                    disabled={!useMemo(() => JSON.stringify(draftSet) !== JSON.stringify(serverSet), [draftSet, serverSet])}
                     onClick={() => setDraftSet(serverSet)}
                   >
                     Reset
@@ -382,24 +443,8 @@ export default function MappingManager() {
                     size="small"
                     variant="contained"
                     startIcon={<SaveIcon />}
-                    disabled={JSON.stringify(draftSet) === JSON.stringify(serverSet) || sumWeights(draftSet) > 100 || !versionId || !reqId}
-                    onClick={async () => {
-                      await saveRequirementMappings({
-                        version_id: versionId,
-                        requirement_id: reqId,
-                        items: draftSet.map(({ control_id, weight }) => ({ control_id, weight })),
-                      });
-                      // re-fetch server set after save
-                      const fresh = await getRequirementMappings({ requirement_id: reqId });
-                      const enriched = await Promise.all(
-                        fresh.map(async (x) => {
-                          const c = await getControl(x.control_id).catch(() => null);
-                          return { ...x, code: c?.code ?? `#${x.control_id}`, title: c?.title ?? "" };
-                        })
-                      );
-                      setServerSet(enriched);
-                      setDraftSet(enriched);
-                    }}
+                    disabled={!useMemo(() => JSON.stringify(draftSet) !== JSON.stringify(serverSet), [draftSet, serverSet]) || sumWeights(draftSet) > 100 || !versionId || !reqId}
+                    onClick={saveDraft}
                   >
                     Save
                   </Button>
@@ -411,42 +456,10 @@ export default function MappingManager() {
               ) : !reqId ? (
                 <Typography variant="body2" color="text.secondary">Pick a requirement to edit mappings.</Typography>
               ) : (
-                <Box sx={{ height: 520 }}>
+                <Box sx={{ height: '100%' }}>
                   <DataGrid
                     rows={draftSet.map((x) => ({ id: x.control_id, ...x }))}
-                    columns={[
-                      { field: "code", headerName: "Code", width: 110, renderCell: (p) => <span>{p.row.code}</span> },
-                      { field: "title", headerName: "Control", flex: 1, minWidth: 220, renderCell: (p) => <span>{p.row.title}</span> },
-                      {
-                        field: "weight",
-                        headerName: "Weight %",
-                        width: 130,
-                        renderCell: (p) => (
-                          <TextField
-                            size="small"
-                            type="number"
-                            inputProps={{ min: 0, max: 100, style: { textAlign: "right", width: 80 } }}
-                            value={p.row.weight}
-                            onChange={(e) => {
-                              const w = Math.max(0, Math.min(100, Number(e.target.value) || 0));
-                              setDraftSet(draftSet.map((x) => (x.control_id === p.row.control_id ? { ...x, weight: w } : x)));
-                            }}
-                          />
-                        ),
-                      },
-                      {
-                        field: "actions",
-                        headerName: "",
-                        width: 60,
-                        sortable: false,
-                        filterable: false,
-                        renderCell: (p) => (
-                          <IconButton size="small" onClick={() => setDraftSet(draftSet.filter((x) => x.control_id !== p.row.control_id))}>
-                            <DeleteOutlineIcon fontSize="small" />
-                          </IconButton>
-                        ),
-                      },
-                    ]}
+                    columns={mapColumns}
                     hideFooter
                     density="compact"
                     disableColumnMenu
@@ -458,7 +471,7 @@ export default function MappingManager() {
         </Grid>
 
         {/* RIGHT: Controls catalog */}
-        <Grid item xs={12} md={4} size={12}>
+        <Grid item xs={12} md={4} size={12} mt={5}>
           <Card>
             <CardContent>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Controls catalog</Typography>
@@ -467,8 +480,8 @@ export default function MappingManager() {
                   size="small"
                   fullWidth
                   placeholder="Search controls…"
-                  value={cqRaw}
-                  onChange={(e) => setCqRaw(e.target.value)}
+                  value={cq}
+                  onChange={(e) => setCq(e.target.value)}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -483,7 +496,7 @@ export default function MappingManager() {
                   label="Source"
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  sx={{ minWidth: 120 }}
+                  sx={{ minWidth: 160 }}
                 >
                   {["all", "ISO", "Internal", "BSI", "GDPR", "DORA", "Other"].map((s) => (
                     <MenuItem key={s} value={s}>
@@ -498,43 +511,42 @@ export default function MappingManager() {
               <Box sx={{ height: 520 }}>
                 <DataGrid
                   rows={catRows.map((x) => ({ id: x.control_id, ...x }))}
-                  columns={[
-                    { field: "code", headerName: "Code", width: 110, renderCell: (p) => <span>{p.row.code}</span> },
-                    { field: "title", headerName: "Control", flex: 1, minWidth: 220, renderCell: (p) => <span>{p.row.title}</span> },
-                    {
-                      field: "source",
-                      headerName: "Source",
-                      width: 110,
-                      renderCell: (p) => <Chip size="small" variant="outlined" label={p.row.source || "—"} />,
-                    },
-                    {
-                      field: "add",
-                      headerName: "",
-                      width: 60,
-                      sortable: false,
-                      filterable: false,
-                      renderCell: (p) => (
-                        <IconButton size="small" onClick={() => addControlToDraft(p.row)}>
-                          <AddCircleOutlineIcon fontSize="small" />
-                        </IconButton>
-                      ),
-                    },
-                  ]}
+                  columns={catalogColumns}
                   density="compact"
                   disableColumnMenu
-                  loading={catLoading}
+                  loading={allControlsLoading}
                   paginationMode="server"
                   rowCount={catTotal}
                   paginationModel={catPage}
                   onPaginationModelChange={setCatPage}
                   pageSizeOptions={[10, 25, 50]}
-                  onRowDoubleClick={(p) => addControlToDraft(p.row)}
+                  onRowDoubleClick={(p) => openCreateDialog(p.row)}
                 />
               </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+
+      <MappingDialog
+        open={dlgOpen}
+        mode={dlgMode}
+        requirement={dlgCtx.requirement}
+        control={dlgCtx.control}
+        initial={dlgCtx.initial}
+        obligationAtoms={dlgCtx.obligationAtoms}
+        remainingWeight={dlgCtx.remainingWeight}
+        onClose={() => setDlgOpen(false)}
+        onSaved={async () => {
+          setDlgOpen(false);
+          // re-fetch mappings for the current requirement and refresh table
+          const fresh = await getRequirementMappings({ requirement_id: reqId });
+          // if your GET already has code/title, no need to enrich:
+          setServerSet(fresh);
+          setDraftSet(fresh);
+        }}
+      />
     </Box>
+    
   );
 }

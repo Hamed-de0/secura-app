@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from typing import List, Optional
 from app.models.compliance.control_framework_mapping import ControlFrameworkMapping
+from app.schemas.compliance import ControlFrameworkMappingNamesOut
 from app.schemas.compliance.control_framework_mapping import ControlFrameworkMappingOut, ControlFrameworkMappingCreate, ControlFrameworkMappingUpdate
 from app.models.compliance.framework_requirement import FrameworkRequirement
 from app.models.controls.control import Control
@@ -21,7 +22,7 @@ def delete(db: Session, id: int) -> bool:
     if not row: return False
     db.delete(row); db.commit(); return True
 
-def list_by_requirement(db: Session, framework_requirement_id: int) -> List[ControlFrameworkMappingOut]:
+def list_by_requirement(db: Session, framework_requirement_id: int) -> List[ControlFrameworkMappingNamesOut]:
     cr = ControlFrameworkMapping
     fr = FrameworkRequirement
     oa = ObligationAtom
@@ -55,7 +56,7 @@ def list_by_requirement(db: Session, framework_requirement_id: int) -> List[Cont
     )
 
     rows = db.execute(stmt).all()
-    return [ControlFrameworkMappingOut(**dict(r._mapping)) for r in rows]
+    return [ControlFrameworkMappingNamesOut(**dict(r._mapping)) for r in rows]
 
     # return db.query(ControlFrameworkMapping).filter_by(framework_requirement_id=framework_requirement_id).all()
 

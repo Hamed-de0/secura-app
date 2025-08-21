@@ -5,7 +5,7 @@ import { getJSON, buildSearchParams } from "../httpClient";
 import { adaptControlsPage, adaptControl } from "../adapters/controls";
 import catalog from "../../mock/controls_catalog.json";
 
-let USE_MOCKS = true;
+let USE_MOCKS = false;
 export function setControlsUseMocks(v) {
   USE_MOCKS = !!v;
 }

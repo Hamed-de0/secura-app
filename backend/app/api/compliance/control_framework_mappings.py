@@ -7,6 +7,7 @@ from app.schemas.compliance.control_framework_mapping import (
     ControlFrameworkMappingCreate,
     ControlFrameworkMappingUpdate,
     ControlFrameworkMappingOut,
+    ControlFrameworkMappingNamesOut
 )
 from app.schemas.compliance.framework_requirement import FrameworkRequirementOut
 from app.crud.compliance import control_framework_mapping as crud
@@ -75,7 +76,7 @@ def delete(id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Not found")
     return {"deleted": ok}
 
-@router.get("/requirements/{framework_requirement_id}", response_model=List[ControlFrameworkMappingOut])
+@router.get("/requirements/{framework_requirement_id}", response_model=List[ControlFrameworkMappingNamesOut])
 def list_by_requirement(framework_requirement_id: int, db: Session = Depends(get_db)):
     return crud.list_by_requirement(db, framework_requirement_id)
 

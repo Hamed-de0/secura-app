@@ -31,7 +31,7 @@ def get_control(control_id: int, db: Session = Depends(get_db)):
 @router.get("/", response_model=ControlsPage)
 def list_controls(
     offset: int = Query(0, ge=0),
-    limit: int = Query(25, ge=1, le=200),
+    limit: int = Query(25, ge=1, le=1000),
     sort_by: str = Query("id"),
     sort_dir: str = Query("asc"),
     db: Session = Depends(get_db)):
