@@ -35,6 +35,7 @@ export default function MappingDialog({
   remainingWeight = 100,
   onClose,
   onSaved,
+  prefillObligationAtom = null
 }) {
   const isEdit = mode === "edit";
   const req = requirement || {};
@@ -45,7 +46,7 @@ export default function MappingDialog({
   const hasAtoms = Array.isArray(obligationAtoms) && obligationAtoms.length > 0;
 
   // --- form state ------------------------------------------------------------
-  const [atomId, setAtomId] = React.useState(init.obligation_atom_id ?? null);
+  const [atomId, setAtomId] = React.useState(init.obligation_atom_id ?? (prefillObligationAtom ? Number(prefillObligationAtom.id) : null));
   const [relationType, setRelationType] = React.useState(init.relation_type || (hasAtoms ? "satisfies" : "supports"));
   const [weight, setWeight] = React.useState(
     isEdit ? Number(init.weight ?? 0) : Math.max(0, Math.min(100, Number(remainingWeight ?? 100)))
@@ -73,7 +74,7 @@ export default function MappingDialog({
         const i = initial || {};
         const usesAtoms = Array.isArray(obligationAtoms) && obligationAtoms.length > 0;
 
-        setAtomId(i.obligation_atom_id ?? null);
+        setAtomId(i.obligation_atom_id ?? (prefillObligationAtom ? Number(prefillObligationAtom.id) : null));
         setRelationType(i.relation_type || (usesAtoms ? "satisfies" : "supports"));
         setWeight(
             mode === "edit"

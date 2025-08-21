@@ -1,7 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Box, Grid, Card, CardContent, Typography, Stack, TextField, InputAdornment, Button,
-  IconButton, Chip, LinearProgress, Divider, MenuItem
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  Stack,
+  TextField,
+  InputAdornment,
+  Button,
+  IconButton,
+  Chip,
+  LinearProgress,
+  Divider,
+  MenuItem,
+  Tooltip
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import SearchIcon from "@mui/icons-material/Search";
@@ -15,8 +28,21 @@ import RequirementTree from "../components/RequirementTree";
 import { listFrameworkVersions } from "../../../api/services/frameworks";
 import { listRequirements } from "../../../api/services/requirements";
 import { listControls, getControl } from "../../../api/services/controls";
-import { getRequirementMappings, saveRequirementMappings, createCrosswalkMapping, deleteCrosswalkMapping } from "../../../api/services/mappings";
+import {
+  getRequirementMappings,
+  saveRequirementMappings,
+  createCrosswalkMapping,
+  deleteCrosswalkMapping,
+  
+} from "../../../api/services/mappings";
 import MappingDialog from "../components/MappingDialog";
+// --- New for Obligation Atom Drawer -----------------------------------------
+import ComplianceDrawer from '../components/ComplianceDrawer';
+import { normalizeTo100 } from "../../../utils/weights";
+import { updateCrosswalkMapping } from "../../../api/services/mappings";
+import TuneIcon from "@mui/icons-material/Tune";
+import PercentIcon from "@mui/icons-material/Percent";
+import { Toolbar } from "@mui/x-data-grid";
 
 // --- helpers ----------------------------------------------------------------
 function sumWeights(items) {
@@ -34,12 +60,16 @@ export default function MappingManager() {
   const qpReq = Number(params.get("req") || 0);
 
   // ---- top: framework versions ---------------------------------------------
-  const [versions, setVersions] = useState([]);          // [{id, code, name, version_code}]
-  const [versionId, setVersionId] = useState(qpVersion); // selected version
+  const [versions, setVersions] = useState([]); // [{id, code, name, version_code}]
+  const [versionId, setVersionId] = useState(qpVersion); //  version
   const [loadingVersions, setLoadingVersions] = useState(true);
 
   const [allControls, setAllControls] = useState([]);
   const [allControlsLoading, setAllControlsLoading] = useState(false);
+
+  // ---- Drawer stuff ----------------------------------------------------------
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [prefillObligation, setPrefillObligation] = useState(null);
 
   // ---- Modal Window for edit/new ---------------------------------------------
   const [dlgOpen, setDlgOpen] = React.useState(false);
@@ -53,17 +83,38 @@ export default function MappingManager() {
   });
 
   function openCreateDialog(control) {
-    const req = requirements.find(r => r.requirement_id === reqId) || null;
+    const req = requirements.find((r) => r.requirement_id === reqId) || null;
     setDlgMode("create");
     setDlgCtx({
       requirement: req,
       control,
       initial: null,
-      obligationAtoms: [],     // plug atoms list here when you have it
+      obligationAtoms: [], // plug atoms list here when you have it
       remainingWeight: Math.max(0, 100 - totalWeight),
     });
     setDlgOpen(true);
   }
+
+  // Normalize action for current requirement
+  async function handleNormalizeWeights() {
+    if (!mappings?.length) return;
+    const current = mappings.map((m) => ({
+      id: m.mapping_id,
+      weight: m.weight || 0,
+    }));
+    const next = normalizeTo100(current);
+    const pending = [];
+    for (const n of next) {
+      const before = mappings.find((m) => m.mapping_id === n.id);
+      if (!before || before.weight === n.weight) continue;
+      // optimistic update optional: update local state here if you keep local grid state
+      pending.push(updateCrosswalkMapping(n.id, { weight: n.weight }));
+    }
+    await Promise.allSettled(pending);
+    // refresh the current requirement mappings after updates
+    await reloadMappingsForRequirement();
+  }
+
 
   useEffect(() => {
     let cancelled = false;
@@ -73,9 +124,10 @@ export default function MappingManager() {
         const list = await listFrameworkVersions();
         if (cancelled) return;
         setVersions(list);
-        const initial = qpVersion && list.some(v => v.id === qpVersion)
-          ? qpVersion
-          : (list[0]?.id || 0);
+        const initial =
+          qpVersion && list.some((v) => v.id === qpVersion)
+            ? qpVersion
+            : list[0]?.id || 0;
         setVersionId(initial);
         setParams((p) => {
           const n = new URLSearchParams(p);
@@ -96,11 +148,20 @@ export default function MappingManager() {
         let acc = [];
         let offset = 0;
         for (;;) {
-          const page = await listControls({ limit: BATCH, offset, q: "", sort: 'id' });
+          const page = await listControls({
+            limit: BATCH,
+            offset,
+            q: "",
+            sort: "id",
+          });
           if (cancelled) return;
           acc = acc.concat(page.items);
           // stop when we have everything
-          if (acc.length >= (page.total ?? acc.length) || page.items.length === 0) break;
+          if (
+            acc.length >= (page.total ?? acc.length) ||
+            page.items.length === 0
+          )
+            break;
           offset += BATCH;
         }
         setAllControls(acc);
@@ -111,7 +172,9 @@ export default function MappingManager() {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once
 
@@ -130,7 +193,10 @@ export default function MappingManager() {
     let cancelled = false;
     setLoadingReqs(true);
     (async () => {
-      const items = await listRequirements({ version_id: versionId, q: rq.trim() });
+      const items = await listRequirements({
+        version_id: versionId,
+        q: rq.trim(),
+      });
       if (cancelled) return;
       setRequirements(items);
       if (!items.some((r) => r.requirement_id === reqId)) {
@@ -138,15 +204,19 @@ export default function MappingManager() {
       }
       setLoadingReqs(false);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [versionId, rq]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // keep URL in sync when version or req changes
   useEffect(() => {
     setParams((p) => {
       const n = new URLSearchParams(p);
-      if (versionId) n.set("version", String(versionId)); else n.delete("version");
-      if (reqId) n.set("req", String(reqId)); else n.delete("req");
+      if (versionId) n.set("version", String(versionId));
+      else n.delete("version");
+      if (reqId) n.set("req", String(reqId));
+      else n.delete("req");
       return n;
     });
   }, [versionId, reqId, setParams]);
@@ -174,7 +244,7 @@ export default function MappingManager() {
           code: x.code || x.control_code || `#${x.control_id}`,
           title: x.title || x.control_title || "",
         }));
-        
+
         if (!cancelled) {
           setServerSet(enriched);
           setDraftSet(enriched);
@@ -183,17 +253,21 @@ export default function MappingManager() {
         if (!cancelled) setLoadingMap(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [reqId]);
 
   const totalWeight = useMemo(() => sumWeights(draftSet), [draftSet]);
-  const dirty = useMemo(() => JSON.stringify(draftSet) !== JSON.stringify(serverSet), [draftSet, serverSet]);
+  const dirty = useMemo(
+    () => JSON.stringify(draftSet) !== JSON.stringify(serverSet),
+    [draftSet, serverSet]
+  );
   const over = totalWeight > 100;
 
   // ---- right: controls catalog (server) ------------------------------------
   const [cq, setCq] = useState("");
   const [source, setSource] = useState("all");
-  
 
   const [catPage, setCatPage] = useState({ page: 0, pageSize: 10 });
   const [catRows, setCatRows] = useState([]);
@@ -207,15 +281,19 @@ export default function MappingManager() {
     let items = allControls;
 
     if (ql.length >= 2) {
-      items = items.filter(c => {
+      items = items.filter((c) => {
         const code = String(c.code || c.reference_code || "").toLowerCase();
-        const name = String(c.title || c.control_title || c.title_en || "").toLowerCase();
+        const name = String(
+          c.title || c.control_title || c.title_en || ""
+        ).toLowerCase();
         return code.includes(ql) || name.includes(ql);
       });
     }
 
     if (source !== "all") {
-      items = items.filter(c => (c.source || "").toLowerCase() === source.toLowerCase());
+      items = items.filter(
+        (c) => (c.source || "").toLowerCase() === source.toLowerCase()
+      );
     }
 
     // Update total & current page slice
@@ -225,55 +303,35 @@ export default function MappingManager() {
     setCatRows(items.slice(start, end));
   }, [allControls, cq, source, catPage.page, catPage.pageSize]);
 
-  // useEffect(() => {
-  //   let cancelled = false;
-  //   (async () => {
-  //     setCatLoading(true);
-  //     try {
-  //       const limit = catPage.pageSize;
-  //       const offset = catPage.page * catPage.pageSize;
-  //       const page = await listControls({ limit, offset, q: cq.length >= 2 ? cq : "" });
-  //       const items = page.items.filter((i) => source === "all" || i.source === source);
-  //       if (!cancelled) {
-  //         setCatRows(items);
-  //         setCatTotal(page.total);
-  //       }
-  //       // console.log(items.total,  items)
-  //     } finally {
-  //       if (!cancelled) setCatLoading(false);
-  //     }
-  //   })();
-  //   return () => { cancelled = true; };
-  // }, [catPage.page, catPage.pageSize, cq, source]);
+
+  // onPickObligation handler: store prefill; you can pass this to MappingDialog when opening it
+  function handlePickObligation(atom) {
+    console.log('from manager', atom);
+    setPrefillObligation(atom);
+  }
 
   // ---- actions --------------------------------------------------------------
-  function addControlToDraft(control) {
-    const id = Number(control.control_id);
-    if (draftSet.some((x) => x.control_id === id)) return;
-    const remaining = Math.max(0, 100 - totalWeight);
-    const weight = remaining > 0 ? remaining : 0;
-    const next = distinctById([...draftSet, { control_id: id, weight, code: control.code, title: control.title }]);
-    setDraftSet(next);
-  }
   async function removeFromDraft(id) {
-    console.log('id for delete', id, reqId);
-    await deleteCrosswalkMapping({mapping_id: id}).catch(console.log);
-    const fresh = await getRequirementMappings({requirement_id: reqId});
+    console.log("id for delete", id, reqId);
+    await deleteCrosswalkMapping({ mapping_id: id }).catch(console.log);
+    const fresh = await getRequirementMappings({ requirement_id: reqId });
     setDraftSet(fresh);
     setServerSet(fresh);
-    console.log('successfully deleted.')
-    
-    
+    console.log("successfully deleted.");
   }
-  function updateWeight(id, newWeight) {
-    const w = Math.max(0, Math.min(100, Number(newWeight) || 0));
-    setDraftSet(draftSet.map((x) => (x.control_id === id ? { ...x, weight: w } : x)));
-  }
+
   async function saveDraft() {
     setSaving(true);
     try {
-      const items = draftSet.map(({ control_id, weight }) => ({ control_id, weight }));
-      const saved = await saveRequirementMappings({ version_id: versionId, requirement_id: reqId, items });
+      const items = draftSet.map(({ control_id, weight }) => ({
+        control_id,
+        weight,
+      }));
+      const saved = await saveRequirementMappings({
+        version_id: versionId,
+        requirement_id: reqId,
+        items,
+      });
       const enriched = saved.map((x) => ({
         ...x,
         code: x.code || x.control_code || `#${x.control_id}`,
@@ -287,9 +345,21 @@ export default function MappingManager() {
   }
 
   // ---- columns --------------------------------------------------------------
+  
   const mapColumns = [
-    { field: "code", headerName: "Code", width: 110, renderCell: (p) => <span>{p.row.code}</span> },
-    { field: "title", headerName: "Control", flex: 1, minWidth: 220, renderCell: (p) => <span>{p.row.title}</span> },
+    {
+      field: "code",
+      headerName: "Code",
+      width: 110,
+      renderCell: (p) => <span>{p.row.code}</span>,
+    },
+    {
+      field: "title",
+      headerName: "Control",
+      flex: 1,
+      minWidth: 220,
+      renderCell: (p) => <span>{p.row.title}</span>,
+    },
     {
       field: "weight",
       headerName: "Weight %",
@@ -299,14 +369,22 @@ export default function MappingManager() {
           size="small"
           label={`${p.row.weight}%`}
           onClick={() => {
-            const req = requirements.find(r => r.requirement_id === reqId) || null;
+            const req =
+              requirements.find((r) => r.requirement_id === reqId) || null;
             setDlgMode("edit");
             setDlgCtx({
               requirement: req,
-              control: { control_id: p.row.control_id, code: p.row.code, title: p.row.title },
-              initial: p.row,         // contains mapping_id, weight, relation_type, etc.
-              obligationAtoms: [],    // supply if you have
-              remainingWeight: Math.max(0, 100 - (totalWeight - (p.row.weight || 0))),
+              control: {
+                control_id: p.row.control_id,
+                code: p.row.code,
+                title: p.row.title,
+              },
+              initial: p.row, // contains mapping_id, weight, relation_type, etc.
+              obligationAtoms: [], // supply if you have
+              remainingWeight: Math.max(
+                0,
+                100 - (totalWeight - (p.row.weight || 0))
+              ),
             });
             setDlgOpen(true);
           }}
@@ -320,7 +398,10 @@ export default function MappingManager() {
       sortable: false,
       filterable: false,
       renderCell: (p) => (
-        <IconButton size="small" onClick={() => removeFromDraft(p.row.mapping_id)}>
+        <IconButton
+          size="small"
+          onClick={() => removeFromDraft(p.row.mapping_id)}
+        >
           <DeleteOutlineIcon fontSize="small" />
         </IconButton>
       ),
@@ -328,13 +409,26 @@ export default function MappingManager() {
   ];
 
   const catalogColumns = [
-    { field: "code", headerName: "Code", width: 110, renderCell: (p) => <span>{p.row.code}</span> },
-    { field: "title", headerName: "Control", flex: 1, minWidth: 220, renderCell: (p) => <span>{p.row.title}</span> },
+    {
+      field: "code",
+      headerName: "Code",
+      width: 110,
+      renderCell: (p) => <span>{p.row.code}</span>,
+    },
+    {
+      field: "title",
+      headerName: "Control",
+      flex: 1,
+      minWidth: 220,
+      renderCell: (p) => <span>{p.row.title}</span>,
+    },
     {
       field: "source",
       headerName: "Source",
       width: 110,
-      renderCell: (p) => <Chip size="small" variant="outlined" label={p.row.source || "—"} />,
+      renderCell: (p) => (
+        <Chip size="small" variant="outlined" label={p.row.source || "—"} />
+      ),
     },
     {
       field: "add",
@@ -354,7 +448,13 @@ export default function MappingManager() {
   return (
     <Box sx={{ p: 2 }}>
       {/* Top toolbar: framework selection */}
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "stretch", md: "center" }} justifyContent="space-between" sx={{ mb: 2 }}>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        alignItems={{ xs: "stretch", md: "center" }}
+        justifyContent="space-between"
+        sx={{ mb: 2 }}
+      >
         <Typography variant="h6">Requirements ↔ Controls Mapping</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
           <TextField
@@ -369,11 +469,22 @@ export default function MappingManager() {
             }}
             sx={{ minWidth: 260 }}
           >
-            {loadingVersions && <MenuItem disabled value="">Loading…</MenuItem>}
-            {!loadingVersions && versions.length === 0 && <MenuItem disabled value="">No versions</MenuItem>}
+            {loadingVersions && (
+              <MenuItem disabled value="">
+                Loading…
+              </MenuItem>
+            )}
+            {!loadingVersions && versions.length === 0 && (
+              <MenuItem disabled value="">
+                No versions
+              </MenuItem>
+            )}
             {versions.map((v) => (
               <MenuItem key={v.id} value={v.id}>
-                {v.code ? `${v.code}${v.version_code ? ` ${v.version_code}` : ""}` : `Version ${v.id}`} — {v.name}
+                {v.code
+                  ? `${v.code}${v.version_code ? ` ${v.version_code}` : ""}`
+                  : `Version ${v.id}`}{" "}
+                — {v.name}
               </MenuItem>
             ))}
           </TextField>
@@ -401,15 +512,19 @@ export default function MappingManager() {
         <Grid item xs={12} md={3} size={5} maxHeight={400} mb={5}>
           <Card>
             <CardContent>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>Requirements</Typography>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Requirements
+              </Typography>
               {!versionId ? (
-                <Typography variant="body2" color="text.secondary">Select a framework version to load requirements.</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Select a framework version to load requirements.
+                </Typography>
               ) : loadingReqs ? (
                 <LinearProgress />
               ) : (
                 <RequirementTree
                   requirements={requirements}
-                  selectedId={reqId}
+                  Id={reqId}
                   onSelect={(id) => setReqId(id)}
                   query={rq}
                 />
@@ -422,19 +537,37 @@ export default function MappingManager() {
         <Grid item xs={12} md={5} size={7} maxHeight={350}>
           <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{ mb: 1 }}
+              >
                 <Typography variant="subtitle2">Mappings</Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Chip
                     size="small"
-                    color={sumWeights(draftSet) > 100 ? "error" : sumWeights(draftSet) === 100 ? "success" : "default"}
+                    color={
+                      sumWeights(draftSet) > 100
+                        ? "error"
+                        : sumWeights(draftSet) === 100
+                        ? "success"
+                        : "default"
+                    }
                     label={`Total: ${sumWeights(draftSet)}%`}
                     variant="outlined"
                   />
                   <Button
                     size="small"
                     startIcon={<RestartAltIcon />}
-                    disabled={!useMemo(() => JSON.stringify(draftSet) !== JSON.stringify(serverSet), [draftSet, serverSet])}
+                    disabled={
+                      !useMemo(
+                        () =>
+                          JSON.stringify(draftSet) !==
+                          JSON.stringify(serverSet),
+                        [draftSet, serverSet]
+                      )
+                    }
                     onClick={() => setDraftSet(serverSet)}
                   >
                     Reset
@@ -443,26 +576,49 @@ export default function MappingManager() {
                     size="small"
                     variant="contained"
                     startIcon={<SaveIcon />}
-                    disabled={!useMemo(() => JSON.stringify(draftSet) !== JSON.stringify(serverSet), [draftSet, serverSet]) || sumWeights(draftSet) > 100 || !versionId || !reqId}
+                    disabled={
+                      !useMemo(
+                        () =>
+                          JSON.stringify(draftSet) !==
+                          JSON.stringify(serverSet),
+                        [draftSet, serverSet]
+                      ) ||
+                      sumWeights(draftSet) > 100 ||
+                      !versionId ||
+                      !reqId
+                    }
                     onClick={saveDraft}
                   >
                     Save
                   </Button>
+                  <Tooltip title="Normalize to 100%">
+                    <IconButton size="small" onClick={handleNormalizeWeights}>
+                      <PercentIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Compliance Drawer">
+                    <IconButton size="small" onClick={() => setDrawerOpen(true)}>
+                      <TuneIcon />
+                    </IconButton>
+                  </Tooltip>
                 </Stack>
               </Stack>
 
               {loadingMap ? (
                 <LinearProgress />
               ) : !reqId ? (
-                <Typography variant="body2" color="text.secondary">Pick a requirement to edit mappings.</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Pick a requirement to edit mappings.
+                </Typography>
               ) : (
-                <Box sx={{ height: '100%' }}>
+                <Box sx={{ height: "100%" }}>
                   <DataGrid
                     rows={draftSet.map((x) => ({ id: x.control_id, ...x }))}
                     columns={mapColumns}
                     hideFooter
                     density="compact"
                     disableColumnMenu
+                    
                   />
                 </Box>
               )}
@@ -474,7 +630,9 @@ export default function MappingManager() {
         <Grid item xs={12} md={4} size={12} mt={5}>
           <Card>
             <CardContent>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>Controls catalog</Typography>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Controls catalog
+              </Typography>
               <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
                 <TextField
                   size="small"
@@ -498,7 +656,15 @@ export default function MappingManager() {
                   onChange={(e) => setSource(e.target.value)}
                   sx={{ minWidth: 160 }}
                 >
-                  {["all", "ISO", "Internal", "BSI", "GDPR", "DORA", "Other"].map((s) => (
+                  {[
+                    "all",
+                    "ISO",
+                    "Internal",
+                    "BSI",
+                    "GDPR",
+                    "DORA",
+                    "Other",
+                  ].map((s) => (
                     <MenuItem key={s} value={s}>
                       {s === "all" ? "All" : s}
                     </MenuItem>
@@ -536,6 +702,7 @@ export default function MappingManager() {
         initial={dlgCtx.initial}
         obligationAtoms={dlgCtx.obligationAtoms}
         remainingWeight={dlgCtx.remainingWeight}
+        prefillObligationAtom={prefillObligation}
         onClose={() => setDlgOpen(false)}
         onSaved={async () => {
           setDlgOpen(false);
@@ -546,7 +713,15 @@ export default function MappingManager() {
           setDraftSet(fresh);
         }}
       />
+
+       <ComplianceDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        requirementId={reqId}
+        versionId={versionId}
+        controls={allControls || []}
+        onPickObligation={handlePickObligation}
+      />
     </Box>
-    
   );
 }
