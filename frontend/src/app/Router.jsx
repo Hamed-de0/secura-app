@@ -13,7 +13,7 @@ import TagList from '../features/tags/TagList'
 import RiskScenarioTable from '../features/riskScenarios/RiskScenarioTable'
 import RiskScenarioForm from '../features/riskScenarios/RiskScenarioForm'
 import RiskScenarioEdit from '../features/riskScenarios/RiskScenarioEdit'
-import RiskDashboard from '../features/riskScenarios/RiskDashboard'
+// import RiskDashboard from '../features/riskScenarios/RiskDashboard'
 import RiskScenarioContextView from '../features/RiskScenarioContexts/RiskScenarioContextView'
 import AssetTypePage from '../features/assets/assetTypes/AssetTypePage'
 import RisksEffectiveView from '../features/dashboards/RiskEffectiveView'
@@ -22,6 +22,7 @@ import ISMSDashboard from '../features/dashboards/ISMSDashboard'
 import ComplianceExplorer from '../features/compliance/pages/ComplianceExplorer.jsx';
 import ControlsAtScope from '../features/controls/pages/ControlsAtScope.jsx';
 import RiskView from '../features/risks/pages/RiskView.jsx';
+import RiskDashboard from '../features/dashboards/RiskDashboard.jsx';
 import ProvidersPage from '../features/providers/pages/ProvidersPage.jsx';
 import ActivitiesPage from '../features/activities/pages/ActivitiesPage.jsx';
 import MappingManager from '../features/mapping/pages/MappingManager.jsx';
@@ -65,9 +66,9 @@ function AppRouter() {
       <Route path="/risk-scenarios-context" element={<MainView><RiskScenarioContextView /></MainView>} />
       <Route path="/risk-scenarios/new" element={<MainView><RiskScenarioForm /></MainView>} />
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
-      {/* <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} /> */}
-      {/* <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} /> */}
-      <Route path="/risk-view" element={<MainView><RiskView /></MainView>} />
+      <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} />
+      <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} />
+      {/* <Route path="/risk-view" element={<MainView><RiskView /></MainView>} /> */}
       {/* <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} /> */}
       <Route path="/controls" element={<MainView><ControlsDashboard /></MainView>} />
       <Route path="/providers" element={<MainView><ProvidersPage /></MainView>} />

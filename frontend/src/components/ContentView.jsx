@@ -10,7 +10,7 @@ const ContentView = ({ children, footer }) => {
       width: '100%',
       overflowY: 'auto',
       backgroundColor: theme.palette.background.default,
-      marginTop: '4.1rem',
+      
       boxSizing: 'border-box',
     }}
   >

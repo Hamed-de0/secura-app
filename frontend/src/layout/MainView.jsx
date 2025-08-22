@@ -27,7 +27,8 @@ export default function MainView({ children }) {
           sidebarCollapsed={ui.sidebarCollapsed}
           onToggleSidebar={ui.toggleSidebar}
         />
-        <Box component="main" sx={{ p: 2, flex: 1 }}>
+        <Box component="main" sx={{ p: 0, flex: 1 }}>
+
           <ContentView sx={{ flex: 1, width: '100%' }}>
           {children}
         </ContentView>

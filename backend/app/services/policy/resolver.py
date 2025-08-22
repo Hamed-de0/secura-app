@@ -1,6 +1,7 @@
+import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from sqlalchemy.orm import Session
-from app.crud.policies.risk_appetite_policy import resolve_for
+from app.crud.policies.risk_appetite_policy import find_effective_for_asset
 from app.crud.policies.control_applicability_policy import list_effective
 from app.models.controls.control import Control  # adjust import to your project
 from app.models.controls.control_risk_link import ControlRiskLink  # scenario template
@@ -8,10 +9,11 @@ from app.models.compliance.framework import Framework
 from app.models.compliance.framework_requirement import FrameworkRequirement
 from app.models.compliance.control_framework_mapping import ControlFrameworkMapping
 from app.crud.policies.framework_activation_policy import list_active as list_active_fw_policies
-
+from datetime import datetime
 
 def resolve_appetite(db: Session, *, asset) -> Optional[Dict[str, Any]]:
-    p = resolve_for(db, asset=asset, scenario=None)
+    p = find_effective_for_asset(db, asset_id=asset.id, at_time=datetime.utcnow(),domain=None)
+    # p = resolve_for(db, asset=asset, scenario=None)
     if not p:
         return None
     return {

@@ -11,7 +11,7 @@ from app.schemas.risks.risk_scenario_context import (
 )
 from app.schemas.risks.risk_context_list import RiskContextListResponse
 from app.services import calculate_risk_scores_by_context
-from app.crud.risks import risk_scenario_context as crud_legacy, risk_context_list
+from app.crud.risks import risk_scenario_context as crud_legacy, risk_context_list, context_metrics
 from app.crud.risks.risk_scenario_context import RiskScenarioContextCRUD as rsc_crud
 from app.constants.scopes import normalize_scope, is_valid_scope, SCOPE_TYPES
 
@@ -80,6 +80,22 @@ def list_contexts(
 
     return rsc_crud.list(db, risk_scenario_id, scope_type, scope_id)
 
+@router.get("/metrics")
+def get_risk_context_metrics(
+    scope: str = Query("all"),                           # asset|asset_type|asset_group|tag|bu|site|entity|service|org_group|all
+    scope_id: int = Query(None),
+    status: str = Query("all"),
+    domain: str = Query("all"),                          # C|I|A|L|R|all
+    over_appetite: Optional[bool] = Query(None),
+    owner_id: Optional[int] = Query(None),
+    days: int = Query(90, ge=1, le=365),
+    search: str = Query("", max_length=200),
+    db: Session = Depends(get_db),
+):
+    return context_metrics(
+        db, scope_id=scope_id, scope=scope, status=status, domain=domain,
+        over_appetite=over_appetite, owner_id=owner_id, days=days, search=search
+    )
 
 # -------------------------------------------------------------
 # Paginated/managed list – keep existing integration
@@ -93,9 +109,10 @@ def get_contexts(
     scope: str = Query("all"),
     status: str = Query("all"),
     search: str = Query("", max_length=200),
-    # legacy filters retained for now (your list service currently takes these)
-    asset_id: Optional[int] = None,
-    asset_type_id: Optional[int] = None,
+    domain: str = "all",  # C|I|A|L|R|all
+    over_appetite: Optional[bool] = None,
+    owner_id: Optional[int] = None,
+    days: int = 90,
     db: Session = Depends(get_db),
 ):
     return risk_context_list.list_contexts(
@@ -107,8 +124,10 @@ def get_contexts(
         scope=scope,
         status=status,
         search=search,
-        asset_id=asset_id,
-        asset_type_id=asset_type_id,
+        domain=domain,
+        owner_id=owner_id,
+        over_appetite=over_appetite,
+        days=days
     )
 
 

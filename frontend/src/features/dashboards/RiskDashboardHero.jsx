@@ -55,6 +55,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import configs from "../configs";
+import { fetchAssetEffectiveRisks } from '../../api/services/risks';
+import RiskDashboardHero from './RiskDashboardHero'
 
 /**
  * Risks (Effective) — Static demo view with a professional Modal detail
@@ -1176,8 +1178,6 @@ export default function RisksEffectiveView() {
     },
   ];
 
-  
-  
   return (
     <Container maxWidth={false} disableGutters sx={{ py: 2 }}>
       <Stack spacing={2}>
