@@ -22,7 +22,7 @@ import ISMSDashboard from '../features/dashboards/ISMSDashboard'
 import ComplianceExplorer from '../features/compliance/pages/ComplianceExplorer.jsx';
 import ControlsAtScope from '../features/controls/pages/ControlsAtScope.jsx';
 import RiskView from '../features/risks/pages/RiskView.jsx';
-import RiskDashboard from '../features/dashboards/RiskDashboard.jsx';
+import RiskDashboard from '../features/risks/pages/RiskDashboard.jsx';
 import ProvidersPage from '../features/providers/pages/ProvidersPage.jsx';
 import ActivitiesPage from '../features/activities/pages/ActivitiesPage.jsx';
 import MappingManager from '../features/mapping/pages/MappingManager.jsx';
@@ -68,7 +68,7 @@ function AppRouter() {
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
       <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} />
       <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} />
-      {/* <Route path="/risk-view" element={<MainView><RiskView /></MainView>} /> */}
+      <Route path="/risk-dashboard2" element={<MainView><RiskView /></MainView>} />
       {/* <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} /> */}
       <Route path="/controls" element={<MainView><ControlsDashboard /></MainView>} />
       <Route path="/providers" element={<MainView><ProvidersPage /></MainView>} />

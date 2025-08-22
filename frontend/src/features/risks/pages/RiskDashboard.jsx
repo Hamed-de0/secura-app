@@ -1,4 +1,3 @@
-// frontend/src/features/risk/RiskShowcaseDashboard.jsx
 import * as React from 'react';
 import {
   Box, Grid, Card, CardContent, Paper, Typography, Stack, Chip, useTheme, Divider
@@ -15,7 +14,7 @@ import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
 /* ================================
    Tiny SVG widgets (no extra libs)
    ================================ */
-function Sparkline({ data, width = 220, height = 60, strokeWidth = 2 }) {
+function Sparkline({ data, width = 220, height = 106, strokeWidth = 2 }) {
   if (!data?.length) return null;
   const max = Math.max(...data);
   const min = Math.min(...data);
@@ -341,7 +340,7 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
         </Box>
         
         {/* Heatmap and Donuts */}
-        <Box sx={{display: 'grid', gap: 2, p:1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(5, 1fr)' }, backgroundColor: 'yellow' }} >
+        <Box sx={{display: 'grid', gap: 2, p:1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(5, 1fr)' } , }} >
           {/* Heatmap + Domain chips */}
           <Grid item xs={12} md={7}>
             <Card sx={{ borderRadius: 3 }}>
@@ -363,7 +362,7 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
           </Grid>
 
           {/* Donut + legend */}
-          <Grid item xs={12} md={5}>
+          <Grid item xs={12} md={5} sx={{}} >
             <Card sx={{ borderRadius: 3 }}>
               <CardContent>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -381,7 +380,7 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
               </CardContent>
             </Card>
 
-            <Card sx={{ mt: 2, borderRadius: 3 }}>
+            <Card sx={{ mt: 1, borderRadius: 3 }} >
               <CardContent>
                 <Typography variant="subtitle2">Residual Risk Trend</Typography>
                 <Box sx={{ mt: 1, color: theme.palette.primary.main }}>
@@ -392,8 +391,8 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
           </Grid>
 
           {/* Evidence + SLA */}
-          <Grid item xs={12} md={5}>
-            <Card sx={{ borderRadius: 3 }}>
+          <Grid item xs={12} md={5} sx={{}}>
+            <Card sx={{ borderRadius: 2,  }}>
               <CardContent>
                 <Typography variant="subtitle2">Review SLA</Typography>
                 <GaugeSemi value={MOCK.review.scorePct} max={100} bar={theme.palette.success.main}
@@ -406,13 +405,14 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
               </CardContent>
             </Card>
 
-            <Card sx={{ mt: 2, borderRadius: 3 }}>
+            <Card sx={{ mt: 1, borderRadius: 2, height: 180 }}>
               <CardContent>
                 <Typography variant="subtitle2">Evidence Freshness</Typography>
                 <Stack spacing={1} sx={{ mt: 1 }}>
                   <BarLine label="Fresh"   value={MOCK.evidence.ok}      color={theme.palette.success.main} />
                   <BarLine label="Due"     value={MOCK.evidence.warn}    color={theme.palette.warning.main} />
                   <BarLine label="Overdue" value={MOCK.evidence.overdue} color={theme.palette.error.main} />
+                  <BarLine label="Missing" value={18} color={theme.palette.error.main} />
                 </Stack>
               </CardContent>
             </Card>
