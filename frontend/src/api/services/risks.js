@@ -8,3 +8,27 @@ export async function fetchAssetEffectiveRisks(assetId, { days = 90 } = {}) {
   const data = await getJSON(url, { searchParams });
   return Array.isArray(data) ? data : [];
 }
+
+
+/** Fetch aggregated metrics for the Risk Dashboard (server-side paging-safe). */
+export async function fetchRiskMetrics(filters = {}) {
+  const defaults = { scope: 'all', status: 'all', domain: 'all', days: 90 };
+  const searchParams = buildSearchParams({ ...defaults, ...filters });
+  // trailing slash matters
+  return await getJSON('risks/risk_scenario_contexts/metrics/', { searchParams });
+}
+
+export async function fetchRiskContexts(params = {}) {
+  const defaults = {
+    offset: 0,
+    limit: 10,
+    sort_by: 'id',
+    sort_dir: 'desc',
+    scope: 'all',
+    status: 'all',
+    domain: 'all',
+    days: 90,
+  };
+  const searchParams = buildSearchParams({ ...defaults, ...params });
+  return await getJSON('risks/risk_scenario_contexts/contexts/', { searchParams });
+}

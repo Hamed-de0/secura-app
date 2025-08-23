@@ -97,8 +97,9 @@ import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
     );
   }
 
-const KPIStrip = () => {
+const KPIStrip = ({data}) => {
   const theme = useTheme();
+  console.log('metrics',data);
   return (
     <Box
           sx={{
@@ -114,10 +115,10 @@ const KPIStrip = () => {
             title="Risk Exposure"
             color={theme.palette.primary.main}
             icon={ShieldOutlinedIcon}
-            main="157"
+            main={data?.exposure?.total || 0}
             sub={[
-              { label: 'High/Critical', value: '7' },
-              { label: 'Avg Residual', value: '23' },
+              { label: 'High/Critical', value: data?.exposure?.highCritical || 0 },
+              { label: 'Avg Residual', value: data?.exposure?.avgResidual || 0 },
             ]}
             //spark={[42, 44, 43, 47, 49, 48, 50, 51]}
           />
@@ -127,10 +128,10 @@ const KPIStrip = () => {
             title="Appetite Breaches"
             color={theme.palette.error.main}
             icon={ReportProblemOutlinedIcon}
-            main="32"
-            accent="20% of total"
+            main={data?.appetite?.count}
+            accent={`${data?.appetite?.percent}% of total`}
             sub={[
-              { label: 'Exceptions (30d)', value: '3' },
+              { label: 'Exceptions (30d)', value: data?.appetite?.exceptions30 },
             ]}
           />
 
@@ -139,10 +140,10 @@ const KPIStrip = () => {
             title="Ownership & Action"
             color={theme.palette.info.main}
             icon={PersonOutlineOutlinedIcon}
-            main="75%"
+            main={data?.ownership?.withOwnerPct}
             sub={[
-              { label: 'With Owner', value: '75%' },
-              { label: 'Mitigations', value: '12' },
+              { label: 'With Owner', value: data?.ownership?.withOwnerPct },
+              { label: 'Mitigations', value: data?.ownership?.mitigations },
             ]}
           />
 
@@ -151,10 +152,10 @@ const KPIStrip = () => {
             title="Assurance Health"
             color={theme.palette.success.main}
             icon={VerifiedUserOutlinedIcon}
-            main="81%"
+            main={data?.assurance?.evidencePct}
             sub={[
-              { label: 'Evidence Fresh', value: '81%' },
-              { label: 'Review SLA', value: '76%' },
+              
+              { label: 'Review SLA', value: data?.assurance?.reviewPct },
             ]}
           />
 
@@ -163,11 +164,11 @@ const KPIStrip = () => {
             title="Improvement Trend"
             color={theme.palette.warning.main}
             icon={TrendingDownOutlinedIcon}
-            main="−18"
-            accent="30 days"
+            main={data?.improvement?.delta}
+            accent={`${data?.improvement?.days} days`}
             //spark={[54, 53, 52, 50, 49, 47, 46, 45]}
             sub={[
-              { label: 'Residual Δ', value: '−18' },
+              { label: 'Residual Δ', value: data?.improvement?.delta },
             ]}
           />
         </Box>

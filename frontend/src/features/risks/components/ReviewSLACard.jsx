@@ -18,7 +18,7 @@ export default function ReviewSLACard({ data }) {
     <Card sx={{ borderRadius: 2 }}>
       <CardContent>
         <Typography variant="subtitle2">Review SLA</Typography>
-        <GaugeSemi value={data?.scorePct} max={100} bar={theme.palette.success.main}
+        <GaugeSemi c={theme.palette.mode==='light'?'#23324d':'#e4e9f4'} value={data?.scorePct} max={100} bar={theme.palette.success.main}
                    track={theme.palette.mode==='dark'?'#23324d':'#e4e9f4'} />
         <Stack direction="row" justifyContent="space-around" sx={{ mt: -1 }}>
           <LegendDot color={theme.palette.success.main} label="On Track" val={data?.onTrack} />

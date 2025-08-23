@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Box, Card, CardContent, Stack, Typography, useTheme } from '@mui/material';
 import Donut from '../charts/Donut';
 
-export default function SeverityDonutCard({ counts }) {
+export default function SeverityDonutCard({ counts, size =160, stroke=16 }) {
   const theme = useTheme();
   const segs = [
     { label: 'Low',      value: counts?.Low ?? 0,      color: theme.palette.info.main },
@@ -13,8 +13,8 @@ export default function SeverityDonutCard({ counts }) {
   return (
     <Card sx={{ borderRadius: 3 }}>
       <CardContent>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Donut segments={segs} />
+        <Stack direction="column" spacing={2} alignItems="center">
+          <Donut segments={segs} size={size} stroke={stroke} />
           <Box>
             {segs.map(s=>(
               <Stack key={s.label} direction="row" spacing={1} alignItems="center" sx={{ mb: .5 }}>
