@@ -32,3 +32,10 @@ export async function fetchRiskContexts(params = {}) {
   const searchParams = buildSearchParams({ ...defaults, ...params });
   return await getJSON('risks/risk_scenario_contexts/contexts/', { searchParams });
 }
+
+// Get full detail for a single Risk Scenario Context
+export async function fetchRiskContextDetail(contextId) {
+  if (!contextId) return null;
+  // trailing slash required by your ky client / API
+  return await getJSON(`risks/risk_scenario_contexts/${contextId}/details`);
+}

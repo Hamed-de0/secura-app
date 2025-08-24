@@ -37,6 +37,7 @@ import MainDashboard from '../features/dashboards/pages/MainDashboard.jsx';
 import ComplianceDashboard from '../features/compliance/pages/ComplianceDashboard.jsx';
 import ComplianceDashboardMulti from '../features/compliance/pages/ComplianceDashboardMulti.jsx';
 import ControlsDashboard from '../features/controls/pages/ControlsDashboard.jsx';
+import RiskRegisterPage from '../features/risks/pages/RiskRegisterPage.jsx';
 
 
 // Add others progressively...
@@ -68,7 +69,8 @@ function AppRouter() {
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
       <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} />
       <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} />
-      <Route path="/risk-dashboard2" element={<MainView><RiskView /></MainView>} />
+      {/* <Route path="/risk-dashboard2" element={<MainView><RiskView /></MainView>} /> */}
+      <Route path="/risk-register" element={<MainView><RiskRegisterPage /></MainView>} />
       {/* <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} /> */}
       <Route path="/controls" element={<MainView><ControlsDashboard /></MainView>} />
       <Route path="/providers" element={<MainView><ProvidersPage /></MainView>} />

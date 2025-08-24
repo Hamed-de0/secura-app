@@ -1,8 +1,6 @@
 # risk_context_list.py  (updated to unified scope)
-
-from typing import Dict, Any, List, Optional, Tuple
+from fastapi import HTTPException
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, asc, case, and_, or_
 
 from app.models.risks.risk_scenario_context import RiskScenarioContext
@@ -12,8 +10,11 @@ from app.models.risks.risk_score import RiskScore
 from app.models.controls.control_context_link import ControlContextLink
 from app.models.controls.control_effect_rating import ControlEffectRating
 from app.models.controls.control import Control
+from app.schemas.risks.risk_context_details import *
 
-from app.services.policy.resolver import resolve_appetite, compute_rag
+from app.services.policy.resolver import *
+from app.services.evidence.freshness import evidence_aggregate_by_context, evidence_aggregate_for_context
+
 from collections import defaultdict
 
 # Optional/known models for scope labels (import if present)
@@ -142,6 +143,32 @@ def resolve_scope_info(db: Session, scope_type: Optional[str], scope_id: Optiona
     # default fallback
     return (f"{scope_type}:{scope_id}" if scope_id is not None else scope_type, None)
 
+# Unified-scope label resolver (reuse your central version if you have one)
+def resolve_scope_label(db: Session, scope_type: Optional[str], scope_id: Optional[int]) -> str:
+    model_map = {
+        "asset": ("app.models.assets.asset", "Asset", "name"),
+        "asset_group": ("app.models.assets.asset_group", "AssetGroup", "name"),
+        "asset_type": ("app.models.assets.asset_type", "AssetType", "name"),
+        "tag": ("app.models.assets.asset_tag", "AssetTag", "name"),
+        "entity": ("app.models.org.entity", "OrgEntity", "name"),
+        "bu": ("app.models.org.business_unit", "BusinessUnit", "name"),
+        "site": ("app.models.org.site", "Site", "name"),
+        "service": ("app.models.services.service", "Service", "name"),
+        "org_group": ("app.models.org.org_group", "OrgGroup", "name"),
+    }
+    if not scope_type:
+        return "Organization"
+    mod_path, cls_name, label_attr = model_map.get(scope_type, (None, None, None))
+    if not mod_path or scope_id is None:
+        return f"{scope_type}:{scope_id}" if scope_id is not None else scope_type
+    try:
+        module = __import__(mod_path, fromlist=[cls_name])
+        cls = getattr(module, cls_name)
+        row = db.query(cls).get(scope_id)
+        return getattr(row, label_attr, f"{scope_type}:{scope_id}") if row else f"{scope_type}:{scope_id}"
+    except Exception:
+        return f"{scope_type}:{scope_id}"
+
 def resolve_appetite_for_scope(db: Session, scope_type: Optional[str], scope_id: Optional[int]) -> Dict[str, Any]:
     """
     Minimal scope-based appetite resolver against risk_appetite_policies:
@@ -251,29 +278,12 @@ def context_metrics(
     ).filter(RiskScore.risk_scenario_context_id.in_(ctx_ids)).all()
     score_by_ctx = {cid: {"residual": (res or 0), "last": lu} for cid, res, lu in scores}
 
-    # ---- Evidence aggregates (implemented + overdue) ----
-    ev_rows = (
-        db.query(
-            func.sum(
-                case((func.lower(ControlContextLink.assurance_status).in_(("implemented", "verified")), 1), else_=0)
-            ).label("impl"),
-            func.sum(
-                case((
-                    and_(
-                        func.lower(ControlContextLink.assurance_status).in_(("implemented", "verified")),
-                        or_(ControlContextLink.status_updated_at.is_(None),
-                            ControlContextLink.status_updated_at < stale_before)
-                    ), 1), else_=0)
-            ).label("overdue"),
-            func.max(ControlContextLink.status_updated_at).label("max_ev")
-        )
-        .filter(ControlContextLink.risk_scenario_context_id.in_(ctx_ids))
-        .one()
-    )
-    total_impl = int(ev_rows.impl or 0)
-    total_overdue = int(ev_rows.overdue or 0)
+    # ---- Evidence aggregates (centralized) ----
+    agg_by_ctx = evidence_aggregate_by_context(db, ctx_ids, stale_before)
+    total_impl = sum(v["implemented"] for v in agg_by_ctx.values())
+    total_overdue = sum(v["overdue"] for v in agg_by_ctx.values())
     total_ok = max(total_impl - total_overdue, 0)
-    max_evidence_ts = ev_rows.max_ev
+    max_evidence_ts = max([v["max_evidence"] for v in agg_by_ctx.values() if v["max_evidence"]], default=None)
 
     # ---- Recommended totals per scenario (for coverage in heatmap/KPI if needed)
     rec_rows = (
@@ -449,194 +459,6 @@ def context_metrics(
     }
 
 
-# def context_metrics(
-#         db: Session,
-#         scope: Optional[str] = "all",
-#         scope_id: Optional[int] = None,
-#         status: Optional[str] = "all",
-#         domain: Optional[str] = "all",
-#         over_appetite: Optional[bool] = None,
-#         owner_id: Optional[int] = None,
-#         days: Optional[int] = 365,
-#         search: Optional["str"] = None,
-#
-# ) -> Dict[str, Any]:
-#     now = datetime.utcnow()
-#     stale_before = now - timedelta(days=days)
-#
-#     # ---- Base contexts with filters (unified scope) ----
-#     q = (db.query(RiskScenarioContext)
-#          .join(RiskScenario)
-#          .outerjoin(RiskScore, RiskScore.risk_scenario_context_id == RiskScenarioContext.id))
-#
-#     if scope != "all":
-#         q = q.filter(RiskScenarioContext.scope_type == scope)
-#         if scope_id is not None:
-#             q = q.filter(RiskScenarioContext.scope_id == scope_id)
-#     if status != "all":
-#         q = q.filter(RiskScenarioContext.status == status)
-#     if owner_id is not None:
-#         q = q.filter(RiskScenarioContext.owner_id == owner_id)
-#     if search:
-#         like = f"%{search.lower()}%"
-#         q = q.filter(func.lower(func.coalesce(RiskScenario.title_en, "")).like(like))
-#
-#     contexts: List[RiskScenarioContext] = q.all()
-#     if not contexts:
-#         return {
-#             "total": 0,
-#             "overAppetite": 0,
-#             "severityCounts": {"Low": 0, "Medium": 0, "High": 0, "Critical": 0},
-#             "ragCounts": {"Green": 0, "Amber": 0, "Red": 0},
-#             "evidence": {"ok": 0, "warn": 0, "overdue": 0},
-#             "reviewSLA": {"onTrack": 0, "dueSoon": 0, "overdue": 0},
-#             "heatmap": {},
-#             "lastUpdatedMax": None,
-#             "asOf": now.replace(microsecond=0).isoformat() + "Z",
-#         }
-#
-#     ctx_ids = [c.id for c in contexts]
-#     scn_ids = list({c.risk_scenario_id for c in contexts})
-#
-#     # ---- Bulk scores (fast path) ----
-#     scores = db.query(
-#         RiskScore.risk_scenario_context_id,
-#         RiskScore.residual_score,
-#         RiskScore.last_updated
-#     ).filter(RiskScore.risk_scenario_context_id.in_(ctx_ids)).all()
-#     score_by_ctx = {cid: {"residual": (res or 0), "last": lu} for cid, res, lu in scores}
-#
-#     # ---- Evidence aggregates (implemented + overdue) ----
-#     ev_rows = (
-#         db.query(
-#             func.sum(
-#                 case((func.lower(ControlContextLink.assurance_status).in_(("implemented", "verified")), 1), else_=0)
-#             ).label("impl"),
-#             func.sum(
-#                 case((
-#                     and_(
-#                         func.lower(ControlContextLink.assurance_status).in_(("implemented", "verified")),
-#                         or_(ControlContextLink.status_updated_at.is_(None),
-#                             ControlContextLink.status_updated_at < stale_before)
-#                     ), 1), else_=0)
-#             ).label("overdue"),
-#             func.max(ControlContextLink.status_updated_at).label("max_ev")
-#         )
-#         .filter(ControlContextLink.risk_scenario_context_id.in_(ctx_ids))
-#         .one()
-#     )
-#     total_impl = int(ev_rows.impl or 0)
-#     total_overdue = int(ev_rows.overdue or 0)
-#     total_ok = max(total_impl - total_overdue, 0)
-#     max_evidence_ts = ev_rows.max_ev
-#
-#     # ---- Recommended totals per scenario (for coverage in heatmap/KPI if needed)
-#     rec_rows = (
-#         db.query(
-#             ControlEffectRating.risk_scenario_id,
-#             func.count(ControlEffectRating.control_id).label("n")
-#         )
-#         .filter(ControlEffectRating.risk_scenario_id.in_(scn_ids),
-#                 ControlEffectRating.score > 0)
-#         .group_by(ControlEffectRating.risk_scenario_id)
-#         .all()
-#     )
-#     rec_by_scn = {sid: int(n) for sid, n in rec_rows}
-#
-#     # ---- Compute per-context derived fields (severity, bands, appetite, rag) ----
-#     severity_counts = {"Low": 0, "Medium": 0, "High": 0, "Critical": 0}
-#     rag_counts = {"Green": 0, "Amber": 0, "Red": 0}
-#     heatmap: Dict[str, int] = {}
-#     over_appetite_count = 0
-#     last_updated_candidates: List[datetime] = []
-#
-#     # cache appetite per unique (scope_type, scope_id)
-#     uniq_scopes = {(c.scope_type, c.scope_id) for c in contexts}
-#     appetite_cache: Dict[tuple, Dict] = {pair: resolve_appetite_for_scope(db, *pair) for pair in uniq_scopes}
-#
-#     filtered_contexts: List[RiskScenarioContext] = []
-#
-#     for c in contexts:
-#         impacts = _pack_impacts(c)
-#         if domain in ("C", "I", "A", "L", "R") and (impacts.get(domain, 0) or 0) <= 0:
-#             continue
-#
-#         impact_overall = _impact_overall(impacts)
-#         sev = _severity(impact_overall, int(c.likelihood or 0))
-#         band = _severity_band(sev)
-#
-#         sc = score_by_ctx.get(c.id, {"residual": 0, "last": None})
-#         residual = int(sc["residual"] or 0)
-#
-#         appetite = appetite_cache[(c.scope_type, c.scope_id)]
-#         amber_max = int(appetite.get("amberMax") or 0)
-#         is_over = residual > amber_max
-#
-#         # optional filter
-#         if over_appetite is not None and bool(is_over) != bool(over_appetite):
-#             continue
-#
-#         # RAG via your existing function
-#         rag = compute_rag(
-#             residual=residual,
-#             appetite=appetite,
-#             likelihood=int(c.likelihood or 0),
-#             impacts=impacts,
-#         )
-#
-#         severity_counts[band] += 1
-#         rag_counts[rag] = rag_counts.get(rag, 0) + 1
-#         if is_over:
-#             over_appetite_count += 1
-#
-#         # heatmap cell (impactOverall x likelihood)
-#         key = f"{impact_overall}x{int(c.likelihood or 0)}"
-#         heatmap[key] = heatmap.get(key, 0) + 1
-#
-#         # updated timestamps to compute max
-#         last_updated_candidates.extend([getattr(c, "updated_at", None), sc["last"]])
-#
-#         filtered_contexts.append(c)
-#
-#     # Review SLA counts (if you store next_review on context)
-#     review_on, review_soon, review_over = 0, 0, 0
-#     for c in filtered_contexts:
-#         next_review = getattr(c, "next_review", None)
-#         if not next_review:
-#             continue
-#         appetite = appetite_cache[(c.scope_type, c.scope_id)]
-#         sla_amber = (appetite.get("slaDays") or {}).get("amber")
-#         if now > next_review:
-#             review_over += 1
-#         elif sla_amber and (next_review - now).days <= int(sla_amber):
-#             review_soon += 1
-#         else:
-#             review_on += 1
-#
-#     last_updated_max = None
-#     if last_updated_candidates or max_evidence_ts:
-#         last_updated_max = max(
-#             [d for d in last_updated_candidates if d] + ([max_evidence_ts] if max_evidence_ts else []))
-#
-#     return {
-#         "total": len(filtered_contexts),
-#         "overAppetite": over_appetite_count,
-#         "severityCounts": severity_counts,
-#         "ragCounts": rag_counts,
-#         "evidence": {"ok": total_ok, "warn": total_overdue, "overdue": total_overdue},
-#         "reviewSLA": {"onTrack": review_on, "dueSoon": review_soon, "overdue": review_over},
-#         "heatmap": heatmap,
-#         "lastUpdatedMax": last_updated_max.replace(microsecond=0).isoformat() + "Z" if last_updated_max else None,
-#         "asOf": now.replace(microsecond=0).isoformat() + "Z",
-#         # NEW
-#         "avgResidual": 99.9,
-#         "exceptionsExpiring30d": 99,
-#         "ownerAssigned": 99,
-#         "mitigationsInProgress": 99,
-#         "residualReduction30d": 99
-#     }
-
-
 def list_contexts(
     db: Session,
     *,
@@ -685,57 +507,8 @@ def list_contexts(
     now = datetime.utcnow()
     stale_before = now - timedelta(days=days)
 
-    impl_agg = (
-        db.query(
-            ControlContextLink.risk_scenario_context_id.label("ctx"),
-            func.sum(
-                case(
-                    (func.lower(ControlContextLink.assurance_status).in_(("implemented","verified")), 1),
-                    else_=0
-                )
-            ).label("implemented"),
-            func.sum(
-                case(
-                    (
-                        and_(
-                            func.lower(ControlContextLink.assurance_status).in_(("implemented","verified")),
-                            or_(
-                                ControlContextLink.status_updated_at.is_(None),
-                                ControlContextLink.status_updated_at < stale_before,
-                            ),
-                        ),
-                        1,
-                    ),
-                    else_=0,
-                )
-            ).label("overdue"),
-            func.max(ControlContextLink.status_updated_at).label("max_evidence"),
-        )
-        .filter(ControlContextLink.risk_scenario_context_id.in_(ctx_ids))
-        .group_by(ControlContextLink.risk_scenario_context_id)
-        .all()
-    )
+    impl_by_ctx = evidence_aggregate_by_context(db, ctx_ids, stale_before)
 
-
-    # impl_by_ctx = {
-    #     r.ctx: {"implemented": int(r.implemented or 0), "overdue": int(r.overdue or 0), "max_evidence": r.max_evidence}
-    #     for r in impl_agg
-    # }
-
-    # rec_rows = (
-    #     db.query(
-    #         ControlEffectRating.risk_scenario_id,
-    #         func.count(ControlEffectRating.control_id).label("n"),
-    #     )
-    #     .filter(
-    #         ControlEffectRating.risk_scenario_id.in_(scn_ids),
-    #         ControlEffectRating.score > 0,
-    #     )
-    #     .group_by(ControlEffectRating.risk_scenario_id)
-    #     .all()
-    # )
-
-    # Implemented links per context (names resolved in bulk)
     impl_pairs = (
         db.query(
             ControlContextLink.risk_scenario_context_id,
@@ -812,11 +585,9 @@ def list_contexts(
         sev_band = _severity_band(sev)
 
         # controls/evidence
-        # impl = impl_by_ctx.get(c.id, {}).get("implemented", 0)
-        overdue = impl_ids_by_ctx.get(c.id, {}).get("overdue", 0)
-        latest_ev = impl_ids_by_ctx.get(c.id, {}).get("max_evidence")
-        # recommended_total = rec_by_scn.get(c.risk_scenario_id, 0)
-        # coverage = (impl / recommended_total) if recommended_total else None
+        ev = impl_by_ctx.get(c.id, {"implemented": 0, "overdue": 0, "max_evidence": None})
+        overdue = ev["overdue"]
+        latest_ev = ev["max_evidence"]
 
         rec_ids = rec_ids_by_scn.get(c.risk_scenario_id, set())
         rec_names = rec_names_by_scn.get(c.risk_scenario_id, [])
@@ -919,3 +690,251 @@ def list_contexts(
     items = items[offset: offset + limit]
 
     return {"total": total, "items": items}
+
+
+def get_context_by_details(db: Session, context_id: int, days: int = 90):
+    now = datetime.utcnow()
+    stale_before = now - timedelta(days=days)
+
+    # --- 1) Load context + scenario + score ---
+    ctx: RiskScenarioContext = (
+        db.query(RiskScenarioContext)
+        .join(RiskScenario)
+        .outerjoin(RiskScore, RiskScore.risk_scenario_context_id == RiskScenarioContext.id)
+        .filter(RiskScenarioContext.id == context_id)
+        .first()
+    )
+    if not ctx:
+        raise HTTPException(404, "Risk scenario context not found")
+
+    scn: RiskScenario = ctx.risk_scenario
+    score: RiskScore = ctx.score
+
+    scenario_title = (
+            getattr(scn, "title", None)
+            or getattr(scn, "title_en", None)
+            or getattr(scn, "title_de", None)
+            or f"Scenario #{scn.id}"
+    )
+    scenario_desc = getattr(scn, "description", None) or getattr(scn, "description_en", None) or getattr(scn,
+                                                                                                         "description_de",
+                                                                                                         None)
+
+    # --- 2) Scores & trend (fast path via RiskScore/RiskScoreHistory) ---
+    initial = int(getattr(score, "inherent_score", 0) or 0) or 50
+    residual = int(getattr(score, "residual_score", 0) or 0) or 25
+    hist = (
+        db.query(RiskScoreHistory)
+        .filter(RiskScoreHistory.risk_scenario_context_id == ctx.id)
+        .order_by(RiskScoreHistory.created_at.desc())
+        .limit(days)
+        .all()
+    )
+    trend = [{"x": i, "y": int(h.residual_score or 0)} for i, h in enumerate(reversed(hist))] if hist else []
+
+    # --- 3) Impacts/likelihood/severity ---
+    impacts = _pack_impacts(ctx)
+    domains = [k for k in ("C", "I", "A", "L", "R") if impacts.get(k, 0)]
+    impact_overall = _impact_overall(impacts)
+    likelihood = int(ctx.likelihood or 0)
+    severity = _severity(impact_overall, likelihood)
+    severity_band = _severity_band(severity)
+
+    # --- 4) Scope & appetite & rag ---
+    scope_type = getattr(ctx, "scope_type", None)
+    scope_id = getattr(ctx, "scope_id", None)
+    scope_label = resolve_scope_label(db, scope_type, scope_id)
+    appetite = resolve_appetite_for_scope(db, scope_type, scope_id)
+    over_appetite = residual > int(appetite.get("amberMax") or 0)
+    rag = compute_rag(
+        residual=residual,
+        appetite=appetite,
+        likelihood=likelihood,
+        impacts=impacts,
+    )
+
+    # --- 5) Controls: recommended (per scenario) + implemented links on this context ---
+    rec_rows = (
+        db.query(
+            ControlEffectRating.control_id,
+            Control.reference_code,
+            Control.title_en,
+            Control.title_de,
+        )
+        .join(Control, Control.id == ControlEffectRating.control_id)
+        .filter(ControlEffectRating.risk_scenario_id == scn.id,
+                ControlEffectRating.score > 0)
+        .all()
+    )
+    rec_ids = {cid for (cid, _c, _e, _d) in rec_rows}
+    rec_names = [_control_display_name(c, e, d) for (_id, c, e, d) in rec_rows]
+
+    impl_rows = (
+        db.query(
+            ControlContextLink.id,
+            ControlContextLink.control_id,
+            ControlContextLink.assurance_status,
+            ControlContextLink.status_updated_at,
+            # ControlContextLink.effectiveness_override,
+            ControlContextLink.notes,
+            Control.reference_code,
+            Control.title_en,
+            Control.title_de,
+        )
+        .join(Control, Control.id == ControlContextLink.control_id)
+        .filter(
+            ControlContextLink.risk_scenario_context_id == ctx.id,
+        )
+        .all()
+    )
+
+    ev = evidence_aggregate_for_context(db, ctx.id, stale_before)
+    evidence_overdue = ev["overdue"] or 0
+    evidence_ok = max((ev["implemented"] or 0) - evidence_overdue, 0)
+    latest_ev_ts = ev["max_evidence"]
+
+    # Implemented = implemented/verified that are also in recommended set
+    impl_in_rec_names: List[str] = []
+    implemented_count = 0
+    evidence_overdue = 0
+    evidence_ok = 0
+    latest_ev_ts = None
+    for (link_id, ctrl_id, a_status, st_upd, ev_upd, eff_ovr, notes, code, t_en, t_de) in impl_rows:
+        if a_status and str(a_status).lower() in ("implemented", "verified") and ctrl_id in rec_ids:
+            implemented_count += 1
+            impl_in_rec_names.append(_control_display_name(code, t_en, t_de))
+            # evidence freshness per your latest pattern (status_updated_at)
+            if a_status and str(a_status).lower() in ("implemented", "verified") and ctrl_id in rec_ids:
+                implemented_count += 1
+                impl_in_rec_names.append(_control_display_name(code, t_en, t_de))
+
+        # track max evidence-ish timestamp for updatedAt
+        for ts in (st_upd, ev_upd):
+            if ts and (latest_ev_ts is None or ts > latest_ev_ts):
+                latest_ev_ts = ts
+
+    controls_total = len(rec_ids)
+    coverage = (implemented_count / controls_total) if controls_total else None
+
+    # Build link details (all links, not only implemented)
+    link_details: List[ControlLinkDetails] = []
+    for (link_id, ctrl_id, a_status, st_upd, ev_upd, eff_ovr, notes, code, t_en, t_de) in impl_rows:
+        link_details.append(ControlLinkDetails(
+            linkId=link_id,
+            controlId=ctrl_id,
+            name=_control_display_name(code, t_en, t_de),
+            referenceCode=code,
+            assuranceStatus=a_status,
+            statusUpdatedAt=st_upd,
+            effectivenessOverride=eff_ovr,
+            notes=notes,
+        ))
+
+    controls = ControlsOut(
+        implemented=implemented_count,
+        total=controls_total,
+        recommended=rec_names,
+        implementedList=impl_in_rec_names,
+        coverage=coverage,
+    )
+    evidence = EvidenceOut(ok=evidence_ok, warn=evidence_overdue, overdue=evidence_overdue)
+
+    # --- 6) Compliance chips (reuse your existing service) ---
+    req_controls = get_required_controls(db, asset=None, scenario_id=scn.id)  # if your impl needs asset, adapt
+    required_ids = {c.id for c in req_controls}
+    implemented_ids = {ctrl_id for (_lid, ctrl_id, *_rest) in impl_rows if
+                       str(_rest[0]).lower() in ("implemented", "verified")}
+    compliance = build_compliance_chips(
+        db,
+        asset=None,  # pass the asset if your implementation requires it; else None
+        required_control_ids=required_ids,
+        implemented_control_ids=implemented_ids,
+    )
+
+    # --- 7) Exceptions (optional) ---
+    exceptions: List[ExceptionOut] = []
+    try:
+        from app.models.compliance.exception import ComplianceException
+        ex_rows = (
+            db.query(ComplianceException)
+            .filter(ComplianceException.risk_scenario_context_id == ctx.id)
+            .order_by(ComplianceException.expires_at.is_(None), ComplianceException.end_date.asc())
+            .all()
+        )
+        for ex in ex_rows:
+            exceptions.append(ExceptionOut(
+                id=ex.id,
+                title=getattr(ex, "title", None),
+                status=getattr(ex, "status", None),
+                active=getattr(ex, "active", None),
+                expiresAt=getattr(ex, "expires_at", None),
+            ))
+    except Exception:
+        pass
+
+    # --- 8) Review fields & status ---
+    last_review = getattr(ctx, "last_review", None)
+    next_review = getattr(ctx, "next_review", None)
+    review_status = None
+    sla_amber = (appetite.get("slaDays") or {}).get("amber")
+    if next_review:
+        if now > next_review:
+            review_status = "Overdue"
+        elif sla_amber and (next_review - now).days <= int(sla_amber):
+            review_status = "DueSoon"
+        else:
+            review_status = "OnTrack"
+
+    # --- 9) Final updated timestamp ---
+    last_updated_ts = max(
+        [d for d in [
+            getattr(ctx, "updated_at", None),  # context change
+            getattr(score, "last_updated", None),  # RiskScore last change
+            latest_ev_ts  # newest evidence timestamp (centralized)
+        ] if d] or [None]
+    )
+
+    # --- 10) Response ---
+    return RiskContextDetails(
+        contextId=ctx.id,
+        scenarioId=scn.id,
+        scenarioTitle=scenario_title,
+        scenarioDescription=scenario_desc,
+
+        scope=scope_type or "org",
+        scopeRef=ScopeRef(type=scope_type, id=scope_id, label=scope_label),
+        scopeDisplay=f"{scope_type}:{scope_label}" if scope_type else scope_label,
+
+        ownerId=getattr(ctx, "owner_id", None),
+        owner=getattr(ctx, "owner_name", None) or "Unassigned",
+        ownerInitials=getattr(ctx, "owner_initials", None) or "?",
+
+        status=ctx.status or "Open",
+        likelihood=likelihood,
+        impacts=impacts,
+        domains=domains,
+
+        initial=initial,
+        residual=residual,
+        severity=severity,
+        severityBand=severity_band,
+        overAppetite=over_appetite,
+        rag=rag,
+
+        trend=trend,
+        lastUpdated=last_updated_ts,
+
+        controls=controls,
+        controlLinks=link_details,
+        evidence=evidence,
+        compliance=compliance,
+        appetite=appetite,  # Pydantic will coerce dict→AppetiteOut
+
+        lastReview=last_review,
+        nextReview=next_review,
+        reviewSLAStatus=review_status,
+
+        exceptions=exceptions,
+
+        asOf=now.replace(microsecond=0),
+    )

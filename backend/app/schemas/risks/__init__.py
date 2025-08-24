@@ -9,5 +9,6 @@ from app.schemas.risks.risk_category import *
 from app.schemas.risks.risk_effective import *
 from app.schemas.risks.risk_score import *
 from app.schemas.risks.risk_context_list import *
+from app.schemas.risks.risk_context_details import *
 
 

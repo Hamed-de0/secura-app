@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, ARRAY, Table
 from sqlalchemy.orm import relationship
 from app.core.base import BaseModel, Base
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class RiskScenario(BaseModel):
@@ -27,6 +28,10 @@ class RiskScenario(BaseModel):
     description_de = Column(String(1000), nullable=True)
 
     subcategory_id = Column(Integer, ForeignKey("risk_scenario_subcategories.id"))
+
+    # NEW - Scenario Default Template
+    likelihood = Column(Integer, nullable=True)
+    impact = Column(JSONB, nullable=True, default=dict)
 
     asset_tags = relationship("AssetTag", secondary=risk_scenario_tags, back_populates="risk_scenarios")
     subcategory = relationship("RiskScenarioSubcategory", back_populates="scenarios")

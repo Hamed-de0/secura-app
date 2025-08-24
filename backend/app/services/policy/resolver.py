@@ -1,5 +1,5 @@
 import datetime
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, Set
 from sqlalchemy.orm import Session
 from app.crud.policies.risk_appetite_policy import find_effective_for_asset
 from app.crud.policies.control_applicability_policy import list_effective
@@ -10,6 +10,94 @@ from app.models.compliance.framework_requirement import FrameworkRequirement
 from app.models.compliance.control_framework_mapping import ControlFrameworkMapping
 from app.crud.policies.framework_activation_policy import list_active as list_active_fw_policies
 from datetime import datetime
+from sqlalchemy import or_, and_
+
+SPEC_SCOPES = {
+    "asset", "asset_type", "asset_group", "tag",
+    "bu", "site", "entity", "service", "org_group"
+}
+
+
+def _scope_pairs_for_asset(asset) -> Set[Tuple[str, int]]:
+    """
+    Build the set of (scope_type, scope_id) pairs that describe this asset.
+    Works even if some relations/attributes are missing.
+    """
+    pairs: Set[Tuple[str, int]] = set()
+
+    # asset
+    aid = getattr(asset, "id", None)
+    if aid: pairs.add(("asset", aid))
+
+    # asset_type
+    atid = getattr(asset, "type_id", None)
+    if atid: pairs.add(("asset_type", atid))
+
+    # groups (many-to-many)
+    for g in (getattr(asset, "groups", []) or []):
+        gid = getattr(g, "id", None)
+        if gid: pairs.add(("asset_group", gid))
+
+    # tags (many-to-many)
+    for t in (getattr(asset, "tags", []) or []):
+        tid = getattr(t, "id", None)
+        if tid: pairs.add(("tag", tid))
+
+    # business unit
+    bu_id = getattr(asset, "business_unit_id", None) or getattr(getattr(asset, "business_unit", None), "id", None)
+    if bu_id: pairs.add(("bu", bu_id))
+
+    # entity / org entity
+    ent = getattr(asset, "entity", None) or getattr(asset, "org_entity", None)
+    ent_id = getattr(asset, "entity_id", None) or getattr(asset, "org_entity_id", None) or getattr(ent, "id", None)
+    if ent_id: pairs.add(("entity", ent_id))
+
+    # site
+    site_id = getattr(asset, "site_id", None) or getattr(getattr(asset, "site", None), "id", None)
+    if site_id: pairs.add(("site", site_id))
+
+    # services (many-to-many)
+    for s in (getattr(asset, "services", []) or []):
+        sid = getattr(s, "id", None)
+        if sid: pairs.add(("service", sid))
+
+    # org_group (via entity, if present)
+    og = getattr(ent, "org_group", None)
+    og_id = getattr(ent, "org_group_id", None) or (getattr(og, "id", None) if og else None)
+    if og_id: pairs.add(("org_group", og_id))
+
+    return pairs
+
+
+def policy_applies_to_asset(policy, asset) -> bool:
+    """
+    Unified policy check:
+    - If policy.scope/scope_id is NULL → global policy (applies to all assets)
+    - Else policy applies if its (scope, scope_id) matches any of the asset’s scope pairs.
+    Legacy compatibility: still honors old p.asset_type_id / p.asset_group_id / p.asset_tag_id if present.
+    """
+    # Global (org-wide) policy: no scope restriction
+    if getattr(policy, "scope", None) is None and getattr(policy, "scope_id", None) is None:
+        return True
+
+    asset_pairs = _scope_pairs_for_asset(asset)
+
+    # New unified scope
+    st = getattr(policy, "scope", None)
+    sid = getattr(policy, "scope_id", None)
+    if st in SPEC_SCOPES and sid is not None:
+        return (st, sid) in asset_pairs
+
+    # Legacy fallbacks (if you still have data in old columns)
+    legacy_pairs = []
+    if getattr(policy, "asset_type_id", None) is not None:
+        legacy_pairs.append(("asset_type", policy.asset_type_id))
+    if getattr(policy, "asset_group_id", None) is not None:
+        legacy_pairs.append(("asset_group", policy.asset_group_id))
+    if getattr(policy, "asset_tag_id", None) is not None:
+        legacy_pairs.append(("tag", policy.asset_tag_id))
+
+    return any(pair in asset_pairs for pair in legacy_pairs)
 
 def resolve_appetite(db: Session, *, asset) -> Optional[Dict[str, Any]]:
     p = find_effective_for_asset(db, asset_id=asset.id, at_time=datetime.utcnow(),domain=None)
@@ -39,11 +127,7 @@ def compute_rag(residual: int, appetite: Dict[str, Any], *, likelihood: int, imp
     return rag
 
 def _asset_matches_policy(asset, p) -> bool:
-    ok = True
-    if p.asset_type_id is not None:  ok &= (asset.type_id == p.asset_type_id)
-    if p.asset_tag_id is not None:   ok &= any(t.id == p.asset_tag_id for t in getattr(asset, "tags", []))
-    if p.asset_group_id is not None: ok &= any(g.id == p.asset_group_id for g in getattr(asset, "groups", []))
-    return ok
+    return policy_applies_to_asset(asset=asset, policy=p)
 
 def get_required_controls(db: Session, *, asset, scenario_id: int) -> List[Control]:
     # 1) Scenario template controls

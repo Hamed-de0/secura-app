@@ -10,6 +10,7 @@ from app.schemas.risks.risk_scenario_context import (
     RiskContextBatchAssignInput,
 )
 from app.schemas.risks.risk_context_list import RiskContextListResponse
+from app.schemas.risks.risk_context_details import RiskContextDetails
 from app.services import calculate_risk_scores_by_context
 from app.crud.risks import risk_scenario_context as crud_legacy, risk_context_list, context_metrics
 from app.crud.risks.risk_scenario_context import RiskScenarioContextCRUD as rsc_crud
@@ -130,7 +131,13 @@ def get_contexts(
         days=days
     )
 
-
+@router.get("/{context_id}/details", response_model=RiskContextDetails)
+def get_risk_context_details(
+    context_id: int,
+    days: int = Query(90, ge=1, le=365),   # evidence freshness window & trend length
+    db: Session = Depends(get_db),
+):
+    return risk_context_list.get_context_by_details(db=db, context_id=context_id, days=days)
 
 
 @router.get("/{context_id}", response_model=RiskScenarioContextOut)

@@ -64,8 +64,8 @@ const writeOpen = (obj) => {
 const TOP = [
   { label: 'common.overview', icon: <SpeedIcon />, to: '/overview' },
   { label: 'common.myWork', icon: <AssignmentTurnedInIcon />, to: '/my-work' },
-  { label: 'Risk Dashboard 1', icon: <AssignmentTurnedInIcon />, to: 'risk-dashboard' },
-  { label: 'Risk Dashboard 2', icon: <AssignmentTurnedInIcon />, to: 'risk-dashboard2' },
+  { label: 'Risk Dashboard', icon: <WarningAmberIcon />, to: 'risk-dashboard' },
+  { label: 'Risk Register', icon: <WarningAmberIcon />, to: 'risk-register' },
   
 ];
 

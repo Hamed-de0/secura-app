@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 from .risk_context_impact_rating import RiskContextImpactRatingRead
 
@@ -9,6 +9,8 @@ class RiskScenarioBase(BaseModel):
     description_en: Optional[str] = None
     description_de: Optional[str] = None
     status: Optional[str] = None  # E.g., 'Open', 'Mitigated', 'Accepted'
+    likelihood: Optional[int] = None # Default by scenario
+    impact: Optional[Dict] = dict
 
     threat_id: int
     vulnerability_id: int
@@ -23,6 +25,8 @@ class RiskScenarioUpdate(BaseModel):
     description_en: Optional[str] = None
     description_de: Optional[str] = None
     status: Optional[str] = None  # E.g., 'Open', 'Mitigated', 'Accepted'
+    likelihood: Optional[int] = None  # Default by scenario
+    impact: Optional[Dict] = None
 
 
 class RiskScenarioRead(RiskScenarioBase):
