@@ -80,8 +80,15 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
             {overview.scenarioTitle || '—'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Scope: {overview.scopeName || overview.scopeRef?.label || overview.scope || '—'}
+            Scope: {overview.scopeDisplay || overview.scopeName || overview.scopeRef?.label || overview.scope || '—'}
           </Typography>
+
+          {/* optional: show scenarioDescription if available */}
+          {overview.scenarioDescription && (
+            <Typography variant="body2" sx={{ mt: .5 }}>
+              {overview.scenarioDescription}
+            </Typography>
+          )}
 
           <Stack direction="row" spacing={1} alignItems="center">
             <RagChip rag={overview.rag} />
@@ -118,6 +125,17 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
               </Box>
             </Paper>
 
+            {Array.isArray(controls.recommended) && controls.recommended.length > 0 && (
+              <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2, mt: 1 }}>
+                <Typography variant="subtitle2" sx={{ mb: .5 }}>Recommended Controls</Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {controls.recommended.map((t, i) => (
+                    <Chip key={i} size="small" label={t} />
+                  ))}
+                </Stack>
+              </Paper>
+            )}
+
             <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2, flex: 1 }}>
               <Typography variant="subtitle2" sx={{ mb: .5 }}>Evidence Freshness</Typography>
               <Stack spacing={.75}>
@@ -129,7 +147,7 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
           </Stack>
 
           <Typography variant="caption" color="text.secondary">
-            Updated: {overview.updatedAt ? new Date(overview.updatedAt).toLocaleString() : '—'}
+            Updated: {overview.lastUpdated ? new Date(overview.lastUpdated).toLocaleString() : '—'}
           </Typography>
         </Stack>
       )}
@@ -157,7 +175,7 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>Residual Trend</Typography>
           <Box sx={{ color: 'primary.main' }}>
-            <Sparkline data={overview.trend?.map(p => p.y) || [42, 44, 43, 47, 49, 48, 50, 51]} width="100%" height={80} />
+            <Sparkline data={(overview.trend || []).map(p => p.y)} width="100%" height={80} />
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Hook to /risk_scenario_contexts/history?context_id={contextId}&days=90 when available.

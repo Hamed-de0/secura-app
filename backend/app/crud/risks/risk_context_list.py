@@ -767,7 +767,9 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
         .all()
     )
     rec_ids = {cid for (cid, _c, _e, _d) in rec_rows}
+    # print('--------------------------------------------- rec', rec_ids)
     rec_names = [_control_display_name(c, e, d) for (_id, c, e, d) in rec_rows]
+    rec_names = set(rec_names)  # remove duplicate by join
 
     impl_rows = (
         db.query(
