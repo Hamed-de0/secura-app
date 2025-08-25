@@ -99,7 +99,7 @@ import TrendingDownOutlinedIcon from '@mui/icons-material/TrendingDownOutlined';
 
 const KPIStrip = ({data}) => {
   const theme = useTheme();
-  console.log('metrics',data);
+  // console.log('metrics',data);
   return (
     <Box
           sx={{

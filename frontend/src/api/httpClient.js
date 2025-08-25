@@ -117,6 +117,8 @@ export function buildSearchParams({
   limit,
   offset,
   sort,
+  sort_dir,
+  status,
   q,
   fields,
   filter,
@@ -125,7 +127,9 @@ export function buildSearchParams({
   if (Number.isFinite(limit)) params.set("limit", String(limit));
   if (Number.isFinite(offset)) params.set("offset", String(offset));
   if (q) params.set("q", q);
-  if (sort) params.set("sort", sort);
+  if (sort) params.set("sort_by", sort);
+  if (sort_dir) params.set("sort_dir", sort_dir === "asc" ? "asc" : "desc");
+  if (status) params.set("status", status );
   if (fields) params.set("fields", fields);
   if (filter && typeof filter === "object") {
     for (const [k, v] of Object.entries(filter)) {

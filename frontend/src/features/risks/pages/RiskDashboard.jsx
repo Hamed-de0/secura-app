@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Box, Grid} from '@mui/material';
+import { Box, Grid, useTheme, Chip} from '@mui/material';
 // ---- System --------------------------------
 import { fetchRiskMetrics } from '../../../api/services/risks';
 import { fetchRiskContexts } from '../../../api/services/risks';
@@ -12,8 +12,8 @@ import ResidualTrendCard from '../components/ResidualTrendCard';
 import ReviewSLACard from '../components/ReviewSLACard';
 import EvidenceFreshnessCard from '../components/EvidenceFreshnessCard';
 import ScopeGrid from '../components/ScopeGrid';
-import RegisterGrid from '../components/RegisterGrid';
 
+import RiskContextsGrid from '../components/RiskContextsGrid';
 /* ================================
    Static mock data (tune later)
    ================================ */
@@ -50,6 +50,8 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
   const [gridTotal, setGridTotal] = React.useState(0);
   const [gridLoading, setGridLoading] = React.useState(false);
 
+  const theme = useTheme();
+
   // Reuse the same filters you used for metrics
   const baseFilters = React.useMemo(
     () => ({ scope: 'all', status: 'all', domain: 'all', days: 90 }),
@@ -65,14 +67,16 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
           ...baseFilters,
           offset: gridModel.page * gridModel.pageSize,
           limit: gridModel.pageSize,
-          sort_by: 'id',
+          sort: 'id',
           sort_dir: 'desc',
+          status: 'all',
         });
         if (!alive) return;
         setGridTotal(res?.total ?? 0);
         setGridRows(adaptContextsToRegisterRows(res?.items || []));
       } finally {
         if (alive) setGridLoading(false);
+        console.log('RiskDashboard: grid loaded', { alive, gridTotal, gridRows }); // DEBUG
       }
     })();
     return () => { alive = false; };
@@ -91,6 +95,37 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
     })();
     return () => { alive = false; };
   }, []);
+
+  const DASH_COLUMNS =  [
+    { field: 'scenario', headerName: 'Scenario', flex: 1.4, minWidth: 200 },
+    { field: 'scope',    headerName: 'Scope',    flex: 1.0, minWidth: 160 },
+    { field: 'L',        headerName: 'L', width: 60, align:'center', headerAlign:'center' },
+    { field: 'I',        headerName: 'I', width: 60, align:'center', headerAlign:'center' },
+    {
+      field: 'residual', headerName: 'Residual', width: 96, align:'center', headerAlign:'center',
+      renderCell:(p)=>(
+        <Chip size="small" label={p.value} color={p.row.ragMui}          
+        />
+      ),
+      sortable: true,
+    },
+    { field: 'owner',  headerName: 'Owner', width: 140 },
+    {
+      field: 'status',
+      headerName: 'Status',
+      width: 120,
+      renderCell: (p) => (
+        <Chip
+          size="small"
+          label={p.row.statusLabel}  // 'Open', 'Mitigating', ...
+          color={p.row.statusColor}          // 'success' | 'warning' | ...
+          variant={p.row.statusVariant}      // 'filled' | 'outlined'
+        />
+      ),
+      sortable: false,
+    },
+    { field: 'updated', headerName: 'Updated', width: 80, sortable: true },
+  ];
 
   const m = metricsData || {};
   const total = m.total ?? 0;
@@ -142,9 +177,13 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
       const i = parseInt(iStr, 10), l = parseInt(lStr, 10);
       if (i >= 1 && i <= 5 && l >= 1 && l <= 5) grid[5 - i][l - 1] = val || 0;
     });
-    console.table(grid);
+    // console.table(grid);
     return grid;
   }, [m.heatmap]);
+
+  const [filters, setFilters] = React.useState({
+    search: '', scope:'all', status:'all', domain:'all', days: 90, overAppetite:false,
+  });
 
   return (
     <Box sx={{ display:'flex', justifyContent:'left', p: 1}} size={12}>
@@ -177,14 +216,28 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
         </Box>
 
         {/* Register */}
-        <RegisterGrid 
+        <RiskContextsGrid
+          columns={DASH_COLUMNS}
+          height={360}
+          pageSize={10}
+          compactToolbar
+          orderMenuItems={[
+            { label: 'Updated (newest)', sort: { field:'updatedAt', sort:'desc' } },
+            { label: 'Residual (high → low)', sort: { field:'residual', sort:'desc' } },
+            { label: 'Likelihood (high → low)', sort: { field:'likelihood', sort:'desc' } },
+          ]}
+          filters={filters}
+          onFiltersChange={setFilters}
+          onRowClick={(row)=>{/* open drawer */}}
+        />
+        {/* <RegisterGrid 
           rows={gridRows}
           total={gridTotal}
           loading={gridLoading}
           paginationModel={gridModel}
           onPaginationModelChange={setGridModel} 
           
-        />
+        /> */}
 
 
       </Box>

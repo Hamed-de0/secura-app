@@ -200,7 +200,7 @@ def resolve_appetite_for_scope(db: Session, scope_type: Optional[str], scope_id:
 
     row = q.first()
     if not row:
-        return {"greenMax": 20, "amberMax": 30, "domainCaps": {}, "slaDays": {"amber": 30, "red": 7}}
+        return {"greenMax": 9, "amberMax": 18, "domainCaps": {}, "slaDays": {"amber": 30, "red": 7}}
 
     return {
         "greenMax": row.green_max,
@@ -575,12 +575,23 @@ def list_contexts(
         appetite = resolve_appetite_for_scope(db, st, sid)
 
         # scores
-        score = c.score
-        initial = int(getattr(score, "inherent_score", 0) or 0) or 50
-        residual = int(getattr(score, "residual_score", 0) or 0) or 25
-
+        # score = c.score
+        # initial = int(getattr(score, "inherent_score", 0) or 0) or 50
+        # residual = int(getattr(score, "residual_score", 0) or 0) or 25
+        #
+        # impacts = _pack_impacts(c)
+        # impact_overall = _impact_overall(impacts)
+        score = c.score  # may be None
+        likelihood = int(c.likelihood or 0)
         impacts = _pack_impacts(c)
         impact_overall = _impact_overall(impacts)
+
+        if score:
+            initial = int(getattr(score, "initial_score", 0) or 0)
+            residual = int(getattr(score, "residual_score", 0) or 0)
+        else:
+            initial = impact_overall * likelihood
+            residual = initial
         sev = _severity(impact_overall, int(c.likelihood or 0))
         sev_band = _severity_band(sev)
 
@@ -623,6 +634,9 @@ def list_contexts(
         else:
             review_sla = None
 
+        score_updated = getattr(score, "last_updated", None)  # not 'updated_at'
+        updated_at_dt = _max_dt(getattr(c, "updated_at", None), latest_ev, score_updated)
+
         items.append({
             "contextId": c.id,
             "scenarioId": c.risk_scenario_id,
@@ -653,7 +667,8 @@ def list_contexts(
                 "warn": overdue,
                 "overdue": overdue,    # NEW
             },
-            "updatedAt": updated_at.isoformat() if updated_at else None,
+            "updatedAt": updated_at_dt.isoformat() if updated_at_dt else None,
+            "_u": updated_at_dt,  # temp only for sorting
             "overAppetite": over_app,
             "severity": sev,
             "severityBand": sev_band,
@@ -678,18 +693,29 @@ def list_contexts(
     # ----- sorting -----
     reverse = (sort_dir.lower() == "desc")
     if sort_by == "severity":
-        items.sort(key=lambda it: (it.get("severity") or 0, it.get("residual") or 0, it.get("updatedAt") or ""), reverse=reverse)
+        items.sort(key=lambda it: (it.get("severity") or 0,
+                                   it.get("residual") or 0,
+                                   it.get("_u") or datetime.min),
+                   reverse=reverse)
     elif sort_by == "residual":
-        items.sort(key=lambda it: (it.get("residual") or 0, it.get("updatedAt") or ""), reverse=reverse)
-    elif sort_by == "updated_at":
-        items.sort(key=lambda it: (it.get("updatedAt") or ""), reverse=reverse)
+        items.sort(key=lambda it: (it.get("residual") or 0,
+                                   it.get("_u") or datetime.min),
+                   reverse=reverse)
+    elif sort_by in ("updated_at", "updatedAt"):
+        items.sort(key=lambda it: (it.get("_u") or datetime.min),
+                   reverse=reverse)
     else:
-        items.sort(key=lambda it: (it.get("updatedAt") or "", it["contextId"]), reverse=reverse)
+        items.sort(key=lambda it: (it.get("_u") or datetime.min, it["contextId"]),
+                   reverse=reverse)
 
-    # ----- pagination -----
-    items = items[offset: offset + limit]
+    # paginate AFTER sorting
+    page = items[offset: offset + limit]
 
-    return {"total": total, "items": items}
+    # drop temp sort key so it never leaks to clients
+    for it in page:
+        it.pop("_u", None)
+
+    return {"total": len(items), "items": page}
 
 
 def get_context_by_details(db: Session, context_id: int, days: int = 90):
@@ -721,7 +747,7 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
                                                                                                          None)
 
     # --- 2) Scores & trend (fast path via RiskScore/RiskScoreHistory) ---
-    initial = int(getattr(score, "inherent_score", 0) or 0) or 50
+    initial = int(getattr(score, "inherent_score", 0) or 0) or 25
     residual = int(getattr(score, "residual_score", 0) or 0) or 25
     hist = (
         db.query(RiskScoreHistory)
