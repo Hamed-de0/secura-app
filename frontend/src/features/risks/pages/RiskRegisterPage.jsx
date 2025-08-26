@@ -7,13 +7,43 @@ import ContextDetail from '../components/ContextDetail';
 import { fetchRiskContexts } from '../../../api/services/risks';
 import { adaptContextsToRegisterRows } from '../../../api/adapters/risks'; // if you don’t have it, I can supply it
 import ContextBuilderDrawer from '../builder/ContextBuilderDrawer';
-
+import { updateRiskContextOwner } from '../../../api/services/risks';
+import OwnerPicker from '../components/OwnerPicker';
 
 const SORT_MAP = {
   residual: 'residual',
   updatedAt: 'updated_at',
   id: 'id',
 };
+
+function OwnerCell({ row, refresh }) {
+  const [editing, setEditing] = React.useState(false);
+  const [val, setVal] = React.useState(null); // optionally prefill from row.owner if you return ownerObj
+
+  const commit = async (picked) => {
+    setVal(picked);
+    await updateRiskContextOwner(row.id, picked ? picked.id : null);
+    setEditing(false);
+    refresh?.(); // re-fetch current page or optimistically update row.owner
+  };
+
+  if (!editing) {
+    return (
+      <Chip
+        size="small"
+        label={val?.displayName || row.owner || 'Unassigned'}
+        onClick={() => setEditing(true)}
+      />
+    );
+  }
+  return (
+    <Box sx={{ minWidth: 240 }}>
+      <OwnerPicker value={val} onChange={commit} autoFocus />
+    </Box>
+  );
+}
+
+
 
 export default function RiskRegisterPage() {
   const theme = useTheme();
@@ -45,6 +75,9 @@ export default function RiskRegisterPage() {
   const [activeRow, setActiveRow] = React.useState(null);
   const [drawerTitle, setDrawerTitle] = React.useState('Risk Context');
 
+  const reloadCurrentPage = React.useCallback(() => {
+    setModel((m) => ({ ...m })); // trigger useEffect
+  }, []);
   // Fetch contexts (server-side paging/sorting)
   React.useEffect(() => {
     let alive = true;
@@ -94,7 +127,13 @@ export default function RiskRegisterPage() {
       ),
       sortable: true,
     },
-    { field: 'owner',    headerName: 'Owner', width: 140 },
+    {
+    field: 'owner',
+    headerName: 'Owner',
+    width: 200,
+    sortable: false,
+    renderCell: (p) => <OwnerCell row={p.row} refresh={reloadCurrentPage} />,
+  },
     { field: 'status',   headerName: 'Status', width: 120 },
     { field: 'updated',  headerName: 'Updated', width: 160, sortable: true },
   ]), [theme]);
@@ -125,7 +164,8 @@ export default function RiskRegisterPage() {
             onSortModelChange={(sm)=> setSortModel(sm.length ? sm : [{ field:'updatedAt', sort:'desc' }])}
             disableColumnMenu
             density="compact"
-            onRowClick={(p) => { setActiveRow(p.row); setDrawerOpen(true); setDrawerTitle(p.row.scenario || 'Risk Context'); }}
+            onRowClick={(p) => { setActiveRow(p.row); }}
+            onRowDoubleClick={(p) => { setActiveRow(p.row); setDrawerOpen(true); setDrawerTitle(p.row.scenario || 'Risk Context'); }}
           />
         </Box>
       </Paper>

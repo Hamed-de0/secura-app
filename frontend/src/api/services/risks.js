@@ -1,5 +1,5 @@
 // src/api/services/risks.js
-import { getJSON, buildSearchParams } from '../../api/httpClient';
+import { getJSON,putJSON, buildSearchParams } from '../../api/httpClient';
 
 /** Fetch “effective” risks for an asset. Keeps trailing slash. */
 export async function fetchAssetEffectiveRisks(assetId, { days = 90 } = {}) {
@@ -38,4 +38,9 @@ export async function fetchRiskContextDetail(contextId) {
   if (!contextId) return null;
   // trailing slash required by your ky client / API
   return await getJSON(`risks/risk_scenario_contexts/${contextId}/details`);
+}
+
+export async function updateRiskContextOwner(contextId, ownerId) {
+  const url = `risks/risk_scenario_contexts/${contextId}`; // trailing slash
+  return await putJSON(url, {json:{ owner_id: ownerId }});
 }

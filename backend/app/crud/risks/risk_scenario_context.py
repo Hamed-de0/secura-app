@@ -7,6 +7,7 @@ from app.schemas.risks.risk_scenario_context import (
 from app.models.risks.risk_context_impact_rating import RiskContextImpactRating
 from typing import Optional, List
 from app.models.risks.risk_scenario_context import RiskScenarioContext as RSCModel
+from datetime import datetime
 
 
 # legacy
@@ -25,7 +26,10 @@ def get_all_contexts(db: Session, skip: int = 0, limit: int = 100):
 
 def update_context(db: Session, context_id: int, obj_in: RiskScenarioContextUpdate) -> RiskScenarioContext:
     db_obj = get_context(db, context_id)
-    for field, value in obj_in.dict(exclude_unset=True).items():
+    data = obj_in.model_dump(exclude_unset=True)
+
+    print('----------------------------------', data)
+    for field, value in data.dict(exclude_unset=True).items():
         setattr(db_obj, field, value)
     db.commit()
     db.refresh(db_obj)
@@ -194,7 +198,12 @@ class RiskScenarioContextCRUD:
     def update(db: Session, context_id: int, payload) -> RSCModel:
         obj = RiskScenarioContextCRUD.get(db, context_id)
 
+        if 'scope_type' in payload and payload['scope_type'] is None:
+            del payload['scope_type']
+
+
         data = payload.dict(exclude_unset=True)
+
         # If scope fields change, re-check uniqueness
         if any(k in data for k in ("risk_scenario_id", "scope_type", "scope_id")):
             rs = data.get("risk_scenario_id", obj.risk_scenario_id)
@@ -214,8 +223,10 @@ class RiskScenarioContextCRUD:
                 raise HTTPException(409, "Another context already exists for this scenario and scope")
 
         for k, v in data.items():
-            setattr(obj, k, v)
-        db.add(obj)
+            if k != "scope_type":
+                setattr(obj, k, v)
+        # db.add(obj)
+        obj.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(obj)
         return obj

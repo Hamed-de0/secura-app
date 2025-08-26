@@ -5,6 +5,7 @@ import SortIcon from '@mui/icons-material/Sort';
 import { DataGrid } from '@mui/x-data-grid';
 import { fetchRiskContexts } from '../../../api/services/risks';
 import { adaptContextsToRegisterRows } from '../../../api/adapters/risks';
+import OwnerPicker from './OwnerPicker';
 
 const SORT_MAP = { residual: 'residual', updatedAt: 'updated_at', id: 'id', likelihood:'likelihood' };
 
@@ -13,11 +14,8 @@ export default function RiskContextsGrid({
   height = 560,
   pageSize = 10,
   defaultSort = { field: 'updatedAt', sort: 'desc' },
-  // compact toolbar for dashboard
   compactToolbar = false,
-  // order menu items: [{ label, sort: { field, sort } }]
   orderMenuItems = [],
-  // shared filters; supply whatever you already keep in state
   filters,
   onFiltersChange,
   onRowClick,

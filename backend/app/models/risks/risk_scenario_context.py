@@ -28,9 +28,12 @@ class RiskScenarioContext(BaseModel):
     vulnerability_id = Column(Integer, ForeignKey("vulnerabilities.id"))
     likelihood = Column(Integer)
 
+    owner_id = Column(Integer, ForeignKey("persons.id", ondelete="SET NULL"), nullable=True, index=True)
     # Relationships (unchanged)
     risk_scenario = relationship("RiskScenario", back_populates="contexts")
     impact_ratings = relationship("RiskContextImpactRating", back_populates="context", cascade="all, delete")
+    owner = relationship("Person", lazy="joined", foreign_keys=[owner_id])
+
     asset = relationship("Asset", backref="risk_scenario_contexts")
     asset_group = relationship("AssetGroup", backref="risk_scenario_contexts")
     asset_tag = relationship("AssetTag", backref="risk_scenario_contexts")

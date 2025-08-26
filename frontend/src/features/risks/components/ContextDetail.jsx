@@ -4,6 +4,8 @@ import {
 } from '@mui/material';
 import Sparkline from '../../risks/charts/Sparkline';
 import { fetchRiskContextDetail } from '../../../api/services/risks';
+import { updateRiskContextOwner } from '../../../api/services/risks';
+import OwnerPicker from './OwnerPicker';
 
 const DOMAINS = ['C','I','A','L','R'];
 
@@ -25,7 +27,10 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState('');
   const [ctx, setCtx] = React.useState(null);
-
+  const reload = React.useCallback(async () => {
+    console.log('ContextDetail: reload');
+  });
+    
   React.useEffect(() => {
     if (!contextId) return;
     let alive = true;
@@ -106,7 +111,14 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
           </Stack>
 
           <Stack direction="row" spacing={2} flexWrap="wrap">
-            <Chip label={`Owner: ${overview.owner ?? 'Unassigned'}`} />
+            <OwnerPicker
+              value={overview?.owner_name || 'NA'}
+              onChange={async (p) => {
+                await updateRiskContextOwner(contextId, p ? p.id : null);
+                await reload(); // your detail refetch
+              }}
+              sx={{ minWidth: 300 }}
+            />
             <Chip label={`Status: ${overview.status ?? '—'}`} />
             <Chip label={`Last review: ${overview.lastReview ? new Date(overview.lastReview).toLocaleDateString() : '—'}`} />
             <Chip label={`Next review: ${overview.nextReview ? new Date(overview.nextReview).toLocaleDateString() : '—'}`} />

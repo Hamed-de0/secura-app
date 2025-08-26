@@ -16,6 +16,8 @@ class RiskScenarioContextBase(BaseModel):
     asset_tag_id: Optional[int] = None
     asset_type_id: Optional[int] = None  # <-- fix typo here
 
+    owner_id: Optional[int] = None
+
     lifecycle_states: Optional[List[str]] = None
     status: Optional[str] = "Open"
     threat_id: Optional[int] = None
@@ -39,14 +41,23 @@ class RiskScenarioContextCreate(RiskScenarioContextBase):
     pass
 
 class RiskScenarioContextUpdate(RiskScenarioContextBase):
-    scope_type: Optional[
-        Literal["asset", "tag", "asset_group", "asset_type", "bu", "site", "entity", "service", "org_group"]] = None
+    risk_scenario_id: Optional[int] = None
+
+    scope_type: Optional[Literal[
+        "asset", "tag", "asset_group", "asset_type", "bu", "site", "entity", "service", "org_group"
+    ]] = None
     scope_id: Optional[int] = None
+
+    owner_id: Optional[int] = None
+
     lifecycle_states: Optional[List[str]] = None
     status: Optional[str] = None
     threat_id: Optional[int] = None
     vulnerability_id: Optional[int] = None
     likelihood: Optional[int] = None
+
+    class Config:
+        extra = "ignore"  # ignore unexpected keys from the client
 
 class RiskScenarioContextInDBBase(RiskScenarioContextBase):
     id: int

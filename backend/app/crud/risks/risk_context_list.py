@@ -215,6 +215,22 @@ def _control_display_name(code: Optional[str], title_en: Optional[str], title_de
         return f"{code} – {title}"
     return title or (code or "Control")
 
+def _owner_display(u) -> tuple[str, str]:
+    if not u:
+        return "Unassigned", "?"
+    # decide what you store on User
+    first = getattr(u, "first_name", None)
+    last = getattr(u, "last_name", None)
+    if first or last:
+        name = f"{first or ''} {last or ''}".strip()
+        initials = "".join([p[0] for p in name.split() if p])[:2].upper() or "?"
+        return name, initials
+    # fallback to email/username
+    email = getattr(u, "email", None) or getattr(u, "username", None) or "User"
+    initials = (email[:1] + email.split("@")[0][1:2]).upper() if email else "?"
+    return email, initials
+
+
 # ------------- main query ----------------
 def context_metrics(
         db: Session,
@@ -637,6 +653,10 @@ def list_contexts(
         score_updated = getattr(score, "last_updated", None)  # not 'updated_at'
         updated_at_dt = _max_dt(getattr(c, "updated_at", None), latest_ev, score_updated)
 
+        # Owner -------------
+        owner_name, owner_initials = _owner_display(getattr(c, "owner", None))
+
+
         items.append({
             "contextId": c.id,
             "scenarioId": c.risk_scenario_id,
@@ -646,8 +666,8 @@ def list_contexts(
             "assetId": asset_id_for_app,         # only set for scope_type='asset'
             "assetName": scope_label if st == "asset" else None,
             "ownerId": getattr(c, "owner_id", None),
-            "owner": "Unassigned",
-            "ownerInitials": "?",
+            "owner": owner_name,
+            "ownerInitials": owner_initials,
             "status": c.status or "Open",
             "likelihood": int(c.likelihood or 0),
             "impacts": impacts,
@@ -922,6 +942,8 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
         ] if d] or [None]
     )
 
+    owner_name, owner_initials = _owner_display(getattr(ctx, "owner", None))
+
     # --- 10) Response ---
     return RiskContextDetails(
         contextId=ctx.id,
@@ -934,8 +956,8 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
         scopeDisplay=f"{scope_type}:{scope_label}" if scope_type else scope_label,
 
         ownerId=getattr(ctx, "owner_id", None),
-        owner=getattr(ctx, "owner_name", None) or "Unassigned",
-        ownerInitials=getattr(ctx, "owner_initials", None) or "?",
+        owner=owner_name,
+        ownerInitials=owner_initials,
 
         status=ctx.status or "Open",
         likelihood=likelihood,
