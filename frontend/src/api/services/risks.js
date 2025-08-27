@@ -73,3 +73,14 @@ export async function prefillRiskContexts(pairs) {
   const res = await postJSON(url, { json: { pairs } });
   return Array.isArray(res) ? res : [];
 }
+
+/** Bulk create risk scenario contexts (spec-shaped wrapper).
+ * items: [{ scenarioId, scopeRef:{type,id}, likelihood?, impacts?, ownerId?, nextReview? }]
+ */
+export async function bulkCreateRiskContexts(items, idempotencyKey) {
+  const url = `${context_url}bulk_create/`; // trailing slash
+  const body = { items };
+  if (idempotencyKey) body.idempotencyKey = idempotencyKey;
+  const res = await postJSON(url, { json: body });
+  return res || { createdIds: [], skipped: [], updated: [] };
+}

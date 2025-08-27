@@ -25,7 +25,9 @@ import { fetchScopeCatalog } from "../../../api/services/scopes";
 import {
   fetchScenarios,
   prefillRiskContexts,
+  bulkCreateRiskContexts,
 } from "../../../api/services/risks";
+import { v4 as uuidv4 } from "uuid";
 
 const STEPS = ["Select", "Prefill", "Own & Review", "Confirm"];
 
@@ -54,6 +56,7 @@ export default function ContextBuilderDrawer({
 
   // Prefill state
   const [loadingPrefill, setLoadingPrefill] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
 
   // Load catalogs when drawer opens
   React.useEffect(() => {
@@ -145,7 +148,7 @@ export default function ContextBuilderDrawer({
           scenarioId: x.scenarioId,
           scenarioTitle: scen?.title || `Scenario ${x.scenarioId}`,
           scopeRef: x.scopeRef,
-          scopeLabel: sc?.label || `${x.scopeRef.type}:${x.scopeRef.id}`,
+          scopeLabel: x.scopeRef?.label || sc?.label || `${x.scopeRef.type}:${x.scopeRef.id}`,
           likelihood: x.likelihood ?? 3,
           impacts,
           rationale: x.rationale || [],
@@ -172,17 +175,41 @@ export default function ContextBuilderDrawer({
   };
   const handleBack = () => setActiveStep((s) => Math.max(s - 1, 0));
 
-  const handleCommit = () => {
-    // In real flow: POST /bulk_create with rows (+ ownerId/nextReview), then refresh register/metrics.
-    const created = rows.filter((r) => !r.exists);
-    const skipped = rows.filter((r) => r.exists);
-    const overAppetite = rows.filter((r) => r.overAppetite).length;
+  const handleCommit = async () => {
+    const creatable = rows.filter((r) => !r.exists);
+    if (creatable.length === 0) {
+      onCreated?.({ created: 0, skipped: rows.length, overAppetite: 0 }, []);
+      onClose?.();
+      return;
+    }
 
-    onCreated?.(
-      { created: created.length, skipped: skipped.length, overAppetite },
-      created
-    );
-    onClose?.();
+    const items = creatable.map((r) => ({
+      scenarioId: r.scenarioId,
+      scopeRef: { type: r.scopeRef.type, id: r.scopeRef.id },
+      likelihood: r.likelihood,
+      impacts: r.impacts,
+      ownerId: ownerId || undefined,
+      nextReview: (typeof nextReview?.toISOString === "function")
+        ? nextReview.toISOString()
+        : (nextReview || undefined),
+    }));
+
+    setSaving(true);
+    try {
+      const { createdIds = [], skipped = [], updated = [] } = await bulkCreateRiskContexts(items, uuidv4());
+      const overAppetite = rows.filter((r) => r.overAppetite).length;
+      onCreated?.(
+        { created: createdIds.length, skipped: skipped.length, updated: updated.length, overAppetite },
+        items
+      );
+      onClose?.();
+    } catch (err) {
+      console.error("Bulk create failed", err);
+      // Minimal UX; integrate with your snackbar/toast system if present
+      window.alert?.("Failed to create contexts. Please check inputs and try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Wizard footer CTAs
@@ -222,8 +249,8 @@ export default function ContextBuilderDrawer({
           </Button>
         )}
         {activeStep === STEPS.length - 1 && (
-          <Button variant="contained" color="primary" onClick={handleCommit}>
-            Create {rows.filter((r) => !r.exists).length} Contexts
+          <Button variant="contained" color="primary" onClick={handleCommit} disabled={saving}>
+            {saving ? "Creating..." : `Create ${rows.filter((r) => !r.exists).length} Contexts`}
           </Button>
         )}
       </Box>
