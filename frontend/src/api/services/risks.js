@@ -1,5 +1,5 @@
 // src/api/services/risks.js
-import { getJSON,putJSON, buildSearchParams } from '../../api/httpClient';
+import { getJSON,putJSON, postJSON, buildSearchParams } from '../../api/httpClient';
 
 
 const context_url = 'risks/risk_scenario_contexts/';
@@ -70,6 +70,6 @@ export async function fetchScenarios({ q = '', limit = 500, offset = 0 } = {}) {
 
 export async function prefillRiskContexts(pairs) {
   const url = `${context_url}prefill/`;  // trailing slash
-  const res = await http.post(url, { json: { pairs } }).json();
+  const res = await postJSON(url, { json: { pairs } });
   return Array.isArray(res) ? res : [];
 }

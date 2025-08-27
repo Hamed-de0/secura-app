@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 from app.constants.scopes import is_valid_scope, normalize_scope
 
-ScopeType = Literal["asset","asset_type","asset_group","tag","bu","site","entity","service","org_group"]
+ScopeType = Literal["asset","asset_type","asset_group","asset_tag","bu","site","entity","service","org_group"]
 
 
 class RiskScenarioContextBase(BaseModel):
