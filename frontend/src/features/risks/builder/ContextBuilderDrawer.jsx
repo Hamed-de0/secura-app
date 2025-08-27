@@ -266,6 +266,7 @@ export default function ContextBuilderDrawer({
   );
 
   return (
+    <>
     <RightPanelDrawer
       open={open}
       onClose={onClose}
@@ -345,5 +346,6 @@ export default function ContextBuilderDrawer({
         {snack.message}
       </Alert>
     </Snackbar>
+    </>
   );
 }

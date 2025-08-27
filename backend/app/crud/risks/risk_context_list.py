@@ -710,8 +710,8 @@ def list_contexts(
             "domains": domains,
             "scopeDisplay": f"{st}:{scope_label}" if scope_label else st,
             "scopeRef": {"type": st, "id": sid, "label": scope_label},
-            "lastReview": getattr(c, "last_review", None),
-            "nextReview": getattr(c, "next_review", None),
+            "lastReview": getattr(c, "last_review", None) if not isinstance(getattr(c, "last_review", None), datetime) else getattr(c, "last_review").isoformat(),
+            "nextReview": getattr(c, "next_review", None) if not isinstance(getattr(c, "next_review", None), datetime) else getattr(c, "next_review").isoformat(),
             "reviewSLAStatus": review_sla,
             # Optional: appetite snapshot for the row
             "appetite": appetite,
