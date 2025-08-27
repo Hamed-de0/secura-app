@@ -133,6 +133,7 @@ def get_contexts(
         days=days
     )
 
+
 @router.get("/{context_id}/details", response_model=RiskContextDetails)
 def get_risk_context_details(
     context_id: int,

@@ -14,7 +14,12 @@ from app.schemas.risks.risk_context_details import *
 
 from app.services.policy.resolver import *
 from app.services.evidence.freshness import evidence_aggregate_by_context, evidence_aggregate_for_context
-
+from app.crud.m4.context_details_summaries import (
+    controls_summary_for_context,
+    evidence_summary_for_context,
+)
+from app.models.controls.control_context_link import ControlContextLink as CCL
+from app.models.compliance.control_evidence import ControlEvidence
 from collections import defaultdict
 
 # Optional/known models for scope labels (import if present)
@@ -817,65 +822,83 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
     rec_names = [_control_display_name(c, e, d) for (_id, c, e, d) in rec_rows]
     rec_names = set(rec_names)  # remove duplicate by join
 
+    # last evidence date per link (MAX(collected_at))
+    ev_sub = (
+        db.query(
+            ControlEvidence.control_context_link_id.label("ccl_id"),
+            func.max(ControlEvidence.collected_at).label("last_ev"),
+        )
+        .group_by(ControlEvidence.control_context_link_id)
+        .subquery()
+    )
+
     impl_rows = (
         db.query(
-            ControlContextLink.id,
-            ControlContextLink.control_id,
-            ControlContextLink.assurance_status,
-            ControlContextLink.status_updated_at,
-            # ControlContextLink.effectiveness_override,
-            ControlContextLink.notes,
-            Control.reference_code,
-            Control.title_en,
-            Control.title_de,
+            CCL.id.label("link_id"),
+            CCL.control_id.label("control_id"),
+            CCL.assurance_status.label("assurance_status"),
+            CCL.status_updated_at.label("status_updated_at"),
+            ev_sub.c.last_ev.label("last_evidence"),
+            CCL.effectiveness_override.label("effectiveness_override"),
+            Control.reference_code.label("code"),
+            Control.title_en.label("title_en"),
+            Control.title_de.label("title_de"),
         )
-        .join(Control, Control.id == ControlContextLink.control_id)
-        .filter(
-            ControlContextLink.risk_scenario_context_id == ctx.id,
-        )
+        .join(Control, Control.id == CCL.control_id)
+        .outerjoin(ev_sub, ev_sub.c.ccl_id == CCL.id)
+        .filter(CCL.risk_scenario_context_id == context_id)
         .all()
     )
 
+    controls_out = []
+    for r in impl_rows:
+        controls_out.append({
+            "id": r.link_id,
+            "contextId": context_id,
+            "controlId": r.control_id,
+            "code": r.code,
+            "title": r.title_en or r.title_de,
+            "status": (r.assurance_status or "proposed"),
+            "lastEvidenceAt": r.last_evidence,  # may be None
+            "effect": r.effectiveness_override or None,  # if you surface it in details
+        })
+
+    # ✅ Evidence aggregates (context-level)
     ev = evidence_aggregate_for_context(db, ctx.id, stale_before)
-    evidence_overdue = ev["overdue"] or 0
-    evidence_ok = max((ev["implemented"] or 0) - evidence_overdue, 0)
+    evidence_overdue = int(ev["overdue"] or 0)
+    evidence_ok = max(int(ev["implemented"] or 0) - evidence_overdue, 0)
     latest_ev_ts = ev["max_evidence"]
 
-    # Implemented = implemented/verified that are also in recommended set
+    # ✅ Implemented count + implemented names (only those in recommended set)
+    implemented_statuses = {"implemented", "verified"}
     impl_in_rec_names: List[str] = []
     implemented_count = 0
-    evidence_overdue = 0
-    evidence_ok = 0
-    latest_ev_ts = None
-    for (link_id, ctrl_id, a_status, st_upd, ev_upd, eff_ovr, notes, code, t_en, t_de) in impl_rows:
-        if a_status and str(a_status).lower() in ("implemented", "verified") and ctrl_id in rec_ids:
-            implemented_count += 1
-            impl_in_rec_names.append(_control_display_name(code, t_en, t_de))
-            # evidence freshness per your latest pattern (status_updated_at)
-            if a_status and str(a_status).lower() in ("implemented", "verified") and ctrl_id in rec_ids:
-                implemented_count += 1
-                impl_in_rec_names.append(_control_display_name(code, t_en, t_de))
 
-        # track max evidence-ish timestamp for updatedAt
-        for ts in (st_upd, ev_upd):
+    for r in impl_rows:
+        st = str(r.assurance_status or "").lower()
+        if st in implemented_statuses and r.control_id in rec_ids:
+            implemented_count += 1
+            impl_in_rec_names.append(_control_display_name(r.code, r.title_en, r.title_de))
+        # track latest timestamp for updatedAt (status vs last evidence)
+        for ts in (r.status_updated_at, r.last_evidence):
             if ts and (latest_ev_ts is None or ts > latest_ev_ts):
                 latest_ev_ts = ts
 
     controls_total = len(rec_ids)
     coverage = (implemented_count / controls_total) if controls_total else None
 
-    # Build link details (all links, not only implemented)
+    # ✅ Build link details (all links, label-based)
     link_details: List[ControlLinkDetails] = []
-    for (link_id, ctrl_id, a_status, st_upd, ev_upd, eff_ovr, notes, code, t_en, t_de) in impl_rows:
+    for r in impl_rows:
         link_details.append(ControlLinkDetails(
-            linkId=link_id,
-            controlId=ctrl_id,
-            name=_control_display_name(code, t_en, t_de),
-            referenceCode=code,
-            assuranceStatus=a_status,
-            statusUpdatedAt=st_upd,
-            effectivenessOverride=eff_ovr,
-            notes=notes,
+            linkId=r.link_id,
+            controlId=r.control_id,
+            name=_control_display_name(r.code, r.title_en, r.title_de),
+            referenceCode=r.code,
+            assuranceStatus=r.assurance_status,
+            statusUpdatedAt=r.status_updated_at,
+            effectivenessOverride=r.effectiveness_override,
+            notes=None,  # no 'notes' column on link; set None
         ))
 
     controls = ControlsOut(
@@ -890,8 +913,11 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
     # --- 6) Compliance chips (reuse your existing service) ---
     req_controls = get_required_controls(db, asset=None, scenario_id=scn.id)  # if your impl needs asset, adapt
     required_ids = {c.id for c in req_controls}
-    implemented_ids = {ctrl_id for (_lid, ctrl_id, *_rest) in impl_rows if
-                       str(_rest[0]).lower() in ("implemented", "verified")}
+    implemented_ids = {
+        r.control_id for r in impl_rows
+        if str(r.assurance_status or "").lower() in implemented_statuses
+    }
+
     compliance = build_compliance_chips(
         db,
         asset=None,  # pass the asset if your implementation requires it; else None
@@ -944,6 +970,10 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
 
     owner_name, owner_initials = _owner_display(getattr(ctx, "owner", None))
 
+    # Add M4 summaries (no extra queries than needed)
+    controls_summary = controls_summary_for_context(db, context_id)
+    evidence_summary = evidence_summary_for_context(db, context_id)
+
     # --- 10) Response ---
     return RiskContextDetails(
         contextId=ctx.id,
@@ -987,4 +1017,7 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
         exceptions=exceptions,
 
         asOf=now.replace(microsecond=0),
+
+        controlsSummary= controls_summary,
+        evidenceSummary= evidence_summary
     )

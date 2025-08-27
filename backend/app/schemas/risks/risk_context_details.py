@@ -49,6 +49,20 @@ class ExceptionOut(BaseModel):
     active: Optional[bool] = None
     expiresAt: Optional[datetime] = None
 
+
+class ControlsSummaryOut(BaseModel):
+    countsByStatus: Dict[str, int]
+    coverageWeighted: Optional[float] = None
+    lastEvidenceMax: Optional[str] = None
+
+
+class EvidenceSummaryOut(BaseModel):
+    ok: int
+    warn: int
+    overdue: int
+    lastEvidenceMax: Optional[str] = None
+
+
 class RiskContextDetails(BaseModel):
     contextId: int
     scenarioId: int
@@ -92,5 +106,8 @@ class RiskContextDetails(BaseModel):
 
     asOf: datetime
 
+    controlsSummary: ControlsSummaryOut
+    evidenceSummary: EvidenceSummaryOut
+
     class Config:
-        from_attributes = True
+        extra = "allow"

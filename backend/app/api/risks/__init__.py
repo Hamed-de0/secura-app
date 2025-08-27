@@ -10,6 +10,9 @@ from .risk_category import router as risk_category_router
 from .risk_score import router as risk_score_router
 from .risk_engine import router as risk_engine_router
 from .risk_effective import router as risk_effective_router
+from .context_evidence_m4 import router as context_evidence_m4_router
+from .context_controls_m4 import router as context_controls_m4_router
+from .context_details_summaries_m4 import router as context_details_summaries_m4_router
 
 
 router = APIRouter()
@@ -24,3 +27,8 @@ router.include_router(threat_links_router)
 router.include_router(risk_category_router)
 router.include_router(risk_score_router)
 router.include_router(risk_engine_router)
+router.include_router(context_controls_m4_router)
+router.include_router(context_evidence_m4_router)
+router.include_router(context_details_summaries_m4_router)
+
+
