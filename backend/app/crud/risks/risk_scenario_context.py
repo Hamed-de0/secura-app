@@ -154,16 +154,27 @@ def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session):
 
 def _set_impacts(db: Session, context_id: int, impact_items):
     # replace ratings for the 5 domains in one go
-    db.query(RiskContextImpactRating)\
-      .filter(RiskContextImpactRating.risk_scenario_context_id == context_id)\
+    db.query(RiskContextImpactRating) \
+      .filter(RiskContextImpactRating.risk_scenario_context_id == context_id) \
       .delete(synchronize_session=False)
+    # Map input items (which may specify domain letter) to domain_id
+    code2id = {"C": 1, "I": 2, "A": 3, "L": 4, "R": 5}
+    by_dom: Dict[str, int] = {}
+    for it in impact_items:
+        # prefer explicit letter if present; otherwise attempt map from id
+        if getattr(it, "domain", None):
+            by_dom[it.domain] = int(getattr(it, "score", 0) or 0)
+        elif getattr(it, "domain_id", None):
+            # best-effort reverse map
+            rev = {v: k for k, v in code2id.items()}
+            letter = rev.get(getattr(it, "domain_id"))
+            if letter:
+                by_dom[letter] = int(getattr(it, "score", 0) or 0)
     rows = []
-    # impact_items has .domain (C/I/A/L/R) and .score
-    by_dom = {it.domain: int(it.score or 0) for it in impact_items}
-    for dom in ("C","I","A","L","R"):
+    for dom in ("C", "I", "A", "L", "R"):
         rows.append(RiskContextImpactRating(
             risk_scenario_context_id=context_id,
-            domain=dom,
+            domain_id=code2id[dom],
             score=by_dom.get(dom, 0),
         ))
     db.bulk_save_objects(rows)
@@ -238,16 +249,20 @@ def _defaults_for_scenario(db: Session, scenario_id: int) -> Tuple[int, Dict[str
                 imp[k] = _coerce_0_5(v)
         return like, imp
 
-    # If impact is a single scalar: treat as overall → put in R
-    imp["R"] = _coerce_0_5(raw_imp)
+    # If impact is a single scalar: map to C/I/A, leave L and R at 0 (per M5 spec)
+    v = _coerce_0_5(raw_imp)
+    imp["C"], imp["I"], imp["A"] = v, v, v
     return like, imp
 
 def prefill_contexts(
     db: Session, pairs: List[Tuple[int, str, int]]
 ):
+    # Lazy import to avoid circular deps
+    from app.crud.risks.risk_context_list import resolve_scope_label
     ex = find_existing_pairs(db, pairs)
     out = []
     for (scenario_id, st, sid) in pairs:
+        label = resolve_scope_label(db, st, sid)
         if (scenario_id, st, sid) in ex:
             # load existing values
             ctx = db.query(RiskScenarioContext).get(ex[(scenario_id, st, sid)])
@@ -257,7 +272,7 @@ def prefill_contexts(
             imp = {k: ratings.get(k, 0) for k in ("C","I","A","L","R")}
             out.append({
                 "scenarioId": scenario_id,
-                "scopeRef": {"type": st, "id": sid},
+                "scopeRef": {"type": st, "id": sid, "label": label},
                 "exists": True,
                 "likelihood": like,
                 "impacts": imp,
@@ -268,7 +283,7 @@ def prefill_contexts(
             like, imp = _defaults_for_scenario(db, scenario_id)
             out.append({
                 "scenarioId": scenario_id,
-                "scopeRef": {"type": st, "id": sid},
+                "scopeRef": {"type": st, "id": sid, "label": label},
                 "exists": False,
                 "likelihood": like,
                 "impacts": imp,
@@ -492,7 +507,5 @@ class RiskScenarioContextCRUD:
         obj = RiskScenarioContextCRUD.get(db, context_id)
         db.delete(obj)
         db.commit()
-
-
 
 

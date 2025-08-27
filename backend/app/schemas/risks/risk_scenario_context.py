@@ -129,6 +129,7 @@ class BatchAssignIn(BaseModel):
 class ScopeRef(BaseModel):
     type: ScopeType
     id: int
+    label: Optional[str] = None
 
 class PrefillPair(BaseModel):
     scenarioId: int
@@ -145,5 +146,4 @@ class PrefillResponseItem(BaseModel):
     impacts: Dict[str, int]
     rationale: List[str] = []
     suggestedReviewDate: Optional[datetime] = None
-
 

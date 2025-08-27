@@ -1,5 +1,5 @@
 # Core scenario logic
-from sqlalchemy import Column, Integer, String, ForeignKey, ARRAY, CheckConstraint, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, String, ForeignKey, ARRAY, CheckConstraint, UniqueConstraint, Index, DateTime
 from sqlalchemy.orm import relationship
 from app.core.base import BaseModel
 
@@ -29,6 +29,8 @@ class RiskScenarioContext(BaseModel):
     likelihood = Column(Integer)
 
     owner_id = Column(Integer, ForeignKey("persons.id", ondelete="SET NULL"), nullable=True, index=True)
+    # Optional review date per context
+    next_review = Column(DateTime, nullable=True)
     # Relationships (unchanged)
     risk_scenario = relationship("RiskScenario", back_populates="contexts")
     impact_ratings = relationship("RiskContextImpactRating", back_populates="context", cascade="all, delete")
