@@ -10,6 +10,8 @@ import {
   Divider,
   Typography,
   LinearProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import RightPanelDrawer from "../../../components/rightpanel/RightPanelDrawer";
 
@@ -57,6 +59,7 @@ export default function ContextBuilderDrawer({
   // Prefill state
   const [loadingPrefill, setLoadingPrefill] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [snack, setSnack] = React.useState({ open: false, message: "", severity: "success" });
 
   // Load catalogs when drawer opens
   React.useEffect(() => {
@@ -183,15 +186,20 @@ export default function ContextBuilderDrawer({
       return;
     }
 
+    const toIso = (d) => {
+      if (!d) return undefined;
+      if (typeof d?.toISOString === "function") return d.toISOString();
+      // if string like YYYY-MM-DD, coerce to ISO at midnight
+      try { return new Date(d).toISOString(); } catch { return undefined; }
+    };
+
     const items = creatable.map((r) => ({
       scenarioId: r.scenarioId,
       scopeRef: { type: r.scopeRef.type, id: r.scopeRef.id },
       likelihood: r.likelihood,
       impacts: r.impacts,
-      ownerId: ownerId || undefined,
-      nextReview: (typeof nextReview?.toISOString === "function")
-        ? nextReview.toISOString()
-        : (nextReview || undefined),
+      ownerId: (r.ownerId ?? ownerId) || undefined,
+      nextReview: toIso(r.nextReview ?? nextReview),
     }));
 
     setSaving(true);
@@ -202,11 +210,11 @@ export default function ContextBuilderDrawer({
         { created: createdIds.length, skipped: skipped.length, updated: updated.length, overAppetite },
         items
       );
+      setSnack({ open: true, message: `Created ${createdIds.length}, skipped ${skipped.length}`, severity: "success" });
       onClose?.();
     } catch (err) {
       console.error("Bulk create failed", err);
-      // Minimal UX; integrate with your snackbar/toast system if present
-      window.alert?.("Failed to create contexts. Please check inputs and try again.");
+      setSnack({ open: true, message: "Failed to create contexts. Please check inputs and try again.", severity: "error" });
     } finally {
       setSaving(false);
     }
@@ -321,5 +329,21 @@ export default function ContextBuilderDrawer({
         )}
       </Box>
     </RightPanelDrawer>
+    {/* Local snackbar notifications */}
+    <Snackbar
+      open={snack.open}
+      autoHideDuration={2500}
+      onClose={() => setSnack((s) => ({ ...s, open: false }))}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+    >
+      <Alert
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        severity={snack.severity}
+        variant="filled"
+        sx={{ width: "100%" }}
+      >
+        {snack.message}
+      </Alert>
+    </Snackbar>
   );
 }
