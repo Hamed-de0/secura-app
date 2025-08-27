@@ -1,13 +1,16 @@
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict
 from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 from app.constants.scopes import is_valid_scope, normalize_scope
+
+ScopeType = Literal["asset","asset_type","asset_group","tag","bu","site","entity","service","org_group"]
+
 
 class RiskScenarioContextBase(BaseModel):
     risk_scenario_id: int
 
     # NEW normalized scope
-    scope_type: Literal["asset","tag","asset_group","asset_type","bu","site","entity","service","org_group"]
+    scope_type: ScopeType
     scope_id: int
 
     # Legacy (deprecated) fields — keep optional for a while
@@ -43,9 +46,7 @@ class RiskScenarioContextCreate(RiskScenarioContextBase):
 class RiskScenarioContextUpdate(RiskScenarioContextBase):
     risk_scenario_id: Optional[int] = None
 
-    scope_type: Optional[Literal[
-        "asset", "tag", "asset_group", "asset_type", "bu", "site", "entity", "service", "org_group"
-    ]] = None
+    scope_type: Optional[ScopeType] = None
     scope_id: Optional[int] = None
 
     owner_id: Optional[int] = None
@@ -92,5 +93,57 @@ class RiskContextBatchAssignInput(BaseModel):
     status: str
     lifecycle_states: List[str] = []
     impact_ratings: List[ImpactRatingInput]
+
+class ImpactRatingIn(BaseModel):
+    # your UI sends domain_id; we also accept 'domain' (C/I/A/L/R) if you add it later
+    domain_id: Optional[int] = None
+    domain: Optional[Literal["C","I","A","L","R"]] = None
+    score: int
+
+    @model_validator(mode="after")
+    def _coerce_domain(self):
+        if self.domain:
+            return self
+        # simple static map; replace with DB lookup if you have a table
+        id2code = {1:"C", 2:"I", 3:"A", 4:"L", 5:"R"}
+        self.domain = id2code.get(self.domain_id)
+        return self
+
+class BatchAssignIn(BaseModel):
+    risk_scenario_id: int
+    scope_type: ScopeType
+    target_ids: List[int]
+
+    likelihood: Optional[int] = None
+    status: Optional[str] = None
+    lifecycle_states: Optional[List[str]] = None
+    impact_ratings: List[ImpactRatingIn] = []   # [{domain_id, score}] as today
+
+    # optional niceties
+    owner_id: Optional[int] = None
+    next_review: Optional[datetime] = None
+    on_conflict: Literal["skip","update"] = "skip"   # 'skip' -> bulk create, 'update' -> upsert
+    idempotency_key: Optional[str] = None            # safe retries
+
+
+class ScopeRef(BaseModel):
+    type: ScopeType
+    id: int
+
+class PrefillPair(BaseModel):
+    scenarioId: int
+    scopeRef: ScopeRef
+
+class PrefillRequest(BaseModel):
+    pairs: List[PrefillPair]
+
+class PrefillResponseItem(BaseModel):
+    scenarioId: int
+    scopeRef: ScopeRef
+    exists: bool
+    likelihood: int
+    impacts: Dict[str, int]
+    rationale: List[str] = []
+    suggestedReviewDate: Optional[datetime] = None
 
 

@@ -1,6 +1,11 @@
 // src/api/services/risks.js
 import { getJSON,putJSON, buildSearchParams } from '../../api/httpClient';
 
+
+const context_url = 'risks/risk_scenario_contexts/';
+const scenario_url = 'risks/risk_scenarios/';
+
+
 /** Fetch “effective” risks for an asset. Keeps trailing slash. */
 export async function fetchAssetEffectiveRisks(assetId, { days = 90 } = {}) {
   const url = `risks/assets/${assetId}/risks/`;
@@ -43,4 +48,28 @@ export async function fetchRiskContextDetail(contextId) {
 export async function updateRiskContextOwner(contextId, ownerId) {
   const url = `risks/risk_scenario_contexts/${contextId}`; // trailing slash
   return await putJSON(url, {json:{ owner_id: ownerId }});
+}
+
+export async function fetchScenarios({ q = '', limit = 500, offset = 0 } = {}) {
+  const searchParams = buildSearchParams({ q, limit, offset });
+  const data = await getJSON(scenario_url, { searchParams });
+
+  const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+  return items.map(s => ({
+    id: s.id ?? s.scenarioId,
+    title: s.title_en || s.title_de || `Scenario #${s.id}`,
+    description: s.description || '',
+    // optional baseline if provided
+    baseline: {
+      likelihood: s.baseline?.likelihood ?? s.likelihood ?? 3,
+      impacts: s.baseline?.impacts ?? s.impacts ?? { C:2, I:2, A:2, L:2, R:2 },
+    },
+    tags: s.tags || [],
+  }));
+}
+
+export async function prefillRiskContexts(pairs) {
+  const url = `${context_url}prefill/`;  // trailing slash
+  const res = await http.post(url, { json: { pairs } }).json();
+  return Array.isArray(res) ? res : [];
 }

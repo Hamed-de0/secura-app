@@ -15,7 +15,7 @@ from app.schemas.risks import RiskScenarioCreate, RiskScenarioRead, RiskScenario
 from typing import Dict, Any
 from app.services import calculate_risk_scores_by_scenario
 
-router = APIRouter(prefix="/risk-scenarios", tags=["Risk Scenarios"])
+router = APIRouter(prefix="/risk_scenarios", tags=["Risk Scenarios"])
 
 # Dependency
 def get_db():
@@ -30,8 +30,8 @@ def create(scenario_in: RiskScenarioCreate, db: Session = Depends(get_db)):
     return create_risk_scenario(db, scenario_in)
 
 @router.get("/", response_model=list[RiskScenarioRead])
-def read_all(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return get_risk_scenarios(db, skip, limit)
+def read_all(offset: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return get_risk_scenarios(db, skip=offset, limit=limit)
 
 @router.get("/{scenario_id}", response_model=RiskScenarioRead)
 def read(scenario_id: int, db: Session = Depends(get_db)):

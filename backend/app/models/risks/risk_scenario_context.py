@@ -1,5 +1,5 @@
 # Core scenario logic
-from sqlalchemy import Column, Integer, String, ForeignKey, ARRAY, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, ARRAY, CheckConstraint, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from app.core.base import BaseModel
 
@@ -14,7 +14,7 @@ class RiskScenarioContext(BaseModel):
     scope_type = Column(String(30), nullable=False)   # e.g., "asset","entity","service",...
     scope_id = Column(Integer, nullable=False)
 
-    # Legacy (deprecated) columns kept temporarily for backward compatibility
+    # # Legacy (deprecated) columns kept temporarily for backward compatibility
     asset_id = Column(Integer, ForeignKey("assets.id"), nullable=True)
     asset_group_id = Column(Integer, ForeignKey("asset_groups.id"), nullable=True)
     asset_tag_id = Column(Integer, ForeignKey("asset_tags.id"), nullable=True)
@@ -41,3 +41,8 @@ class RiskScenarioContext(BaseModel):
 
     score = relationship("RiskScore", back_populates="context", uselist=False, cascade="all, delete-orphan")
     score_history = relationship("RiskScoreHistory", back_populates="context", cascade="all, delete-orphan")
+
+    __table_args__ = (
+            UniqueConstraint("risk_scenario_id", "scope_type", "scope_id", name="uq_rsc_scenario_scope"),
+            Index("ix_rsc_scope_pair", "scope_type", "scope_id"),
+        )

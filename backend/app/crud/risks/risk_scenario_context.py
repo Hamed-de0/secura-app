@@ -1,12 +1,16 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, tuple_, func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.models.risks.risk_scenario_context import RiskScenarioContext
+from app.models.risks.risk_scenario import RiskScenario
 from app.schemas.risks.risk_scenario_context import (
     RiskScenarioContextCreate, RiskScenarioContextUpdate,
-    RiskContextBatchAssignInput)
+    RiskContextBatchAssignInput, BatchAssignIn)
 from app.models.risks.risk_context_impact_rating import RiskContextImpactRating
-from typing import Optional, List
+from typing import Optional, List, Tuple, Dict, Any
 from app.models.risks.risk_scenario_context import RiskScenarioContext as RSCModel
+from app.models.common.idempotency_key import IdempotencyKey
 from datetime import datetime
 
 
@@ -148,6 +152,258 @@ def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session):
     db.commit()
     return {"assigned": len(created_contexts)}
 
+def _set_impacts(db: Session, context_id: int, impact_items):
+    # replace ratings for the 5 domains in one go
+    db.query(RiskContextImpactRating)\
+      .filter(RiskContextImpactRating.risk_scenario_context_id == context_id)\
+      .delete(synchronize_session=False)
+    rows = []
+    # impact_items has .domain (C/I/A/L/R) and .score
+    by_dom = {it.domain: int(it.score or 0) for it in impact_items}
+    for dom in ("C","I","A","L","R"):
+        rows.append(RiskContextImpactRating(
+            risk_scenario_context_id=context_id,
+            domain=dom,
+            score=by_dom.get(dom, 0),
+        ))
+    db.bulk_save_objects(rows)
+
+
+def _hash_payload(s: str) -> str:
+    import hashlib
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+def normalize_scope(s: str) -> str:
+    return s.lower().strip()
+
+def find_existing_pairs(
+    db: Session, pairs: List[Tuple[int, str, int]]
+) -> Dict[Tuple[int,str,int], int]:
+    """Return {(scenario_id, scope_type, scope_id): context_id} for existing ones."""
+    if not pairs:
+        return {}
+    rows = (
+        db.query(RiskScenarioContext.risk_scenario_id,
+                 RiskScenarioContext.scope_type,
+                 RiskScenarioContext.scope_id,
+                 RiskScenarioContext.id)
+          .filter(tuple_(RiskScenarioContext.risk_scenario_id,
+                         RiskScenarioContext.scope_type,
+                         RiskScenarioContext.scope_id).in_(pairs))
+          .all()
+    )
+    return {(sid, st, sid2): cid for (sid, st, sid2, cid) in rows}
+
+def _defaults_for_scenario(db: Session, scenario_id: int) -> Tuple[int, Dict[str, int]]:
+    """
+    Return default (likelihood, impacts) for a scenario.
+    - risk_scenarios.likelihood: int (fallback 1)
+    - risk_scenarios.impact:
+        * if dict-like: {C,I,A,L,R} (case-insensitive) → coerce 0..5
+        * if scalar: treated as "overall" → put into R (0..5)
+        * if None/invalid: all zeros
+    """
+    def _coerce_0_5(v: Any) -> int:
+        try:
+            return max(0, min(5, int(float(v))))
+        except Exception:
+            return 0
+
+    imp: Dict[str, int] = {"C": 0, "I": 0, "A": 0, "L": 0, "R": 0}
+
+    sn: RiskScenario | None = db.query(RiskScenario).get(scenario_id)
+    if not sn:
+        return 1, imp  # no scenario → safe fallback
+
+    # Likelihood: only override if not null
+    like = _coerce_0_5(getattr(sn, "likelihood", None)) if getattr(sn, "likelihood", None) is not None else 1
+
+    raw_imp = getattr(sn, "impact", None)
+
+    if raw_imp is None:
+        # keep all zeros
+        return like, imp
+
+    # If impact is a dict-like JSON (preferred): fill known domains
+    if isinstance(raw_imp, dict):
+        for k in ("C", "I", "A", "L", "R"):
+            # accept keys in any case; also accept long names if you ever store them
+            v = (
+                raw_imp.get(k)
+                or raw_imp.get(k.lower())
+                or raw_imp.get(k.upper())
+                or raw_imp.get({"C":"confidentiality","I":"integrity","A":"availability","L":"legal","R":"overall"}.get(k), None)
+            )
+            if v is not None:
+                imp[k] = _coerce_0_5(v)
+        return like, imp
+
+    # If impact is a single scalar: treat as overall → put in R
+    imp["R"] = _coerce_0_5(raw_imp)
+    return like, imp
+
+def prefill_contexts(
+    db: Session, pairs: List[Tuple[int, str, int]]
+):
+    ex = find_existing_pairs(db, pairs)
+    out = []
+    for (scenario_id, st, sid) in pairs:
+        if (scenario_id, st, sid) in ex:
+            # load existing values
+            ctx = db.query(RiskScenarioContext).get(ex[(scenario_id, st, sid)])
+            like = int(getattr(ctx, "likelihood", 0) or 0)
+            # pack impacts from related table
+            ratings = {r.domain: int(r.score or 0) for r in getattr(ctx, "impact_ratings", [])}
+            imp = {k: ratings.get(k, 0) for k in ("C","I","A","L","R")}
+            out.append({
+                "scenarioId": scenario_id,
+                "scopeRef": {"type": st, "id": sid},
+                "exists": True,
+                "likelihood": like,
+                "impacts": imp,
+                "rationale": [],
+                "suggestedReviewDate": getattr(ctx, "next_review", None)
+            })
+        else:
+            like, imp = _defaults_for_scenario(db, scenario_id)
+            out.append({
+                "scenarioId": scenario_id,
+                "scopeRef": {"type": st, "id": sid},
+                "exists": False,
+                "likelihood": like,
+                "impacts": imp,
+                "rationale": [],
+                "suggestedReviewDate": None
+            })
+    return out
+
+
+
+def batch_assign(db: Session, body: BatchAssignIn):
+    now = datetime.utcnow()
+    st = body.scope_type.lower()
+    ids = sorted(set(body.target_ids))
+
+    # --- Idempotency short-circuit (optional but recommended)
+    if body.idempotency_key:
+        row = db.query(IdempotencyKey).get(body.idempotency_key)
+        if row and row.response_json:
+            import json
+            return json.loads(row.response_json)
+
+    # --- Find existing contexts for (scenario_id, scope_type, scope_id)
+    pairs = [(body.risk_scenario_id, st, sid) for sid in ids]
+    existing_rows = (
+        db.query(RiskScenarioContext.risk_scenario_id,
+                 RiskScenarioContext.scope_type,
+                 RiskScenarioContext.scope_id,
+                 RiskScenarioContext.id)
+        .filter(tuple_(RiskScenarioContext.risk_scenario_id,
+                       RiskScenarioContext.scope_type,
+                       RiskScenarioContext.scope_id).in_(pairs))
+        .all()
+    )
+    existing = {(sid, s_type, s_id): ctx_id for sid, s_type, s_id, ctx_id in existing_rows}
+
+    created_ids = []
+    updated_ids = []
+    skipped = []
+
+    # --- INSERT missing (bulk)
+    to_insert = []
+    for scope_id in ids:
+        key = (body.risk_scenario_id, st, scope_id)
+        if key in existing:
+            continue
+        to_insert.append({
+            "risk_scenario_id": body.risk_scenario_id,
+            "scope_type": st,
+            "scope_id": scope_id,
+            "likelihood": int(body.likelihood or 0) if body.likelihood is not None else None,
+            "status": body.status or "Open",
+            "lifecycle_states": body.lifecycle_states or None,
+            "owner_id": body.owner_id,
+            "next_review": body.next_review,
+            "created_at": now,
+            "updated_at": now,
+        })
+
+    if to_insert:
+        stmt = pg_insert(RiskScenarioContext).values(to_insert) \
+            .on_conflict_do_nothing(index_elements=["risk_scenario_id", "scope_type", "scope_id"]) \
+            .returning(RiskScenarioContext.id,
+                       RiskScenarioContext.risk_scenario_id,
+                       RiskScenarioContext.scope_type,
+                       RiskScenarioContext.scope_id)
+        rows = db.execute(stmt).fetchall()
+        db.flush()
+        for ctx_id, sid, s_type, s_id in rows:
+            created_ids.append(ctx_id)
+            existing[(sid, s_type, s_id)] = ctx_id  # so impacts can be set below
+
+    # --- UPDATE existing if requested
+    if body.on_conflict == "update":
+        # pull all target ctx ids (both newly created and previously existing)
+        target_ctx_ids = [existing[(body.risk_scenario_id, st, sid)] for sid in ids if
+                          (body.risk_scenario_id, st, sid) in existing]
+        if target_ctx_ids:
+            q = db.query(RiskScenarioContext).filter(RiskScenarioContext.id.in_(target_ctx_ids))
+            updates = {}
+            if body.likelihood is not None: updates["likelihood"] = int(body.likelihood)
+            if body.status is not None: updates["status"] = body.status
+            if body.lifecycle_states is not None: updates["lifecycle_states"] = body.lifecycle_states
+            if body.owner_id is not None: updates["owner_id"] = body.owner_id
+            if body.next_review is not None: updates["next_review"] = body.next_review
+            if updates:
+                updates["updated_at"] = now
+                q.update(updates, synchronize_session=False)
+                # mark updated: exclude those we just created
+                updated_ids = [cid for cid in target_ctx_ids if cid not in created_ids]
+
+    # --- Set impacts for contexts that were newly created or updated
+    impact_items = body.impact_ratings or []
+    if impact_items:
+        target_ctx_ids = created_ids if body.on_conflict == "skip" else \
+            [existing[(body.risk_scenario_id, st, sid)] for sid in ids if (body.risk_scenario_id, st, sid) in existing]
+        for ctx_id in target_ctx_ids:
+            _set_impacts(db, ctx_id, impact_items)
+
+    db.commit()
+
+    # --- Skipped list (only for skip mode)
+    if body.on_conflict == "skip":
+        for scope_id in ids:
+            key = (body.risk_scenario_id, st, scope_id)
+            if key in existing and existing[key] not in created_ids:
+                skipped.append({"scenarioId": body.risk_scenario_id, "scopeRef": {"type": st, "id": scope_id}})
+
+    resp = {
+        "createdIds": created_ids,
+        "skipped": skipped,
+        "updated": updated_ids,  # [] when on_conflict="skip"
+    }
+
+    # Store idempotent response
+    if body.idempotency_key:
+        import json, hashlib
+        payload_hash = hashlib.sha256(
+            json.dumps(dict(body), default=str, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        row = db.query(IdempotencyKey).get(body.idempotency_key)
+        if row:
+            row.request_hash = payload_hash
+            row.response_json = json.dumps(resp, default=str)
+        else:
+            row = IdempotencyKey(
+                key=body.idempotency_key,
+                request_hash=payload_hash,
+                response_json=json.dumps(resp, default=str),
+            )
+            db.add(row)
+        db.commit()
+
+    return resp
+
 
 class RiskScenarioContextCRUD:
     @staticmethod
@@ -236,5 +492,7 @@ class RiskScenarioContextCRUD:
         obj = RiskScenarioContextCRUD.get(db, context_id)
         db.delete(obj)
         db.commit()
+
+
 
 

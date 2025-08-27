@@ -8,6 +8,8 @@ from app.schemas.risks.risk_scenario_context import (
     RiskScenarioContextCreate,
     RiskScenarioContextUpdate,
     RiskContextBatchAssignInput,
+    BatchAssignIn,
+    PrefillRequest, PrefillResponseItem
 )
 from app.schemas.risks.risk_context_list import RiskContextListResponse
 from app.schemas.risks.risk_context_details import RiskContextDetails
@@ -168,9 +170,15 @@ def get_risk_score(context_id: int, db: Session = Depends(get_db)):
 # Batch assign – legacy function kept (works with normalized schema too)
 # -------------------------------------------------------------
 @router.post("/batch-assign")
-def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session = Depends(get_db)):
-    return crud_legacy.batch_assign_contexts(data, db)
+def batch_assign(body: BatchAssignIn, db: Session = Depends(get_db)):
+    return crud_legacy.batch_assign(db, body)
+# def batch_assign_contexts(data: RiskContextBatchAssignInput, db: Session = Depends(get_db)):
+#     return crud_legacy.batch_assign_contexts(data, db)
 
+@router.post("/prefill/", response_model=List[PrefillResponseItem])
+def prefill(body: PrefillRequest, db: Session = Depends(get_db)):
+    pairs = [(p.scenarioId, normalize_scope(p.scopeRef.type), p.scopeRef.id) for p in body.pairs]
+    return crud_legacy.prefill_contexts(db, pairs)
 
 # -------------------------------------------------------------
 # Expanded manage view – keep as-is, but now accepts scope_type
