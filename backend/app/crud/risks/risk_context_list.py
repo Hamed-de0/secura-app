@@ -21,6 +21,8 @@ from app.crud.m4.context_details_summaries import (
 from app.models.controls.control_context_link import ControlContextLink as CCL
 from app.models.compliance.control_evidence import ControlEvidence
 from collections import defaultdict
+from datetime import date
+
 
 # Optional/known models for scope labels (import if present)
 try:
@@ -70,6 +72,14 @@ from app.models.policies.risk_appetite_policy import RiskAppetitePolicy
 # ---------------- helpers ----------------
 
 SPEC_SCOPE = ("asset","asset_group","asset_type","tag","bu","site","entity","service","org_group")
+
+def _as_datetime(ts):
+    """Coerce date/datetime/None to datetime (midnight for dates)."""
+    if isinstance(ts, datetime):
+        return ts
+    if isinstance(ts, date):
+        return datetime.combine(ts, datetime.min.time())
+    return None
 
 def _pack_impacts(c: RiskScenarioContext) -> Dict[str, int]:
     """
@@ -839,7 +849,7 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
             CCL.assurance_status.label("assurance_status"),
             CCL.status_updated_at.label("status_updated_at"),
             ev_sub.c.last_ev.label("last_evidence"),
-            CCL.effectiveness_override.label("effectiveness_override"),
+            # CCL.effectiveness_override.label("effectiveness_override"),
             Control.reference_code.label("code"),
             Control.title_en.label("title_en"),
             Control.title_de.label("title_de"),
@@ -860,16 +870,16 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
             "title": r.title_en or r.title_de,
             "status": (r.assurance_status or "proposed"),
             "lastEvidenceAt": r.last_evidence,  # may be None
-            "effect": r.effectiveness_override or None,  # if you surface it in details
+            # "effect": r.effectiveness_override or None,  # if you surface it in details
         })
 
-    # ✅ Evidence aggregates (context-level)
+    # Evidence aggregates (context-level, already used elsewhere)
     ev = evidence_aggregate_for_context(db, ctx.id, stale_before)
     evidence_overdue = int(ev["overdue"] or 0)
     evidence_ok = max(int(ev["implemented"] or 0) - evidence_overdue, 0)
-    latest_ev_ts = ev["max_evidence"]
+    latest_ev_ts_dt = _as_datetime(ev.get("max_evidence"))
 
-    # ✅ Implemented count + implemented names (only those in recommended set)
+    # Implemented names/count only for recommended controls
     implemented_statuses = {"implemented", "verified"}
     impl_in_rec_names: List[str] = []
     implemented_count = 0
@@ -879,15 +889,15 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
         if st in implemented_statuses and r.control_id in rec_ids:
             implemented_count += 1
             impl_in_rec_names.append(_control_display_name(r.code, r.title_en, r.title_de))
-        # track latest timestamp for updatedAt (status vs last evidence)
         for ts in (r.status_updated_at, r.last_evidence):
-            if ts and (latest_ev_ts is None or ts > latest_ev_ts):
-                latest_ev_ts = ts
+            ts_dt = _as_datetime(ts)
+            if ts_dt and (latest_ev_ts_dt is None or ts_dt > latest_ev_ts_dt):
+                latest_ev_ts_dt = ts_dt
 
     controls_total = len(rec_ids)
     coverage = (implemented_count / controls_total) if controls_total else None
 
-    # ✅ Build link details (all links, label-based)
+    # Build link details (ALL links)
     link_details: List[ControlLinkDetails] = []
     for r in impl_rows:
         link_details.append(ControlLinkDetails(
@@ -897,9 +907,17 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
             referenceCode=r.code,
             assuranceStatus=r.assurance_status,
             statusUpdatedAt=r.status_updated_at,
-            effectivenessOverride=r.effectiveness_override,
-            notes=None,  # no 'notes' column on link; set None
+            # No effectiveness_override column in your model → set None
+            effectivenessOverride=None,
+            # No 'notes' column on link → set None
+            notes=None,
         ))
+
+    # Implemented IDs (for compliance calc)
+    implemented_ids = {
+        r.control_id for r in impl_rows
+        if str(r.assurance_status or "").lower() in implemented_statuses
+    }
 
     controls = ControlsOut(
         implemented=implemented_count,
@@ -964,7 +982,7 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
         [d for d in [
             getattr(ctx, "updated_at", None),  # context change
             getattr(score, "last_updated", None),  # RiskScore last change
-            latest_ev_ts  # newest evidence timestamp (centralized)
+            latest_ev_ts_dt  # newest evidence timestamp (centralized)
         ] if d] or [None]
     )
 

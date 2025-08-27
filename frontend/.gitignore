@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# Vite cache
+.vite
+
+# Generated OpenAPI schema (exported from backend)
+src/api/openapi.json
+
+# Orval cache
+.orval
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

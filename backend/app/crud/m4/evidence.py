@@ -4,8 +4,7 @@ from typing import Tuple, List, Dict, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, date
-from urllib.parse import urlparse
-import os
+
 from app.models.controls.control_context_link import ControlContextLink
 from app.models.compliance.control_evidence import ControlEvidence
 
@@ -44,23 +43,29 @@ def list_by_context(
     context_id: int,
     *,
     control_id: Optional[int] = None,
+    evidence_type: Optional[str] = None,   # NEW
+    freshness: Optional[str] = None,       # NEW: ok|warn|overdue
     offset: int = 0,
     limit: int = 50,
-    sort_by: str = "captured_at",  # captured_at | valid_until
+    sort_by: str = "captured_at",          # captured_at | valid_until
     sort_dir: str = "desc",
 ) -> Tuple[int, List[Dict], Dict[str, int]]:
     """
     Returns envelope for evidence items linked to links that belong to the given risk context.
+    If 'freshness' filter is provided, total/summary reflect the filtered set.
     """
     q = (
         db.query(
             ControlEvidence.id,
             ControlEvidence.control_context_link_id,
             ControlEvidence.evidence_type,
+            ControlEvidence.title,
+            ControlEvidence.description,
             ControlEvidence.evidence_url,
             ControlEvidence.file_path,
             ControlEvidence.collected_at,
             ControlEvidence.valid_until,
+            ControlEvidence.status,
             ControlContextLink.risk_scenario_context_id.label("ctx_id"),
             ControlContextLink.control_id.label("control_id"),
         )
@@ -69,32 +74,18 @@ def list_by_context(
     )
     if control_id is not None:
         q = q.filter(ControlContextLink.control_id == control_id)
+    if evidence_type:
+        q = q.filter(ControlEvidence.evidence_type == evidence_type)
 
-    total = q.count()
+    # Pull raw rows (we'll compute freshness and apply that filter in-Python)
+    rows = q.all()
 
-    # Summary freshness over the whole filtered set
     today = datetime.utcnow().date()
-    all_dates = q.with_entities(ControlEvidence.collected_at, ControlEvidence.valid_until).all()
-    summary = {"ok": 0, "warn": 0, "overdue": 0}
-    for ca, vu in all_dates:
-        f = _freshness(today, ca, vu)
-        summary[f] += 1
-
-    # Sorting & paging
-    desc = (sort_dir.lower() == "desc")
-    if sort_by == "valid_until":
-        q = q.order_by(ControlEvidence.valid_until.desc() if desc else ControlEvidence.valid_until.asc(),
-                       ControlEvidence.id.desc())
-    else:
-        q = q.order_by(ControlEvidence.collected_at.desc() if desc else ControlEvidence.collected_at.asc(),
-                       ControlEvidence.id.desc())
-
-    rows = q.offset(offset).limit(limit).all()
-
-    items: List[Dict] = []
-    for (eid, link_id, etype, url, fpath, ca, vu, ctx_id, ctrl_id) in rows:
+    items_all: List[Dict] = []
+    for (eid, link_id, etype, title, descr, url, fpath, ca, vu, status, ctx_id, ctrl_id) in rows:
         ref = url or fpath
-        items.append({
+        fr = _freshness(today, ca, vu)
+        items_all.append({
             "id": eid,
             "contextId": ctx_id,
             "controlId": ctrl_id,
@@ -103,11 +94,37 @@ def list_by_context(
             "ref": ref,
             "capturedAt": ca,
             "validUntil": vu,
-            "freshness": _freshness(today, ca, vu),
+            "freshness": fr,
+            # not exposed in Out, but available if you later extend:
+            "_title": title,
+            "_description": descr,
+            "_status": status,
         })
+
+    # Optional freshness filter (post-compute)
+    if freshness in ("ok", "warn", "overdue"):
+        items_all = [it for it in items_all if it["freshness"] == freshness]
+
+    # Summary over the filtered set
+    summary = {"ok": 0, "warn": 0, "overdue": 0}
+    for it in items_all:
+        summary[it["freshness"]] += 1
+
+    # Sorting (Python to honor post-filtering)
+    reverse = (sort_dir.lower() == "desc")
+    if sort_by == "valid_until":
+        items_all.sort(key=lambda it: (it["validUntil"] or date.min), reverse=reverse)
+    else:
+        items_all.sort(key=lambda it: (it["capturedAt"] or date.min), reverse=reverse)
+
+    total = len(items_all)
+    items = items_all[offset: offset + limit]
 
     return total, items, summary
 
+# --- create_for_context stays as implemented previously ---
+from urllib.parse import urlparse
+import os
 
 def _derive_title(title: Optional[str], ref: Optional[str], typ: str) -> str:
     if title and title.strip():
@@ -125,11 +142,11 @@ def create_for_context(
     *,
     control_id: int,
     type: str,
-    title: str,                    # ← NEW
+    title: str,
     ref: Optional[str],
     captured_at: Optional[date],
     valid_until: Optional[date],
-    description: Optional[str] = None,   # ← NEW
+    description: Optional[str] = None,
 ):
     link = (
         db.query(ControlContextLink)
@@ -143,8 +160,8 @@ def create_for_context(
     row = ControlEvidence(
         control_context_link_id=link.id,
         evidence_type=type,
-        title=_derive_title(title, ref, type),    # ← set title (not null)
-        description=description,                  # ← optional
+        title=_derive_title(title, ref, type),
+        description=description,
         evidence_url=ref,
         collected_at=captured_at or datetime.utcnow().date(),
         valid_until=valid_until,
@@ -155,5 +172,61 @@ def create_for_context(
     db.refresh(row)
     return row, None
 
+def _ensure_evidence_in_context(db: Session, context_id: int, evidence_id: int) -> Optional[ControlEvidence]:
+    """Return evidence row only if it belongs to a link inside the given context, else None."""
+    return (
+        db.query(ControlEvidence)
+          .join(ControlContextLink, ControlContextLink.id == ControlEvidence.control_context_link_id)
+          .filter(
+              ControlEvidence.id == evidence_id,
+              ControlContextLink.risk_scenario_context_id == context_id
+          )
+          .first()
+    )
 
+def update_in_context(
+    db: Session,
+    context_id: int,
+    evidence_id: int,
+    *,
+    type: Optional[str] = None,
+    title: Optional[str] = None,
+    ref: Optional[str] = None,
+    captured_at: Optional[date] = None,
+    valid_until: Optional[date] = None,
+    description: Optional[str] = None,
+    status: Optional[str] = None,
+):
+    row = _ensure_evidence_in_context(db, context_id, evidence_id)
+    if not row:
+        return None, "not_found"
 
+    changed = False
+    if type is not None and type != row.evidence_type:
+        row.evidence_type = type; changed = True
+    if title is not None and title.strip() and title != row.title:
+        row.title = title.strip(); changed = True
+    if ref is not None and ref != row.evidence_url:
+        row.evidence_url = ref; changed = True
+    if captured_at is not None and captured_at != row.collected_at:
+        row.collected_at = captured_at; changed = True
+    if valid_until is not None and valid_until != row.valid_until:
+        row.valid_until = valid_until; changed = True
+    if description is not None and description != getattr(row, "description", None):
+        row.description = description; changed = True
+    if status is not None and status != row.status:
+        row.status = status; changed = True
+
+    if changed:
+        row.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(row)
+    return row, None
+
+def delete_in_context(db: Session, context_id: int, evidence_id: int) -> bool:
+    row = _ensure_evidence_in_context(db, context_id, evidence_id)
+    if not row:
+        return False
+    db.delete(row)
+    db.commit()
+    return True

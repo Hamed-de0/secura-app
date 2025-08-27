@@ -12,3 +12,9 @@ backend/__pycache__/
 backend/**/*.pyc
 isms-frontend-v2/src/config/confing.js
 isms-frontend-v2/src/config/confing.js
+
+# macOS metadata
+.DS_Store
+
+# Local archives
+backend/app.zip

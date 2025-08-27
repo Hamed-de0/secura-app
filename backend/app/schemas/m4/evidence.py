@@ -33,3 +33,13 @@ class EvidenceCreateIn(BaseModel):
     capturedAt: Optional[date] = None
     validUntil: Optional[date] = None
     description: Optional[str] = None
+
+class EvidenceUpdateIn(BaseModel):
+    # all optional; only provided fields will be updated
+    type: Optional[EvidenceType] = None
+    title: Optional[str] = None
+    ref: Optional[str] = None
+    capturedAt: Optional[date] = None
+    validUntil: Optional[date] = None
+    description: Optional[str] = None
+    status: Optional[str] = None  # if your workflow wants to update status
