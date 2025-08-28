@@ -45,6 +45,8 @@ def list_by_context(
     control_id: Optional[int] = None,
     evidence_type: Optional[str] = None,   # NEW
     freshness: Optional[str] = None,       # NEW: ok|warn|overdue
+    status: Optional[str] = None,          # lifecycle: active|retired|superseded|draft|all
+    include_inactive: bool = False,
     offset: int = 0,
     limit: int = 50,
     sort_by: str = "captured_at",          # captured_at | valid_until
@@ -65,7 +67,9 @@ def list_by_context(
             ControlEvidence.file_path,
             ControlEvidence.collected_at,
             ControlEvidence.valid_until,
-            ControlEvidence.status,
+            ControlEvidence.status,  # review status (legacy)
+            ControlEvidence.lifecycle_status,
+            ControlEvidence.supersedes_id,
             ControlContextLink.risk_scenario_context_id.label("ctx_id"),
             ControlContextLink.control_id.label("control_id"),
         )
@@ -76,13 +80,18 @@ def list_by_context(
         q = q.filter(ControlContextLink.control_id == control_id)
     if evidence_type:
         q = q.filter(ControlEvidence.evidence_type == evidence_type)
+    # Lifecycle filter (default active unless include_inactive is true or explicit status provided)
+    if status and status != 'all':
+        q = q.filter(ControlEvidence.lifecycle_status == status)
+    elif not include_inactive:
+        q = q.filter(ControlEvidence.lifecycle_status == 'active')
 
     # Pull raw rows (we'll compute freshness and apply that filter in-Python)
     rows = q.all()
 
     today = datetime.utcnow().date()
     items_all: List[Dict] = []
-    for (eid, link_id, etype, title, descr, url, fpath, ca, vu, status, ctx_id, ctrl_id) in rows:
+    for (eid, link_id, etype, title, descr, url, fpath, ca, vu, review_status, lifecycle_status, supersedes_id, ctx_id, ctrl_id) in rows:
         ref = url or fpath
         fr = _freshness(today, ca, vu)
         items_all.append({
@@ -95,10 +104,12 @@ def list_by_context(
             "capturedAt": ca,
             "validUntil": vu,
             "freshness": fr,
+            "status": lifecycle_status,
+            "supersedes_id": supersedes_id,
             # not exposed in Out, but available if you later extend:
             "_title": title,
             "_description": descr,
-            "_status": status,
+            "_review_status": review_status,
         })
 
     # Optional freshness filter (post-compute)
@@ -224,9 +235,25 @@ def update_in_context(
     return row, None
 
 def delete_in_context(db: Session, context_id: int, evidence_id: int) -> bool:
+    """Soft-delete (retire) evidence within this context.
+    Returns False if evidence not in context.
+    """
     row = _ensure_evidence_in_context(db, context_id, evidence_id)
     if not row:
         return False
-    db.delete(row)
-    db.commit()
-    return True
+    from app.crud.evidence import lifecycle as lc
+    return lc.soft_delete(db, evidence_id)
+
+def restore_in_context(db: Session, context_id: int, evidence_id: int):
+    row = _ensure_evidence_in_context(db, context_id, evidence_id)
+    if not row:
+        return None
+    from app.crud.evidence import lifecycle as lc
+    return lc.restore(db, evidence_id)
+
+def supersede_in_context(db: Session, context_id: int, evidence_id: int, replacement_id: int):
+    row = _ensure_evidence_in_context(db, context_id, evidence_id)
+    if not row:
+        return None
+    from app.crud.evidence import lifecycle as lc
+    return lc.supersede(db, evidence_id, replacement_id)

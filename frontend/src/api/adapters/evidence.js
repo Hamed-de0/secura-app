@@ -1,5 +1,5 @@
 // Evidence adapter: normalizes API -> UI for the ContextDetail Evidence tab
-// UI shape: { id, controlId, type, ref, capturedAt, freshness, notes }
+// UI shape: { id, controlId, type, ref, capturedAt, freshness, notes, status?, supersedes_id? }
 
 function toStr(x) {
   if (x == null) return '';
@@ -40,7 +40,11 @@ export function adaptEvidenceItem(item = {}) {
   const freshness = (item.freshness === 'warn' || item.freshness === 'overdue') ? item.freshness : 'ok';
   const notes = toStr(item.description ?? item.notes ?? '');
 
-  return { id, controlId, type, ref, capturedAt, freshness, notes };
+  // Pass-through lifecycle fields without transformation
+  const status = item.status;
+  const supersedes_id = item.supersedes_id;
+
+  return { id, controlId, type, ref, capturedAt, freshness, notes, status, supersedes_id };
 }
 
 export function adaptEvidenceResponse(resp) {
@@ -51,4 +55,3 @@ export function adaptEvidenceResponse(resp) {
     : [];
   return arr.map(adaptEvidenceItem).filter(Boolean);
 }
-

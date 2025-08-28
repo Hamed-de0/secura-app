@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 from datetime import date
 
 EvidenceType = str  # "file" | "url" | "report" | ...
@@ -17,6 +17,9 @@ class EvidenceItemOut(BaseModel):
     capturedAt: Optional[date] = None
     validUntil: Optional[date] = None
     freshness: str
+    # Additive lifecycle surface fields
+    status: Optional[Literal['draft','active','superseded','retired']] = None
+    supersedes_id: Optional[int] = None
     class Config:
         from_attributes = True
 

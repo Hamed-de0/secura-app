@@ -92,12 +92,28 @@ export function mapReviewsDue(items = [], opts = {}) {
   return rows.filter((r) => r.slaFlag === 'WARN' || r.slaFlag === 'OVERDUE');
 }
 
-export function adaptQueueEvidenceOverdue(items = []) {
-  return [];
+// Evidence Overdue adapter: expects a list of evidence items (already adapted) and drops non-active unless status='all'
+export function adaptQueueEvidenceOverdue(items = [], { status = 'active' } = {}) {
+  const arr = Array.isArray(items) ? items : [];
+  const wantAll = String(status || '').toLowerCase() === 'all';
+  const rows = arr
+    .filter((ev) => ev && (wantAll || !ev.status || String(ev.status).toLowerCase() === 'active'))
+    .filter((ev) => ev.freshness === 'warn' || ev.freshness === 'overdue')
+    .map((ev) => ({
+      id: ev.id,
+      contextId: ev.contextId ?? ev.context_id ?? null,
+      controlId: ev.controlId ?? ev.control_id ?? null,
+      type: ev.type,
+      freshness: ev.freshness,
+      capturedAt: ev.capturedAt,
+      status: ev.status || 'active',
+    }));
+  return rows;
 }
 
+// Controls Awaiting Verification: pass-through; evidence status filtering typically applied server-side
 export function adaptQueueControlsAwaitingVerification(items = []) {
-  return [];
+  return Array.isArray(items) ? items : [];
 }
 
 export function mapExceptionsExpiring(items = [], { horizonDays = 30 } = {}) {

@@ -1,20 +1,25 @@
 import * as React from 'react';
 import { 
-  Box, Stack, Typography, Chip, Tabs, Tab, Divider, LinearProgress, useTheme, Paper, LinearProgress as MuiLinearProgress, Tooltip
+  Box, Stack, Typography, Chip, Tabs, Tab, Divider, LinearProgress, useTheme, Paper, LinearProgress as MuiLinearProgress, Tooltip,
+  Button, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Sparkline from '../../risks/charts/Sparkline';
 import { useSearchParams } from 'react-router-dom';
-import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextEvidence, fetchContextHistory } from '../../../api/services/risks';
+import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextHistory, listContextEvidence, deleteContextEvidence, restoreEvidence, supersedeEvidence } from '../../../api/services/risks';
+import { postJSON } from '../../../api/httpClient';
+import UploadEvidenceDialog from '../../actions/UploadEvidenceDialog.jsx';
+import EvidenceLifecycleDialog from '../../../components/evidence/EvidenceLifecycleDialog.jsx';
 import { updateRiskContextOwner } from '../../../api/services/risks';
 import OwnerPicker from './OwnerPicker';
 import { adaptContextControlsResponse } from '../../../api/adapters/controlsContext';
 import { adaptEvidenceResponse } from '../../../api/adapters/evidence';
-import { adaptHistoryChanges } from '../../../api/adapters/history';
+import { adaptHistoryChanges, adaptEvidenceLifecycle } from '../../../api/adapters/history';
 import LinkIcon from '@mui/icons-material/Link';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import ScienceIcon from '@mui/icons-material/Science';
+import { fetchEvidenceLifecycle } from '../../../api/services/evidence';
 
 const DOMAINS = ['C','I','A','L','R'];
 
@@ -43,8 +48,14 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
   const [suggestBusy, setSuggestBusy] = React.useState(false);
   const [evidenceLoading, setEvidenceLoading] = React.useState(false);
   const [evidenceItems, setEvidenceItems] = React.useState([]);
+  const [evidenceStatus, setEvidenceStatus] = React.useState('active'); // active|all|retired|superseded|draft
+  const [supersedeOpen, setSupersedeOpen] = React.useState(false);
+  const [supersedeFor, setSupersedeFor] = React.useState(null);
+  const [lifecycleOpen, setLifecycleOpen] = React.useState(false);
+  const [lifecycleForId, setLifecycleForId] = React.useState(null);
   const [historyLoading, setHistoryLoading] = React.useState(false);
   const [historyItems, setHistoryItems] = React.useState([]);
+  const [lifecycleItems, setLifecycleItems] = React.useState([]);
   const reload = React.useCallback(async () => {
     console.log('ContextDetail: reload');
   });
@@ -127,14 +138,14 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
     return () => { alive = false; };
   }, [contextId, tab]);
 
-  // Load evidence when Evidence tab is selected
+  // Load evidence when Evidence tab is selected or status filter changes
   React.useEffect(() => {
     if (!contextId || tab !== 2) return;
     let alive = true;
     setEvidenceLoading(true);
     (async () => {
       try {
-        const resp = await fetchContextEvidence(contextId, { limit: 50, offset: 0, sort_by: 'captured_at', sort_dir: 'desc' });
+        const resp = await listContextEvidence(contextId, { limit: 50, offset: 0, sort_by: 'captured_at', sort_dir: 'desc', status: evidenceStatus });
         if (!alive) return;
         setEvidenceItems(adaptEvidenceResponse(resp));
       } finally {
@@ -142,7 +153,103 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
       }
     })();
     return () => { alive = false; };
-  }, [contextId, tab]);
+  }, [contextId, tab, evidenceStatus]);
+
+  const reloadEvidence = React.useCallback(async () => {
+    if (!contextId || tab !== 2) return;
+    setEvidenceLoading(true);
+    try {
+      const resp = await listContextEvidence(contextId, { limit: 50, offset: 0, sort_by: 'captured_at', sort_dir: 'desc', status: evidenceStatus });
+      setEvidenceItems(adaptEvidenceResponse(resp));
+    } finally {
+      setEvidenceLoading(false);
+    }
+  }, [contextId, tab, evidenceStatus]);
+
+  const refreshControlsIfLoaded = React.useCallback(async () => {
+    try {
+      if (!contextId) return;
+      // Only refresh if controls were already fetched (avoid unnecessary work)
+      if (Array.isArray(controls) && controls.length > 0) {
+        const resp = await fetchContextControls(contextId, { include: 'summary', limit: 50, offset: 0, sort_by: 'status', sort_dir: 'asc' });
+        const rows = adaptContextControlsResponse(resp);
+        setControls(rows);
+      }
+    } catch (_) {}
+  }, [contextId, controls]);
+
+  const handleRetire = async (ev) => {
+    try {
+      const ok = window.confirm('Retire evidence? You can restore it later.');
+      if (!ok) return;
+      await deleteContextEvidence(contextId, ev.id);
+      await reloadEvidence();
+      await refreshControlsIfLoaded();
+    } catch (_) {}
+  };
+  const handleRestore = async (ev) => {
+    try {
+      await restoreEvidence(contextId, ev.id);
+      await reloadEvidence();
+      await refreshControlsIfLoaded();
+    } catch (_) {}
+  };
+  const handleSupersede = (ev) => {
+    setSupersedeFor(ev);
+    setSupersedeOpen(true);
+  };
+  const handleSupersedeComplete = async ({ files, selectedId }) => {
+    try {
+      const tgt = supersedeFor;
+      if (!tgt) return;
+      let replacementId = Number(selectedId);
+      if (!Number.isFinite(replacementId)) {
+        if (!Array.isArray(files) || files.length === 0) return;
+        // Create replacement evidence (use first file name as title/ref; mock type 'file')
+        const file = files[0];
+        const url = `risks/risks/risk_scenario_contexts/${contextId}/evidence/`;
+        const body = {
+          controlId: Number(tgt.controlId),
+          type: 'file',
+          title: file?.name || 'attachment',
+          ref: file?.name || 'attachment',
+          capturedAt: new Date().toISOString().slice(0,10),
+          validUntil: null,
+          description: '',
+        };
+        const created = await postJSON(url, { json: body });
+        replacementId = Number(created?.id);
+      }
+      if (Number.isFinite(replacementId)) {
+        await supersedeEvidence(contextId, tgt.id, replacementId);
+        await reloadEvidence();
+        await refreshControlsIfLoaded();
+      }
+    } finally {
+      setSupersedeOpen(false);
+      setSupersedeFor(null);
+    }
+  };
+
+  const handleViewLifecycle = (ev) => {
+    setLifecycleForId(ev?.id || null);
+    setLifecycleOpen(true);
+    // On-demand: also fetch and cache lifecycle to show under History tab
+    (async () => {
+      try {
+        const rows = await fetchEvidenceLifecycle(ev?.id);
+        const mapped = adaptEvidenceLifecycle(rows);
+        if (Array.isArray(mapped) && mapped.length > 0) {
+          setLifecycleItems((prev) => {
+            const next = [...prev, ...mapped];
+            // sort desc by ts
+            next.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+            return next;
+          });
+        }
+      } catch (_) {}
+    })();
+  };
 
   // ---- Overview tab
   const overview = ctx || {};
@@ -391,6 +498,25 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
       {/* ---- EVIDENCE ---- */}
       {tab === 2 && (
         <Box>
+          {/* Status filter */}
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <InputLabel id="evidence-status-label">Status</InputLabel>
+              <Select
+                labelId="evidence-status-label"
+                label="Status"
+                value={evidenceStatus}
+                onChange={(e) => setEvidenceStatus(e.target.value)}
+              >
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="retired">Retired</MenuItem>
+                <MenuItem value="superseded">Superseded</MenuItem>
+                <MenuItem value="draft">Draft</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+
           {evidenceLoading && <LinearProgress sx={{ mb: 1 }} />}
           {!evidenceLoading && evidenceItems.length === 0 && (
             <Typography variant="body2" color="text.secondary">No evidence.</Typography>
@@ -416,16 +542,38 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
                           <Chip size="small" variant="outlined" label={new Date(ev.capturedAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} />
                         )}
                         <Chip size="small" color={color} label={ev.freshness} />
+                        <Chip size="small" label={ev.status || 'active'} />
                       </Stack>
                     </Stack>
                     {ev.notes && (
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .5 }}>{ev.notes}</Typography>
                     )}
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                      {(ev.status === 'retired' || ev.status === 'superseded') ? (
+                        <Button size="small" variant="outlined" onClick={() => handleRestore(ev)}>Restore</Button>
+                      ) : (
+                        <Button size="small" variant="outlined" color="warning" onClick={() => handleRetire(ev)}>Retire evidence</Button>
+                      )}
+                      <Button size="small" variant="text" onClick={() => handleSupersede(ev)}>Supersede…</Button>
+                      <Button size="small" variant="text" onClick={() => handleViewLifecycle(ev)}>View lifecycle</Button>
+                    </Stack>
                   </Paper>
                 );
               })}
             </Stack>
           )}
+          <UploadEvidenceDialog
+            open={supersedeOpen}
+            onClose={() => { setSupersedeOpen(false); setSupersedeFor(null); }}
+            onComplete={handleSupersedeComplete}
+            allowSelectExisting
+            preset={{ objectType: 'Risk Context', objectCode: String(contextId) }}
+          />
+          <EvidenceLifecycleDialog
+            open={lifecycleOpen}
+            evidenceId={lifecycleForId}
+            onClose={() => { setLifecycleOpen(false); setLifecycleForId(null); }}
+          />
         </Box>
       )}
 
@@ -450,6 +598,26 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
                     <strong>{h.field}</strong>: {String(h.from)} → {String(h.to)}
                   </Typography>
                   <Chip size="small" variant="outlined" label={new Date(h.ts).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} />
+                </Stack>
+              ))}
+            </Stack>
+          )}
+
+          <Divider sx={{ my: 1 }} />
+          <Typography variant="subtitle2" sx={{ mb: .5 }}>Evidence Lifecycle</Typography>
+          {lifecycleItems.length === 0 && (
+            <Typography variant="body2" color="text.secondary">Open “View lifecycle” from an evidence row to load events.</Typography>
+          )}
+          {lifecycleItems.length > 0 && (
+            <Stack spacing={.5}>
+              {lifecycleItems.map((e, idx) => (
+                <Stack key={`lc-${idx}`} direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                  <Typography variant="body2" sx={{ minWidth: 0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <strong>{(e.action || '').toUpperCase()}</strong>
+                    {e.actor ? ` by #${e.actor}` : ''}
+                    {e.notes ? ` — ${e.notes}` : ''}
+                  </Typography>
+                  <Chip size="small" variant="outlined" label={new Date(e.ts).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} />
                 </Stack>
               ))}
             </Stack>

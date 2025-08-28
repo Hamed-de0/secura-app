@@ -51,3 +51,15 @@ export function adaptHistoryChanges(items = []) {
   return out;
 }
 
+// Map evidence lifecycle items into a simple change-log list
+// Input events: [{ id, evidence_id, event, actor_id, notes, created_at }]
+// Output rows: { ts, actor, action, notes }
+export function adaptEvidenceLifecycle(items = []) {
+  const arr = Array.isArray(items) ? items : [];
+  return arr.map((ev) => ({
+    ts: toIso(ev.created_at) || null,
+    actor: ev.actor_id ?? ev.actor ?? null,
+    action: String(ev.event || '').toLowerCase(),
+    notes: ev.notes || null,
+  })).filter((r) => !!r.ts && !!r.action);
+}

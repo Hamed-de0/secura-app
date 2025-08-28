@@ -1,10 +1,18 @@
 import * as React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, Chip, Stack } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, Chip, Stack, Tabs, Tab, TextField } from '@mui/material';
 
-export default function UploadEvidenceDialog({ open, onClose, onComplete, preset }) {
+export default function UploadEvidenceDialog({ open, onClose, onComplete, preset, allowSelectExisting = false }) {
   const [files, setFiles] = React.useState([]);
+  const [mode, setMode] = React.useState('upload'); // 'upload' | 'select'
+  const [existingId, setExistingId] = React.useState('');
 
-  React.useEffect(() => { if (!open) setFiles([]); }, [open]);
+  React.useEffect(() => {
+    if (!open) {
+      setFiles([]);
+      setExistingId('');
+      setMode('upload');
+    }
+  }, [open]);
 
   const onDrop = (e) => {
     e.preventDefault();
@@ -16,6 +24,7 @@ export default function UploadEvidenceDialog({ open, onClose, onComplete, preset
     if (list.length) setFiles((prev) => [...prev, ...list]);
   };
   const removeAt = (i) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
+  const canSelect = allowSelectExisting && String(existingId).trim().length > 0;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -26,35 +35,69 @@ export default function UploadEvidenceDialog({ open, onClose, onComplete, preset
             Object: {preset.objectType} {preset.objectCode || ''}
           </Typography>
         )}
-        <Box
-          onDragOver={(e)=> e.preventDefault()}
-          onDrop={onDrop}
-          sx={{
-            border: '1px dashed', borderColor: 'divider', borderRadius: 2,
-            p: 3, textAlign: 'center', bgcolor: 'background.default', cursor: 'pointer'
-          }}
-          onClick={() => document.getElementById('upload-input').click()}
-        >
-          <Typography>Drag & drop files here, or click to select</Typography>
-          <input id="upload-input" type="file" multiple hidden onChange={onPick} />
-        </Box>
+        {allowSelectExisting && (
+          <Tabs value={mode} onChange={(_, v) => setMode(v)} sx={{ mb: 1 }}>
+            <Tab value="upload" label="Upload new" />
+            <Tab value="select" label="Select existing" />
+          </Tabs>
+        )}
 
-        <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 2, flexWrap: 'wrap' }}>
-          {files.map((f, i) => (
-            <Chip key={`${f.name}-${i}`} label={`${f.name} (${fmt(f.size)})`} onDelete={() => removeAt(i)} />
-          ))}
-        </Stack>
+        {mode === 'select' && allowSelectExisting ? (
+          <Box>
+            <TextField
+              fullWidth
+              label="Existing evidence ID"
+              value={existingId}
+              onChange={(e) => setExistingId(e.target.value)}
+              placeholder="Enter evidence ID to use as replacement"
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: .5, display: 'block' }}>
+              Provide the ID of an existing evidence item to supersede with.
+            </Typography>
+          </Box>
+        ) : (
+          <>
+            <Box
+              onDragOver={(e)=> e.preventDefault()}
+              onDrop={onDrop}
+              sx={{
+                border: '1px dashed', borderColor: 'divider', borderRadius: 2,
+                p: 3, textAlign: 'center', bgcolor: 'background.default', cursor: 'pointer'
+              }}
+              onClick={() => document.getElementById('upload-input').click()}
+            >
+              <Typography>Drag & drop files here, or click to select</Typography>
+              <input id="upload-input" type="file" multiple hidden onChange={onPick} />
+            </Box>
+
+            <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 2, flexWrap: 'wrap' }}>
+              {files.map((f, i) => (
+                <Chip key={`${f.name}-${i}`} label={`${f.name} (${fmt(f.size)})`} onDelete={() => removeAt(i)} />
+              ))}
+            </Stack>
+          </>
+        )}
       </DialogContent>
 
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          disabled={files.length === 0}
-          onClick={() => onComplete?.({ files, objectType: preset?.objectType, objectCode: preset?.objectCode })}
-        >
-          Upload
-        </Button>
+        {mode === 'select' && allowSelectExisting ? (
+          <Button
+            variant="contained"
+            disabled={!canSelect}
+            onClick={() => onComplete?.({ selectedId: Number(existingId), objectType: preset?.objectType, objectCode: preset?.objectCode })}
+          >
+            Use Selected
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            disabled={files.length === 0}
+            onClick={() => onComplete?.({ files, objectType: preset?.objectType, objectCode: preset?.objectCode })}
+          >
+            Upload
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

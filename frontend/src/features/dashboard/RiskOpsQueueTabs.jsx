@@ -63,7 +63,18 @@ const COLUMNS = {
     { field: 'contextId', headerName: 'Context', width: 90 },
     { field: 'scope', headerName: 'Scope', flex: 1.0, minWidth: 160 },
     { field: 'control', headerName: 'Control', flex: 1.4, minWidth: 220 },
-    { field: 'type', headerName: 'Type', width: 120 },
+    { field: 'type', headerName: 'Type', width: 120, renderCell: (p) => {
+      const val = p?.row?.type || p?.value || '—';
+      const st = (p?.row?.evidenceStatus || '').toLowerCase();
+      if (st && st !== 'active') {
+        return (
+          <Tooltip title={`Status: ${st}`} placement="top" arrow>
+            <span>{val}</span>
+          </Tooltip>
+        );
+      }
+      return val;
+    } },
     { field: 'freshness', headerName: 'Freshness', width: 120 },
     { field: 'lastEvidenceAt', headerName: 'Last Evidence', width: 160, valueFormatter: (p) => (p?.value ? new Date(p.value).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' }) : '—') },
     { field: 'owner', headerName: 'Owner', width: 160 },
@@ -171,128 +182,150 @@ export default function RiskOpsQueueTabs() {
     return () => { alive = false; };
   }, [value, rdModel.page, rdModel.pageSize]);
 
-  React.useEffect(() => {
-    if (value !== 2) return; // only fetch when Evidence Overdue tab is active
+  const refreshEvidenceQueue = React.useCallback(async () => {
     let alive = true;
-    (async () => {
-      setEvLoading(true);
-      try {
-        // a) fetch a page of contexts
-        const resp = await fetchRiskContexts({
-          offset: evModel.page * evModel.pageSize,
-          limit: evModel.pageSize,
-          sort: 'updated_at',
-          sort_dir: 'desc',
-        });
-        if (!alive) return;
-        const contexts = Array.isArray(resp?.items) ? resp.items : (Array.isArray(resp) ? resp : []);
-        const metaById = new Map(contexts.map((c) => {
-          const id = c.contextId ?? c.id;
-          const scope = c.scopeName || c.scopeDisplay || c.scope || c.scopeRef?.label || '—';
-          const owner = c.owner || c.owner_name || 'Unassigned';
-          return [id, { scope, owner }];
-        }));
+    setEvLoading(true);
+    try {
+      // a) fetch a page of contexts
+      const resp = await fetchRiskContexts({
+        offset: evModel.page * evModel.pageSize,
+        limit: evModel.pageSize,
+        sort: 'updated_at',
+        sort_dir: 'desc',
+      });
+      if (!alive) return;
+      const contexts = Array.isArray(resp?.items) ? resp.items : (Array.isArray(resp) ? resp : []);
+      const metaById = new Map(contexts.map((c) => {
+        const id = c.contextId ?? c.id;
+        const scope = c.scopeName || c.scopeDisplay || c.scope || c.scopeRef?.label || '—';
+        const owner = c.owner || c.owner_name || 'Unassigned';
+        return [id, { scope, owner }];
+      }));
 
-        const ctxIds = Array.from(metaById.keys());
-        // b) for each context, fetch evidence, filter warn/overdue
-        const maxConcurrency = Math.min(8, ctxIds.length || 0);
-        let index = 0;
-        const out = [];
-        async function worker() {
-          while (index < ctxIds.length) {
-            const i = index++;
-            const id = ctxIds[i];
-            try {
-              const eResp = await fetchContextEvidence(id, { limit: 100, offset: 0, sort_by: 'captured_at', sort_dir: 'desc' });
-              const items = adaptEvidenceResponse(eResp) || [];
-              const flagged = items.filter((ev) => ev.freshness === 'warn' || ev.freshness === 'overdue');
-              const meta = metaById.get(id) || { scope: '—', owner: 'Unassigned' };
-              const mapped = flagged.map((ev) => ({
-                id: `${id}-${ev.id}`,
-                contextId: id,
-                scope: meta.scope,
-                control: ev.controlId ? `#${ev.controlId}` : '—',
-                type: ev.type,
-                freshness: ev.freshness,
-                lastEvidenceAt: ev.capturedAt,
-                owner: meta.owner,
-              }));
-              out.push(...mapped);
-            } catch (_) {
-              // ignore individual failures
-            }
+      const ctxIds = Array.from(metaById.keys());
+      // b) for each context, fetch ACTIVE evidence, filter warn/overdue
+      const maxConcurrency = Math.min(8, ctxIds.length || 0);
+      let index = 0;
+      const out = [];
+      async function worker() {
+        while (index < ctxIds.length) {
+          const i = index++;
+          const id = ctxIds[i];
+          try {
+            const eResp = await fetchContextEvidence(id, { limit: 100, offset: 0, sort_by: 'captured_at', sort_dir: 'desc', status: 'active' });
+            const items = adaptEvidenceResponse(eResp) || [];
+            // Fallback client-side filter for status just in case
+            const active = items.filter((ev) => !ev.status || String(ev.status).toLowerCase() === 'active');
+            const flagged = active.filter((ev) => ev.freshness === 'warn' || ev.freshness === 'overdue');
+            const meta = metaById.get(id) || { scope: '—', owner: 'Unassigned' };
+            const mapped = flagged.map((ev) => ({
+              id: `${id}-${ev.id}`,
+              contextId: id,
+              scope: meta.scope,
+              control: ev.controlId ? `#${ev.controlId}` : '—',
+              type: ev.type,
+              freshness: ev.freshness,
+              lastEvidenceAt: ev.capturedAt,
+              owner: meta.owner,
+              evidenceStatus: ev.status || 'active',
+            }));
+            out.push(...mapped);
+          } catch (_) {
+            // ignore individual failures
           }
         }
-        await Promise.all(Array.from({ length: Math.max(1, maxConcurrency) }, () => worker()));
-        if (!alive) return;
-        setEvRows(out);
-      } finally {
-        if (alive) setEvLoading(false);
       }
-    })();
+      await Promise.all(Array.from({ length: Math.max(1, maxConcurrency) }, () => worker()));
+      if (!alive) return;
+      setEvRows(out);
+    } finally {
+      if (alive) setEvLoading(false);
+    }
     return () => { alive = false; };
-  }, [value, evModel.page, evModel.pageSize]);
+  }, [evModel.page, evModel.pageSize]);
+
+  React.useEffect(() => {
+    if (value !== 2) return; // only fetch when Evidence Overdue tab is active
+    let cancelled = false;
+    (async () => { if (!cancelled) await refreshEvidenceQueue(); })();
+    return () => { cancelled = true; };
+  }, [value, evModel.page, evModel.pageSize, refreshEvidenceQueue]);
+
+  // Refresh queues on global evidence lifecycle updates (if dispatched by actions)
+  React.useEffect(() => {
+    const onLifecycle = () => { if (value === 2) refreshEvidenceQueue(); if (value === 3) refreshControlsQueue(); };
+    window.addEventListener('evidence_lifecycle_updated', onLifecycle);
+    window.addEventListener('storage', onLifecycle);
+    return () => {
+      window.removeEventListener('evidence_lifecycle_updated', onLifecycle);
+      window.removeEventListener('storage', onLifecycle);
+    };
+  }, [value, refreshEvidenceQueue]);
+
+  const refreshControlsQueue = React.useCallback(async () => {
+    let alive = true;
+    setCvLoading(true);
+    try {
+      // 1) Fetch a slice of contexts
+      const resp = await fetchRiskContexts({
+        offset: cvModel.page * cvModel.pageSize,
+        limit: cvModel.pageSize,
+        sort: 'updated_at',
+        sort_dir: 'desc',
+      });
+      if (!alive) return;
+      const ctxItems = Array.isArray(resp?.items) ? resp.items : (Array.isArray(resp) ? resp : []);
+      const ctxIds = ctxItems.map((c) => c.contextId ?? c.id).filter(Boolean);
+
+      // 2) For each context, fetch controls with limited concurrency
+      const maxConcurrency = Math.min(8, ctxIds.length || 0);
+      let index = 0;
+      const acc = [];
+      async function worker() {
+        while (index < ctxIds.length) {
+          const i = index++;
+          const id = ctxIds[i];
+          try {
+            const cResp = await fetchContextControls(id, { include: 'summary', limit: 100, offset: 0, sort_by: 'status', sort_dir: 'asc' });
+            const rows = adaptContextControlsResponse(cResp) || [];
+            const filtered = rows.filter((r) => {
+              const s = String(r.status || '').trim().toLowerCase().replace(/\s+/g, '');
+              const v = String(r.verification || '').trim().toLowerCase().replace(/\s+/g, '');
+              return s === 'implemented' || v === 'design';
+            });
+            const mapped = filtered.map((r) => ({
+              id: `${id}-${r.linkId || r.controlId || r.code}`,
+              contextId: id,
+              code: r.code,
+              title: r.title,
+              control: `${r.code || ''} — ${r.title || ''}`,
+              status: r.status,
+              verification: r.verification,
+              coverage: r.coverage,
+              confidence: r.confidence,
+              lastEvidenceAt: r.lastEvidenceAt,
+            }));
+            acc.push(...mapped);
+          } catch (_) {
+            // ignore failed context control fetches to keep UI responsive
+          }
+        }
+      }
+      await Promise.all(Array.from({ length: Math.max(1, maxConcurrency) }, () => worker()));
+      if (!alive) return;
+      setCvRows(acc);
+    } finally {
+      if (alive) setCvLoading(false);
+    }
+    return () => { alive = false; };
+  }, [cvModel.page, cvModel.pageSize]);
 
   React.useEffect(() => {
     if (value !== 3) return; // only fetch when Controls Awaiting Verification is active
-    let alive = true;
-    (async () => {
-      setCvLoading(true);
-      try {
-        // 1) Fetch a slice of contexts
-        const resp = await fetchRiskContexts({
-          offset: cvModel.page * cvModel.pageSize,
-          limit: cvModel.pageSize,
-          sort: 'updated_at',
-          sort_dir: 'desc',
-        });
-        if (!alive) return;
-        const ctxItems = Array.isArray(resp?.items) ? resp.items : (Array.isArray(resp) ? resp : []);
-        const ctxIds = ctxItems.map((c) => c.contextId ?? c.id).filter(Boolean);
-
-        // 2) For each context, fetch controls with limited concurrency
-        const maxConcurrency = Math.min(8, ctxIds.length || 0);
-        let index = 0;
-        const acc = [];
-        async function worker() {
-          while (index < ctxIds.length) {
-            const i = index++;
-            const id = ctxIds[i];
-            try {
-              const cResp = await fetchContextControls(id, { include: 'summary', limit: 100, offset: 0, sort_by: 'status', sort_dir: 'asc' });
-              const rows = adaptContextControlsResponse(cResp) || [];
-              const filtered = rows.filter((r) => {
-                const s = String(r.status || '').trim().toLowerCase().replace(/\s+/g, '');
-                const v = String(r.verification || '').trim().toLowerCase().replace(/\s+/g, '');
-                return s === 'implemented' || v === 'design';
-              });
-              const mapped = filtered.map((r) => ({
-                id: `${id}-${r.linkId || r.controlId || r.code}`,
-                contextId: id,
-                code: r.code,
-                title: r.title,
-                control: `${r.code || ''} — ${r.title || ''}`,
-                status: r.status,
-                verification: r.verification,
-                coverage: r.coverage,
-                confidence: r.confidence,
-                lastEvidenceAt: r.lastEvidenceAt,
-              }));
-              acc.push(...mapped);
-            } catch (_) {
-              // ignore failed context control fetches to keep UI responsive
-            }
-          }
-        }
-        await Promise.all(Array.from({ length: Math.max(1, maxConcurrency) }, () => worker()));
-        if (!alive) return;
-        setCvRows(acc);
-      } finally {
-        if (alive) setCvLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, [value, cvModel.page, cvModel.pageSize]);
+    let cancelled = false;
+    (async () => { if (!cancelled) await refreshControlsQueue(); })();
+    return () => { cancelled = true; };
+  }, [value, cvModel.page, cvModel.pageSize, refreshControlsQueue]);
 
   React.useEffect(() => {
     if (value !== 4) return; // Exceptions Expiring

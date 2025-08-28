@@ -1,5 +1,5 @@
 // src/api/services/risks.js
-import { getJSON,putJSON, postJSON, buildSearchParams } from '../../api/httpClient';
+import { getJSON,putJSON, postJSON, deleteJSON, buildSearchParams } from '../../api/httpClient';
 
 
 const context_url = 'risks/risk_scenario_contexts/';
@@ -137,16 +137,58 @@ export async function applySuggestedControlToContext(contextId, controlId, statu
 }
 
 // ---- Context Evidence (M4) -------------------------------------------------
-export async function fetchContextEvidence(contextId, { offset = 0, limit = 50, sort_by = 'captured_at', sort_dir = 'desc', type, control_id, freshness } = {}) {
+export async function fetchContextEvidence(contextId, { offset = 0, limit = 50, sort_by = 'captured_at', sort_dir = 'desc', type, control_id, freshness, status } = {}) {
   if (!contextId) return { items: [], total: 0, summary: null };
   const search = { offset, limit, sort_by, sort_dir };
   if (type) search.type = type;
   if (control_id) search.control_id = control_id;
   if (freshness) search.freshness = freshness;
+  if (status) search.status = status; // lifecycle filter (active|retired|superseded|draft|all)
   const searchParams = buildSearchParams(search);
   const url = `risks/risks/risk_scenario_contexts/${contextId}/evidence/`;
   const resp = await getJSON(url, { searchParams });
   return resp || { items: [], total: 0 };
+}
+
+// List context evidence with optional lifecycle status filter
+export async function listContextEvidence(contextId, { offset = 0, limit = 50, sort_by = 'captured_at', sort_dir = 'desc', type, control_id, freshness, status } = {}) {
+  if (!contextId) return { items: [], total: 0, summary: null };
+  const search = { offset, limit, sort_by, sort_dir };
+  if (type) search.type = type;
+  if (control_id) search.control_id = control_id;
+  if (freshness) search.freshness = freshness;
+  if (status) search.status = status; // 'active' | 'retired' | 'superseded' | 'draft' | 'all'
+  const searchParams = buildSearchParams(search);
+  const url = `risks/risks/risk_scenario_contexts/${contextId}/evidence/`;
+  const resp = await getJSON(url, { searchParams });
+  return resp || { items: [], total: 0 };
+}
+
+// Treat delete as retire (soft-delete on backend)
+export async function deleteContextEvidence(contextId, evidenceId) {
+  if (!contextId || !evidenceId) return { ok: false };
+  const url = `risks/risks/risk_scenario_contexts/${contextId}/evidence/${evidenceId}/`;
+  return await deleteJSON(url, {});
+}
+
+// Back-compat alias: deleteEvidence = retire
+export async function deleteEvidence(contextId, evidenceId) {
+  return deleteContextEvidence(contextId, evidenceId);
+}
+
+// Restore a retired evidence item
+export async function restoreEvidence(contextId, evidenceId) {
+  if (!contextId || !evidenceId) return { ok: false };
+  const url = `risks/risks/risk_scenario_contexts/${contextId}/evidence/${evidenceId}/restore/`;
+  // send empty body to maintain JSON Content-Type
+  return await postJSON(url, { json: {} });
+}
+
+// Supersede an evidence item with a replacement
+export async function supersedeEvidence(contextId, evidenceId, replacementId) {
+  if (!contextId || !evidenceId || !replacementId) return { ok: false };
+  const url = `risks/risks/risk_scenario_contexts/${contextId}/evidence/${evidenceId}/supersede/`;
+  return await postJSON(url, { json: { replacement_id: replacementId } });
 }
 
 // ---- Context History -------------------------------------------------------

@@ -60,8 +60,31 @@ def get_evidence(evidence_id: int, db: Session = Depends(get_db)):
     return row
 
 @router.get("/controls/{link_id}", response_model=EvidenceListOut)
-def list_evidence(link_id: int, db: Session = Depends(get_db)):
+def list_evidence(
+    link_id: int,
+    status: str = Query(
+        "active",
+        pattern="^(active|all)$",
+        description=(
+            "Lifecycle status filter. Default 'active' for cross-API consistency; "
+            "pass status=all to include any inactive records if/when lifecycle is supported."
+        ),
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    List evidence items linked to a control-context link.
+
+    Notes:
+    - Conservative default: status='active'. This endpoint currently does not model
+      lifecycle states (draft/retired/superseded); it returns all rows regardless.
+      The parameter is accepted for forward/backward compatibility and to align
+      with other evidence list APIs. Use status=all to opt out of any filtering
+      once lifecycle is introduced.
+    - Backward compatible with older clients that expect all rows.
+    """
     items = list_evidence_for_link(db, link_id)
+    # No lifecycle concept on this model; we do not filter here.
     return {"link_id": link_id, "items": items}
 
 @router.delete("/{evidence_id}")
