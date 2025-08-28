@@ -5,6 +5,8 @@ import { fetchRiskMetrics } from '../../../api/services/risks';
 import { fetchRiskContexts } from '../../../api/services/risks';
 import { adaptContextsToRegisterRows } from '../../../api/adapters/risks';
 import { adaptRiskOpsMetrics } from '../../../api/adapters/metrics';
+import { fetchRiskOpsQueues } from '../../../api/services/dashboards';
+import { summarizeQueues } from '../../../api/adapters/queues';
 // ---- Icons ---------------------------------
 import KPIStrip from '../components/KPIStrip';
 import HeatmapCard from '../components/HeatmapCard';
@@ -45,6 +47,7 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
   const widthPx = typeof size?.width === 'number' ? `${size.width}px` : size?.width || '100%';
   const [metricsData, setMetricsData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
+  const [queuesSummary, setQueuesSummary] = React.useState(null);
 
     // Register grid state
   const [gridModel, setGridModel] = React.useState({ page: 0, pageSize: 10 });
@@ -93,6 +96,21 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
         if (alive) setMetricsData(m);
       } finally {
         if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // Fetch RiskOps queue slices (for small tiles counts)
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const resp = await fetchRiskOpsQueues({ limit: 10, horizon_days: 30, recent_days: 7 });
+        if (!alive) return;
+        setQueuesSummary(summarizeQueues(resp));
+      } catch (_) {
+        // keep silent; tiles will show placeholders
       }
     })();
     return () => { alive = false; };
@@ -197,21 +215,21 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
                     
         </Box>
 
-        {/* Risk Ops KPIs (placeholders) */}
+        {/* Risk Ops KPIs (counts from queues endpoint if available) */}
         <Box sx={{
           p: 1,
           display: 'grid',
           gap: 1.5,
           gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(6, 1fr)' },
         }}>
-          {[
-            'Over Appetite',
-            'Reviews Due',
-            'Evidence Overdue',
-            'Controls Awaiting Verification',
-            'Exceptions Expiring',
-            'New/Changed',
-          ].map((label, idx) => (
+          {([
+            { label: 'Over Appetite', key: 'overAppetite' },
+            { label: 'Reviews Due', key: 'reviewsDue' },
+            { label: 'Evidence Overdue', key: 'evidenceOverdue' },
+            { label: 'Controls Awaiting Verification', key: 'awaitingVerification' },
+            { label: 'Exceptions Expiring', key: 'exceptionsExpiring' },
+            { label: 'New/Changed', key: 'recentChanges' },
+          ]).map((item, idx) => (
             <Box key={idx} sx={{
               borderRadius: 2,
               border: theme => `1px solid ${theme.palette.divider}`,
@@ -219,10 +237,10 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
               px: 1.5, py: 1,
             }}>
               <Typography variant="overline" sx={{ opacity: 0.8 }}>
-                {label}
+                {item.label}
               </Typography>
               <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                —
+                {queuesSummary?.[item.key] ?? '—'}
               </Typography>
             </Box>
           ))}

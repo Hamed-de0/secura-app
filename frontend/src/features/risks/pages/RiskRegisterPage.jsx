@@ -11,7 +11,7 @@ import { updateRiskContextOwner, bulkAssignRiskContextOwner } from '../../../api
 import OwnerPicker from '../components/OwnerPicker';
 import SavedViewBar from '../../../components/SavedViewBar.jsx';
 import useGridView from '../../../lib/views/useGridView';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 const SORT_MAP = {
   residual: 'residual',
@@ -55,6 +55,7 @@ function OwnerCell({ row, refresh }) {
 export default function RiskRegisterPage() {
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
 
   // Builder Wizard
@@ -171,6 +172,23 @@ export default function RiskRegisterPage() {
     refreshTick,
     currentPage,
   ]);
+
+  // Deep-link: ?drawer={contextId}&tab={overview|controls|evidence|history}
+  React.useEffect(() => {
+    let idStr = params.get('drawer');
+    if (!idStr && location.hash) {
+      try {
+        const hp = new URLSearchParams(location.hash.replace(/^#/, ''));
+        idStr = hp.get('drawer');
+      } catch {}
+    }
+    const id = Number(idStr);
+    if (Number.isFinite(id) && id > 0) {
+      if (!activeRow || activeRow.id !== id) setActiveRow({ id });
+      if (!drawerOpen) setDrawerOpen(true);
+      if (drawerTitle !== 'Risk Context') setDrawerTitle('Risk Context');
+    }
+  }, [location.search, location.hash]);
 
   // Columns (compact, professional)
   const rawColumns = React.useMemo(() => ([
@@ -371,7 +389,17 @@ export default function RiskRegisterPage() {
               setSelection(next);
             }}
             onRowClick={(p) => { setActiveRow(p.row); }}
-            onRowDoubleClick={(p) => { setActiveRow(p.row); setDrawerOpen(true); setDrawerTitle(p.row.scenario || 'Risk Context'); }}
+            onRowDoubleClick={(p) => {
+              setActiveRow(p.row);
+              setDrawerOpen(true);
+              setDrawerTitle(p.row.scenario || 'Risk Context');
+              try {
+                const sp = new URLSearchParams(location.search);
+                sp.set('drawer', String(p.row.id));
+                // keep existing tab param if any
+                navigate(`${location.pathname}?${sp.toString()}`, { replace: true });
+              } catch {}
+            }}
           />
         </Box>
       </Paper>

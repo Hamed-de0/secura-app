@@ -1,7 +1,8 @@
 import * as React from 'react';
-import {
-  Box, Stack, Typography, Chip, Tabs, Tab, Divider, LinearProgress, useTheme, Paper, LinearProgress as MuiLinearProgress
+import { 
+  Box, Stack, Typography, Chip, Tabs, Tab, Divider, LinearProgress, useTheme, Paper, LinearProgress as MuiLinearProgress, Tooltip
 } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Sparkline from '../../risks/charts/Sparkline';
 import { useSearchParams } from 'react-router-dom';
 import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextEvidence, fetchContextHistory } from '../../../api/services/risks';
@@ -198,7 +199,17 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
             <Chip label={`Impacts: ${impactsStr}`} />
             <Chip label={`Initial: ${overview.initial ?? '—'}`} />
             <Chip label={`Residual: ${overview.residual ?? '—'}`} />
+            <Chip label={`Target: ${overview.targetResidual ?? '—'}`} />
           </Stack>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+            <Tooltip title="Residual = current effective value (if provided). Target = planned/implemented residual; '—' if not provided.">
+              <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                <InfoOutlinedIcon fontSize="small" sx={{ mr: 0.5 }} />
+                <Typography variant="caption">Residual vs Target (server-gated)</Typography>
+              </Box>
+            </Tooltip>
+          </Box>
 
           <Stack direction="row" spacing={2} flexWrap="wrap">
             <OwnerPicker
