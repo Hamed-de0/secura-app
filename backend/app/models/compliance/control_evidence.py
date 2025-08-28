@@ -1,6 +1,7 @@
 # app/models/compliance/control_evidence.py
 
 from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.base import Base
@@ -29,7 +30,12 @@ class ControlEvidence(Base):
     collected_at = Column(Date, nullable=False)        # when evidence was captured
     valid_until = Column(Date, nullable=True)          # optional: explicit expiry if known
 
+    # Existing review/status (kept for backward compatibility)
     status = Column(String(30), default="valid", nullable=False)  # valid|needs_review|invalid|expired
+
+    # Lifecycle (additive): draft|active|superseded|retired (soft delete)
+    lifecycle_status = Column(String(20), default="active", nullable=False)
+    supersedes_id = Column(Integer, ForeignKey("control_evidence.id"), nullable=True)
     created_by = Column(String(120), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

@@ -40,6 +40,9 @@ class ControlEvidenceOut(BaseModel):
     status: EvidenceStatus
     created_by: Optional[str]
     created_at: datetime
+    # Additive lifecycle fields (optional)
+    lifecycle_status: Optional[str] = None
+    supersedes_id: Optional[int] = None
 
     class Config:
         from_attributes = True
