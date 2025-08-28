@@ -3,10 +3,16 @@ import {
   Box, Stack, Typography, Chip, Tabs, Tab, Divider, LinearProgress, useTheme, Paper, LinearProgress as MuiLinearProgress
 } from '@mui/material';
 import Sparkline from '../../risks/charts/Sparkline';
-import { fetchRiskContextDetail, fetchContextControls } from '../../../api/services/risks';
+import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextEvidence, fetchContextHistory } from '../../../api/services/risks';
 import { updateRiskContextOwner } from '../../../api/services/risks';
 import OwnerPicker from './OwnerPicker';
 import { adaptContextControlsResponse } from '../../../api/adapters/controlsContext';
+import { adaptEvidenceResponse } from '../../../api/adapters/evidence';
+import { adaptHistoryChanges } from '../../../api/adapters/history';
+import LinkIcon from '@mui/icons-material/Link';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import ScienceIcon from '@mui/icons-material/Science';
 
 const DOMAINS = ['C','I','A','L','R'];
 
@@ -30,6 +36,12 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
   const [ctx, setCtx] = React.useState(null);
   const [controlsLoading, setControlsLoading] = React.useState(false);
   const [controls, setControls] = React.useState([]);
+  const [suggestions, setSuggestions] = React.useState([]);
+  const [suggestBusy, setSuggestBusy] = React.useState(false);
+  const [evidenceLoading, setEvidenceLoading] = React.useState(false);
+  const [evidenceItems, setEvidenceItems] = React.useState([]);
+  const [historyLoading, setHistoryLoading] = React.useState(false);
+  const [historyItems, setHistoryItems] = React.useState([]);
   const reload = React.useCallback(async () => {
     console.log('ContextDetail: reload');
   });
@@ -67,8 +79,54 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
         if (!alive) return;
         const rows = adaptContextControlsResponse(resp);
         setControls(rows);
+        // Fetch suggestions in parallel (based on scenarioId from overview)
+        const sid = ctx?.scenarioId || null;
+        if (sid) {
+          const sug = await fetchSuggestedControlsForContext({ scenarioId: sid, contextId });
+          if (alive) {
+            const arr = Array.isArray(sug) ? sug : [];
+            // Frontend guard: exclude any suggestion already mapped/implemented for this context
+            const existingIds = new Set((rows || []).map((r) => Number(r.controlId)));
+            const filtered = arr.filter((s) => !existingIds.has(Number(s.control_id)));
+            setSuggestions(filtered);
+          }
+        } else if (alive) setSuggestions([]);
       } finally {
         if (alive) setControlsLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [contextId, tab]);
+
+  // Load history when History tab is selected
+  React.useEffect(() => {
+    if (!contextId || tab !== 3) return;
+    let alive = true;
+    setHistoryLoading(true);
+    (async () => {
+      try {
+        const raw = await fetchContextHistory(contextId, { days: 90 });
+        if (!alive) return;
+        setHistoryItems(adaptHistoryChanges(raw));
+      } finally {
+        if (alive) setHistoryLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [contextId, tab]);
+
+  // Load evidence when Evidence tab is selected
+  React.useEffect(() => {
+    if (!contextId || tab !== 2) return;
+    let alive = true;
+    setEvidenceLoading(true);
+    (async () => {
+      try {
+        const resp = await fetchContextEvidence(contextId, { limit: 50, offset: 0, sort_by: 'captured_at', sort_dir: 'desc' });
+        if (!alive) return;
+        setEvidenceItems(adaptEvidenceResponse(resp));
+      } finally {
+        if (alive) setEvidenceLoading(false);
       }
     })();
     return () => { alive = false; };
@@ -147,35 +205,46 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
 
           <Divider />
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2, flex: 1 }}>
-              <Typography variant="subtitle2" sx={{ mb: .5 }}>Controls Coverage</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Implemented {controlsSummary.implemented ?? 0} / {controlsSummary.total ?? 0}
-              </Typography>
-              <Box sx={{ mt: 1, height: 8, bgcolor: 'action.hover', borderRadius: 4, overflow: 'hidden' }}>
-                <Box sx={{ width: `${Math.min(100, controlsSummary.coverage ?? 0)}%`, height: '100%', bgcolor: 'primary.main' }} />
-              </Box>
-            </Paper>
-
-            {Array.isArray(controlsSummary.recommended) && controlsSummary.recommended.length > 0 && (
-              <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2, mt: 1 }}>
-                <Typography variant="subtitle2" sx={{ mb: .5 }}>Recommended Controls</Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap">
+          <Stack direction={{ xs: 'column' }} spacing={2}>
+            <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: .5 }}>Controls</Typography>
+              {/* Implemented / mapped / expired — per‑control chips */}
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                {(() => {
+                  const links = Array.isArray(overview.controlLinks) ? overview.controlLinks : [];
+                  const statusOf = (s) => String(s || '').toLowerCase();
+                  const expiryDays = 90;
+                  const now = Date.now();
+                  const colorFor = (l) => {
+                    // expired overrides
+                    const ts = l.lastEvidenceAt ? new Date(l.lastEvidenceAt).getTime() : NaN;
+                    const isExpired = Number.isFinite(ts) && (now - ts) > expiryDays * 24 * 60 * 60 * 1000;
+                    if (isExpired) return 'error';
+                    const s = statusOf(l.assuranceStatus);
+                    if (/^(implemented|effective|verified|in\s*place)$/.test(s)) return 'success';
+                    if (s === 'mapped') return 'info';
+                    return 'default';
+                  };
+                  return links.map((l) => (
+                    <Chip
+                      key={l.linkId || l.controlId}
+                      size="small"
+                      color={colorFor(l)}
+                      variant={colorFor(l) === 'default' ? 'outlined' : 'filled'}
+                      label={`${l.referenceCode || l.code || ''} — ${l.name || l.title || ''}`}
+                      sx={{ maxWidth: 320 }}
+                    />
+                  ));
+                })()}
+              </Stack>
+              {/* Suggested — per‑control chips (if provided by summary) */}
+              {Array.isArray(controlsSummary.recommended) && controlsSummary.recommended.length > 0 && (
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
                   {controlsSummary.recommended.map((t, i) => (
-                    <Chip key={i} size="small" label={t} />
+                    <Chip key={`sug-${i}`} size="small" color="warning" label={t} sx={{ maxWidth: 320 }} />
                   ))}
                 </Stack>
-              </Paper>
-            )}
-
-            <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2, flex: 1 }}>
-              <Typography variant="subtitle2" sx={{ mb: .5 }}>Evidence Freshness</Typography>
-              <Stack spacing={.75}>
-                <RowStat label="Fresh" value={evidence.ok} color="success.main" />
-                <RowStat label="Due" value={evidence.warn} color="warning.main" />
-                <RowStat label="Overdue" value={evidence.overdue} color="error.main" />
-              </Stack>
+              )}
             </Paper>
           </Stack>
 
@@ -252,15 +321,89 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
               ))}
             </Stack>
           )}
+          {/* Suggestions */}
+          {!controlsLoading && suggestions.length > 0 && (
+            <Box sx={{ mt: 1.5 }}>
+              <Typography variant="subtitle2" sx={{ mb: .5 }}>Suggested controls</Typography>
+              <Stack spacing={1}>
+                {suggestions.map((s) => (
+                  <Paper key={s.control_id} variant="outlined" sx={{ p: 1, borderRadius: 1.5 }}>
+                    <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
+                      <Box sx={{ minWidth: 0, pr: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${s.code || ''} — ${s.title || ''}`}>
+                          {s.code || ''} — {s.title || ''}
+                        </Typography>
+                      </Box>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {typeof s.score === 'number' && <Chip size="small" variant="outlined" label={`Score ${s.score}`} />}
+                        <Chip
+                          size="small"
+                          color="primary"
+                          label={suggestBusy ? 'Applying…' : 'Apply'}
+                          onClick={async () => {
+                            if (suggestBusy) return;
+                            setSuggestBusy(true);
+                            try {
+                              await applySuggestedControlToContext(contextId, s.control_id, 'mapped');
+                              // Optimistic update: remove from suggestions and refetch controls
+                              setSuggestions((prev) => prev.filter((x) => x.control_id !== s.control_id));
+                              // Reuse existing effect to load controls
+                              const resp = await fetchContextControls(contextId, { include: 'summary', limit: 50, offset: 0, sort_by: 'status', sort_dir: 'asc' });
+                              const rows = adaptContextControlsResponse(resp);
+                              setControls(rows);
+                            } finally {
+                              setSuggestBusy(false);
+                            }
+                          }}
+                        />
+                      </Stack>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </Box>
+          )}
         </Box>
       )}
 
-      {/* ---- EVIDENCE (placeholder until endpoint wired) ---- */}
+      {/* ---- EVIDENCE ---- */}
       {tab === 2 && (
         <Box>
-          <Typography variant="body2" color="text.secondary">
-            Evidence artifacts will appear here with freshness badges. Hook to /contexts/{'{id}'}/evidence when ready.
-          </Typography>
+          {evidenceLoading && <LinearProgress sx={{ mb: 1 }} />}
+          {!evidenceLoading && evidenceItems.length === 0 && (
+            <Typography variant="body2" color="text.secondary">No evidence.</Typography>
+          )}
+          {!evidenceLoading && evidenceItems.length > 0 && (
+            <Stack spacing={1}>
+              {evidenceItems.map((ev) => {
+                const color = ev.freshness === 'overdue' ? 'error' : ev.freshness === 'warn' ? 'warning' : 'success';
+                const Icon = ev.type === 'url' ? LinkIcon : ev.type === 'doc' ? DescriptionIcon : ev.type === 'ticket' ? ConfirmationNumberIcon : ScienceIcon;
+                return (
+                  <Paper key={ev.id} variant="outlined" sx={{ p: 1, borderRadius: 1.5 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, pr: 1 }}>
+                        <Icon fontSize="small" />
+                        <Typography variant="body2" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ev.ref}>
+                          {ev.type === 'url' && ev.ref ? (
+                            <a href={ev.ref} target="_blank" rel="noopener noreferrer">{ev.ref}</a>
+                          ) : ev.ref || '(no reference)'}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+                        {ev.capturedAt && (
+                          <Chip size="small" variant="outlined" label={new Date(ev.capturedAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} />
+                        )}
+                        <Chip size="small" color={color} label={ev.freshness} />
+                      </Stack>
+                    </Stack>
+                    {ev.notes && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .5 }}>{ev.notes}</Typography>
+                    )}
+                  </Paper>
+                );
+              })}
+            </Stack>
+          )}
         </Box>
       )}
 
@@ -271,9 +414,24 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
           <Box sx={{ color: 'primary.main' }}>
             <Sparkline data={(overview.trend || []).map(p => p.y)} width="100%" height={80} />
           </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Hook to /risk_scenario_contexts/history?context_id={contextId}&days=90 when available.
-          </Typography>
+          <Divider sx={{ my: 1 }} />
+          <Typography variant="subtitle2" sx={{ mb: .5 }}>Change Log</Typography>
+          {historyLoading && <LinearProgress sx={{ mb: 1 }} />}
+          {!historyLoading && historyItems.length === 0 && (
+            <Typography variant="body2" color="text.secondary">No changes.</Typography>
+          )}
+          {!historyLoading && historyItems.length > 0 && (
+            <Stack spacing={.5}>
+              {historyItems.map((h, idx) => (
+                <Stack key={idx} direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                  <Typography variant="body2" sx={{ minWidth: 0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <strong>{h.field}</strong>: {String(h.from)} → {String(h.to)}
+                  </Typography>
+                  <Chip size="small" variant="outlined" label={new Date(h.ts).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} />
+                </Stack>
+              ))}
+            </Stack>
+          )}
         </Box>
       )}
     </Box>

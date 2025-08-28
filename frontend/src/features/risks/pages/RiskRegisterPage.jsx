@@ -182,9 +182,7 @@ export default function RiskRegisterPage() {
     {
       field: 'residual', headerName: 'Residual', width: 100, align:'center', headerAlign:'center',
       renderCell:(p)=>(
-        <Chip size="small" label={p.value}
-              sx={{ color: theme.palette.getContrastText(theme.palette.primary.light),
-                    bgcolor: theme.palette.primary.light }} />
+        <Chip size="small" label={p.value} color={p.row.ragMui || 'default'} />
       ),
       sortable: true,
     },
@@ -195,7 +193,11 @@ export default function RiskRegisterPage() {
     sortable: false,
     renderCell: (p) => <OwnerCell row={p.row} refresh={reloadCurrentPage} />,
   },
-    { field: 'status',   headerName: 'Status', width: 120 },
+    { field: 'status',   headerName: 'Status', width: 140,
+      renderCell: (p) => (
+        <Chip size="small" label={p.row.statusLabel || '—'} color={p.row.statusColor || 'default'} variant={p.row.statusVariant || 'outlined'} />
+      )
+    },
     { field: 'updated',  headerName: 'Updated', width: 160, sortable: true },
   ]), [theme, reloadCurrentPage]);
 

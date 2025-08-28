@@ -120,3 +120,40 @@ export async function fetchContextControls(contextId, { offset = 0, limit = 25, 
   const resp = await getJSON(url, { searchParams });
   return resp || { items: [], total: 0 };
 }
+
+// Suggested controls for a scenario (exclude those already linked to the given context)
+export async function fetchSuggestedControlsForContext({ scenarioId, contextId, limit = 20 } = {}) {
+  if (!scenarioId) return [];
+  const searchParams = buildSearchParams({ context_id: contextId, limit });
+  const url = `controls/control-risk-links/by-scenario/${scenarioId}/suggest/`;
+  const resp = await getJSON(url, { searchParams });
+  return Array.isArray(resp) ? resp : [];
+}
+
+// Apply a suggested control to a context (create link with default status 'mapped')
+export async function applySuggestedControlToContext(contextId, controlId, status = 'mapped') {
+  const url = `risks/risks/risk_scenario_contexts/${contextId}/controls/`;
+  return postJSON(url, { json: { controlId, status } });
+}
+
+// ---- Context Evidence (M4) -------------------------------------------------
+export async function fetchContextEvidence(contextId, { offset = 0, limit = 50, sort_by = 'captured_at', sort_dir = 'desc', type, control_id, freshness } = {}) {
+  if (!contextId) return { items: [], total: 0, summary: null };
+  const search = { offset, limit, sort_by, sort_dir };
+  if (type) search.type = type;
+  if (control_id) search.control_id = control_id;
+  if (freshness) search.freshness = freshness;
+  const searchParams = buildSearchParams(search);
+  const url = `risks/risks/risk_scenario_contexts/${contextId}/evidence/`;
+  const resp = await getJSON(url, { searchParams });
+  return resp || { items: [], total: 0 };
+}
+
+// ---- Context History -------------------------------------------------------
+export async function fetchContextHistory(contextId, { days = 90 } = {}) {
+  if (!contextId) return [];
+  // risk-score router is mounted under /risks → effective /risks/risk-scores/...
+  const url = `risks/risk-scores/context/history/${contextId}/`;
+  const resp = await getJSON(url, { });
+  return Array.isArray(resp) ? resp : [];
+}
