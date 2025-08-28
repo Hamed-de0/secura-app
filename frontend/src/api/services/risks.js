@@ -109,3 +109,14 @@ export async function bulkCreateRiskContexts(items, idempotencyKey) {
   const res = await postJSON(url, { json: body });
   return res || { createdIds: [], skipped: [], updated: [] };
 }
+
+// ---- Context Controls (M4) --------------------------------------------------
+export async function fetchContextControls(contextId, { offset = 0, limit = 25, sort_by = 'status', sort_dir = 'asc', include = 'summary' } = {}) {
+  if (!contextId) return { items: [], total: 0, summary: null };
+  const searchParams = buildSearchParams({ offset, limit, sort_by, sort_dir, include });
+  // Note: controls M4 router is mounted under /risks and declares a nested /risks/* prefix,
+  // so the effective path is /risks/risks/risk_scenario_contexts/{id}/controls/.
+  const url = `risks/risks/risk_scenario_contexts/${contextId}/controls/`;
+  const resp = await getJSON(url, { searchParams });
+  return resp || { items: [], total: 0 };
+}

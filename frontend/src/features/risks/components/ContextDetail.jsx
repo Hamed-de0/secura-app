@@ -1,11 +1,12 @@
 import * as React from 'react';
 import {
-  Box, Stack, Typography, Chip, Tabs, Tab, Divider, LinearProgress, useTheme, Paper
+  Box, Stack, Typography, Chip, Tabs, Tab, Divider, LinearProgress, useTheme, Paper, LinearProgress as MuiLinearProgress
 } from '@mui/material';
 import Sparkline from '../../risks/charts/Sparkline';
-import { fetchRiskContextDetail } from '../../../api/services/risks';
+import { fetchRiskContextDetail, fetchContextControls } from '../../../api/services/risks';
 import { updateRiskContextOwner } from '../../../api/services/risks';
 import OwnerPicker from './OwnerPicker';
+import { adaptContextControlsResponse } from '../../../api/adapters/controlsContext';
 
 const DOMAINS = ['C','I','A','L','R'];
 
@@ -27,6 +28,8 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState('');
   const [ctx, setCtx] = React.useState(null);
+  const [controlsLoading, setControlsLoading] = React.useState(false);
+  const [controls, setControls] = React.useState([]);
   const reload = React.useCallback(async () => {
     console.log('ContextDetail: reload');
   });
@@ -53,12 +56,30 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
     return () => { alive = false; };
   }, [contextId, onLoadedTitle]);
 
+  // Load controls when tab switches to Controls or context changes
+  React.useEffect(() => {
+    if (!contextId || tab !== 1) return;
+    let alive = true;
+    setControlsLoading(true);
+    (async () => {
+      try {
+        const resp = await fetchContextControls(contextId, { include: 'summary', limit: 50, offset: 0, sort_by: 'status', sort_dir: 'asc' });
+        if (!alive) return;
+        const rows = adaptContextControlsResponse(resp);
+        setControls(rows);
+      } finally {
+        if (alive) setControlsLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [contextId, tab]);
+
   // ---- Overview tab
   const overview = ctx || {};
   const impacts = overview.impacts || {};
   const impactsStr = DOMAINS.map(k => `${k}${impacts[k] ?? 0}`).join('  ');
   const evidence = overview.evidence || { ok: 0, warn: 0, overdue: 0 };
-  const controls = overview.controls || { implemented: 0, total: 0, coverage: 0 };
+  const controlsSummary = overview.controls || { implemented: 0, total: 0, coverage: 0 };
 
   return (
     <Box sx={{ display:'flex', flexDirection:'column', minHeight: 0 }}>
@@ -130,18 +151,18 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
             <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2, flex: 1 }}>
               <Typography variant="subtitle2" sx={{ mb: .5 }}>Controls Coverage</Typography>
               <Typography variant="body2" color="text.secondary">
-                Implemented {controls.implemented ?? 0} / {controls.total ?? 0}
+                Implemented {controlsSummary.implemented ?? 0} / {controlsSummary.total ?? 0}
               </Typography>
               <Box sx={{ mt: 1, height: 8, bgcolor: 'action.hover', borderRadius: 4, overflow: 'hidden' }}>
-                <Box sx={{ width: `${Math.min(100, controls.coverage ?? 0)}%`, height: '100%', bgcolor: 'primary.main' }} />
+                <Box sx={{ width: `${Math.min(100, controlsSummary.coverage ?? 0)}%`, height: '100%', bgcolor: 'primary.main' }} />
               </Box>
             </Paper>
 
-            {Array.isArray(controls.recommended) && controls.recommended.length > 0 && (
+            {Array.isArray(controlsSummary.recommended) && controlsSummary.recommended.length > 0 && (
               <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2, mt: 1 }}>
                 <Typography variant="subtitle2" sx={{ mb: .5 }}>Recommended Controls</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {controls.recommended.map((t, i) => (
+                  {controlsSummary.recommended.map((t, i) => (
                     <Chip key={i} size="small" label={t} />
                   ))}
                 </Stack>
@@ -167,9 +188,70 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
       {/* ---- CONTROLS (placeholder until endpoint wired) ---- */}
       {tab === 1 && (
         <Box>
-          <Typography variant="body2" color="text.secondary">
-            Controls list will appear here (status chips, owners, verification). Hook to /contexts/{'{id}'}/controls when ready.
-          </Typography>
+          {controlsLoading && <LinearProgress sx={{ mb: 1 }} />}
+          {!controlsLoading && controls.length === 0 && (
+            <Typography variant="body2" color="text.secondary">No controls linked.</Typography>
+          )}
+          {!controlsLoading && controls.length > 0 && (
+            <Stack spacing={1}>
+              {controls.map((row) => (
+                <Paper
+                  key={row.linkId || row.controlId}
+                  variant="outlined"
+                  sx={{ p: 1, borderRadius: 1.5, overflow: 'hidden' }}
+                >
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '1fr auto' },
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    {/* Left: code/title + chips (truncate long titles) */}
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={`${row.code || ''} — ${row.title || ''}`}
+                      >
+                        {row.code || ''} — {row.title || ''}
+                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ mt: .5, flexWrap: 'wrap' }}>
+                        <Chip size="small" label={row.status || '—'} />
+                        {row.verification && (
+                          <Chip size="small" label={row.verification} color="success" variant="outlined" />
+                        )}
+                        {row.lastEvidenceAt && (
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={`Last: ${new Date(row.lastEvidenceAt).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })}`}
+                          />
+                        )}
+                      </Stack>
+                    </Box>
+
+                    {/* Right: compact meters (fixed small width to keep drawer thin) */}
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+                      <Box sx={{ width: 96 }}>
+                        <Typography variant="caption" color="text.secondary">Cov</Typography>
+                        <MuiLinearProgress variant="determinate" value={Number(row.coverage ?? 0)} sx={{ height: 6, borderRadius: 1 }} />
+                      </Box>
+                      <Box sx={{ width: 96 }}>
+                        <Typography variant="caption" color="text.secondary">Conf</Typography>
+                        <MuiLinearProgress color="secondary" variant="determinate" value={Number(row.confidence ?? 0)} sx={{ height: 6, borderRadius: 1 }} />
+                      </Box>
+                      <Box sx={{ width: 96 }}>
+                        <Typography variant="caption" color="text.secondary">Effect</Typography>
+                        <MuiLinearProgress color="success" variant="determinate" value={Number(row.effect ?? 0)} sx={{ height: 6, borderRadius: 1 }} />
+                      </Box>
+                    </Stack>
+                  </Box>
+                </Paper>
+              ))}
+            </Stack>
+          )}
         </Box>
       )}
 
