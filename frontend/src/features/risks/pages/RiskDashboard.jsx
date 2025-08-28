@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Box, Grid, useTheme, Chip} from '@mui/material';
+import { Box, Grid, useTheme, Chip, Typography } from '@mui/material';
 // ---- System --------------------------------
 import { fetchRiskMetrics } from '../../../api/services/risks';
 import { fetchRiskContexts } from '../../../api/services/risks';
 import { adaptContextsToRegisterRows } from '../../../api/adapters/risks';
+import { adaptRiskOpsMetrics } from '../../../api/adapters/metrics';
 // ---- Icons ---------------------------------
 import KPIStrip from '../components/KPIStrip';
 import HeatmapCard from '../components/HeatmapCard';
@@ -14,6 +15,7 @@ import EvidenceFreshnessCard from '../components/EvidenceFreshnessCard';
 import ScopeGrid from '../components/ScopeGrid';
 
 import RiskContextsGrid from '../components/RiskContextsGrid';
+import RiskOpsQueueTabs from '../../dashboard/RiskOpsQueueTabs';
 /* ================================
    Static mock data (tune later)
    ================================ */
@@ -128,8 +130,7 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
   ];
 
   const m = metricsData || {};
-  const total = m.total ?? 0;
-  const sev = m.severityCounts || {};
+  const kpis = React.useMemo(() => adaptRiskOpsMetrics(metricsData || {}), [metricsData]);
   const evidence = m.evidence || {};
   const review = m.reviewSLA || {};
 
@@ -142,32 +143,8 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
   const scorePct= Number(pct(review.onTrack, (review.onTrack ?? 0) + (review.dueSoon ?? 0) + (review.overdue ?? 0)));
 
 
-  const metrics = {
-    exposure: {
-      total: total,
-      highCritical: (sev.High ?? 0) + (sev.Critical ?? 0),
-      avgResidual: Math.round(m.avgResidual ?? 0),
-      trend: [42, 44, 43, 47, 49, 48, 50, 51], // keep your mock spark until you add a series
-    },
-    appetite: {
-      count: m.overAppetite ?? 0,
-      percent: `${pct(m.overAppetite, total)}%`,
-      exceptions30: m.exceptionsExpiring30d ?? 0,
-    },
-    ownership: {
-      withOwner: m.ownerAssigned ?? 0,
-      withOwnerPct: `${pct(m.ownerAssigned, total)}%`,
-      mitigations: m.mitigationsInProgress ?? 0,
-    },
-    assurance: {
-      evidencePct: `${pct(evidence.ok, (evidence.ok ?? 0) + (evidence.warn ?? 0) + (evidence.overdue ?? 0))}%`,
-      reviewPct: `${pct(review.onTrack, (review.onTrack ?? 0) + (review.dueSoon ?? 0) + (review.overdue ?? 0))}%`,
-    },
-    improvement: {
-      days: 30,
-      delta: `-${m.residualReduction30d ?? 0}`,
-    },
-  };
+  // KPIs normalized via adapter
+  const metrics = kpis;
 
   const heatmapMatrix = React.useMemo(() => {
     const grid = Array.from({ length: 5 }, () => Array(5).fill(0));
@@ -189,8 +166,13 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
     <Box sx={{ display:'flex', justifyContent:'left', p: 1}} size={12}>
       <Box sx={{ width: widthPx, display:'grid', gap: 3, }} size={12}>
         
-        {/* KPIs */}
+        {/* KPIs (normalized from metrics adapter) */}
         <KPIStrip data={metrics} />
+        {!!kpis?.meta?.asOf && (
+          <Typography variant="caption" sx={{ ml: 1, mt: -1, opacity: 0.7 }}>
+            As of {new Date(kpis.meta.asOf).toLocaleString(undefined, { timeZone: 'Europe/Berlin' })}
+          </Typography>
+        )}
         {/* Heatmap and Donuts */}
         <Box sx={{display: 'grid', gap: 2, p:1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(5, 1fr)' } , }} >
           {/* Heatmap + Domain chips */}
@@ -214,6 +196,40 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
           <ScopeGrid />
                     
         </Box>
+
+        {/* Risk Ops KPIs (placeholders) */}
+        <Box sx={{
+          p: 1,
+          display: 'grid',
+          gap: 1.5,
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(6, 1fr)' },
+        }}>
+          {[
+            'Over Appetite',
+            'Reviews Due',
+            'Evidence Overdue',
+            'Controls Awaiting Verification',
+            'Exceptions Expiring',
+            'New/Changed',
+          ].map((label, idx) => (
+            <Box key={idx} sx={{
+              borderRadius: 2,
+              border: theme => `1px solid ${theme.palette.divider}`,
+              bgcolor: 'background.paper',
+              px: 1.5, py: 1,
+            }}>
+              <Typography variant="overline" sx={{ opacity: 0.8 }}>
+                {label}
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                —
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        {/* Action Queue tabs (scaffold) */}
+        <RiskOpsQueueTabs />
 
         {/* Register */}
         <RiskContextsGrid
@@ -244,4 +260,3 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
     </Box>
   );
 }
-

@@ -3,6 +3,7 @@ import {
   Box, Stack, Typography, Chip, Tabs, Tab, Divider, LinearProgress, useTheme, Paper, LinearProgress as MuiLinearProgress
 } from '@mui/material';
 import Sparkline from '../../risks/charts/Sparkline';
+import { useSearchParams } from 'react-router-dom';
 import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextEvidence, fetchContextHistory } from '../../../api/services/risks';
 import { updateRiskContextOwner } from '../../../api/services/risks';
 import OwnerPicker from './OwnerPicker';
@@ -31,6 +32,7 @@ function RagChip({ rag }) {
 
 export default function ContextDetail({ contextId, onLoadedTitle }) {
   const [tab, setTab] = React.useState(0);
+  const [params] = useSearchParams();
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState('');
   const [ctx, setCtx] = React.useState(null);
@@ -67,6 +69,15 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
     })();
     return () => { alive = false; };
   }, [contextId, onLoadedTitle]);
+
+  // Accept deep-link ?tab=overview|controls|evidence|history
+  React.useEffect(() => {
+    const t = (params.get('tab') || '').toLowerCase();
+    const map = { overview: 0, controls: 1, evidence: 2, history: 3 };
+    const idx = typeof map[t] === 'number' ? map[t] : 0;
+    if (idx !== tab) setTab(idx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, contextId]);
 
   // Load controls when tab switches to Controls or context changes
   React.useEffect(() => {
