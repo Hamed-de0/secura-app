@@ -64,64 +64,63 @@ const writeOpen = (obj) => {
 const TOP = [
   { label: 'common.overview', icon: <SpeedIcon />, to: '/overview' },
   { label: 'common.myWork', icon: <AssignmentTurnedInIcon />, to: '/my-work' },
-  { label: 'Risk Dashboard', icon: <WarningAmberIcon />, to: 'risk-dashboard' },
-  { label: 'Risk Register', icon: <WarningAmberIcon />, to: 'risk-register' },
-  
+  { label: 'nav.riskDashboard', icon: <WarningAmberIcon />, to: 'risk-dashboard' },
+  { label: 'nav.riskRegister', icon: <WarningAmberIcon />, to: 'risk-register' },
 ];
 
 const GROUPS = [
   {
     id: 'operate',
-    label: 'Operate',
+    label: 'nav.operate',
     items: [
-      { label: 'Controls', icon: <VerifiedUserIcon />, to: '/controls' },
+      { label: 'common.controls', icon: <VerifiedUserIcon />, to: '/controls' },
       {
-        label: 'Attestations',
+        label: 'common.attestations',
         icon: <FactCheckIcon />,
         to: '/attestations',
         parent: '/controls',
       },
-      { label: 'Risks', icon: <WarningAmberIcon />, to: '/risk-view' },
+      { label: 'common.risks', icon: <WarningAmberIcon />, to: '/risk-view' },
       {
-        label: 'Exceptions',
+        label: 'common.exceptions',
         icon: <ReportGmailerrorredIcon />,
         to: '/exceptions',
         parent: '/risk-view',
       },
-      { label: 'Compliance', icon: <RuleIcon />, to: '/compliance/dashboard' },
+      { label: 'common.compliance', icon: <RuleIcon />, to: '/compliance/dashboard' },
       {
-        label: 'Evidence',
+        label: 'common.evidence',
         icon: <UploadFileIcon />,
         to: '/evidence',
         parent: '/compliance',
       },
       {
-        label: 'SoA Builder',
+        label: 'common.soa',
         icon: <TableViewIcon />,
         to: '/soa',
         parent: '/compliance',
       },
-      { label: 'Providers', icon: <HandshakeIcon />, to: '/providers' },
-      { label: 'Assets', icon: <Inventory2Icon />, to: '/assetgroups/tree' },
+      { label: 'common.providers', icon: <HandshakeIcon />, to: '/providers' },
+      { label: 'common.assets', icon: <Inventory2Icon />, to: '/assetgroups/tree' },
     ],
   },
   {
     id: 'reports',
-    label: 'Reports',
+    label: 'nav.reports',
     items: [
-      { label: 'Activities', icon: <FactCheckIcon />, to: '/activities' },
-      { label: 'Dashboard (legacy)', icon: <SpaceDashboardIcon />, to: '/dashboard' },
-      { label: 'Main Dashboard', icon: <SpaceDashboardIcon />, to: '/main-dashboard' },
+      { label: 'nav.activities', icon: <FactCheckIcon />, to: '/activities' },
+      { label: 'nav.dashboardLegacy', icon: <SpaceDashboardIcon />, to: '/dashboard' },
+      { label: 'nav.mainDashboard', icon: <SpaceDashboardIcon />, to: '/main-dashboard' },
     ],
   },
   {
     id: 'admin',
-    label: 'Admin',
+    label: 'nav.admin',
     items: [
-      { label: 'Tags', icon: <LocalOfferIcon />, to: '/tags' },
-      { label: 'Persons', icon: <GroupIcon />, to: '/persons' },
-      { label: 'Settings', icon: <SettingsIcon />, to: '/settings' },
-      { label: 'Mapping Manager', icon: <LinkIcon />, to: '/mapping' },
+      { label: 'common.tags', icon: <LocalOfferIcon />, to: '/tags' },
+      { label: 'common.persons', icon: <GroupIcon />, to: '/persons' },
+      { label: 'common.settings', icon: <SettingsIcon />, to: '/settings' },
+      { label: 'nav.mappingManager', icon: <LinkIcon />, to: '/mapping' },
     ],
   },
 ];
@@ -218,7 +217,7 @@ export default function Sidebar() {
           </ListItemIcon>
           {!sidebarCollapsed && (
             <ListItemText
-              primary={group.label}
+              primary={t(group.label)}
               primaryTypographyProps={{ variant: 'overline', noWrap: true }}
             />
           )}
@@ -252,12 +251,12 @@ export default function Sidebar() {
       <Box sx={{ height: 56, display: 'flex', alignItems: 'center', px: 1 }}>
         {!sidebarCollapsed && (
           <Typography variant="subtitle2" noWrap sx={{ flex: 1 }}>
-            ISMS / GRC
+            {t('brand')}
           </Typography>
         )}
         <IconButton
           size="small"
-          aria-label="Toggle sidebar"
+          aria-label={t('nav.toggleSidebar')}
           onClick={onToggleSidebar}
           sx={{ ml: sidebarCollapsed ? 0 : 1 }}
         >

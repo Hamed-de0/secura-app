@@ -14,14 +14,14 @@ import { adaptMappingsResponse, adaptRequirementsForControl, adaptMappingItem } 
 export async function getRequirementMappings({ requirement_id }) {
   if (!requirement_id) throw new Error("requirement_id is required");
   // trailing slash usually tolerated; include if your server expects it
-  const resp = await getJSON(`crosswalks/requirements/${requirement_id}`);
+  const resp = await getJSON(`crosswalks/requirements/${requirement_id}/`);
   return adaptMappingsResponse(resp);
 }
 
 /** Reverse crosswalk: list requirements that use a specific control */
 export async function getControlCrosswalk({ control_id }) {
   if (!control_id) throw new Error("control_id is required");
-  const resp = await getJSON(`crosswalks/controls/${control_id}`);
+  const resp = await getJSON(`crosswalks/controls/${control_id}/`);
   return adaptRequirementsForControl(resp);
 }
 
@@ -33,7 +33,7 @@ export async function saveRequirementMappings({ version_id, requirement_id, item
   if (!version_id) throw new Error("version_id is required");
   if (!requirement_id) throw new Error("requirement_id is required");
   const params = buildSearchParams({ version_id, requirement_id });
-  const resp = await putJSON("mappings", { searchParams: params, json: { items: items || [] } });
+  const resp = await putJSON("mappings/", { searchParams: params, json: { items: items || [] } });
   return adaptMappingsResponse(resp);
 }
 
@@ -51,7 +51,7 @@ export async function createCrosswalkMapping(payload, { idempotencyKey } = {}) {
   const body = {};
   for (const [k, v] of Object.entries(payload || {})) if (v !== undefined) body[k] = v;
   const headers = idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined;
-  const resp = await postJSON("crosswalks", { json: body, headers });
+  const resp = await postJSON("crosswalks/", { json: body, headers });
   // Try to adapt a single row if backend echoes it; otherwise return null
   const row = Array.isArray(resp) ? resp[0] : resp;
   try { return adaptMappingItem(row); } catch { return null; }
@@ -64,13 +64,13 @@ export async function createCrosswalkMapping(payload, { idempotencyKey } = {}) {
  */
 export async function deleteCrosswalkMapping({ mapping_id, framework_requirement_id, control_id, obligation_atom_id } = {}) {
   if (mapping_id) {
-    return deleteJSON(`crosswalks/${mapping_id}`);
+    return deleteJSON(`crosswalks/${mapping_id}/`);
   }
   const searchParams = new URLSearchParams();
   if (framework_requirement_id != null) searchParams.set("framework_requirement_id", String(framework_requirement_id));
   if (control_id != null) searchParams.set("control_id", String(control_id));
   if (obligation_atom_id != null) searchParams.set("obligation_atom_id", String(obligation_atom_id));
-  return deleteJSON("crosswalks", { searchParams });
+  return deleteJSON("crosswalks/", { searchParams });
 }
 
 /** PUT /crosswalks/:mapping_id — update one mapping; fallback to DELETE+POST if 404/405 */
@@ -80,7 +80,7 @@ export async function updateCrosswalkMapping(mapping_id, partial) {
   for (const [k, v] of Object.entries(partial || {})) if (v !== undefined) body[k] = v;
 
   try {
-    const resp = await putJSON(`crosswalks/${mapping_id}`, { json: body });
+    const resp = await putJSON(`crosswalks/${mapping_id}/`, { json: body });
     const row = Array.isArray(resp) ? resp[0] : resp;
     return adaptMappingItem(row);
   } catch (e) {

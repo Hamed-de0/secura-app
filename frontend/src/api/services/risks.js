@@ -27,7 +27,7 @@ export async function fetchRiskContexts(params = {}) {
   const defaults = {
     offset: 0,
     limit: 10,
-    sort_by: 'id',
+    sort: 'updated_at',
     sort_dir: 'desc',
     scope: 'all',
     status: 'all',
@@ -42,12 +42,37 @@ export async function fetchRiskContexts(params = {}) {
 export async function fetchRiskContextDetail(contextId) {
   if (!contextId) return null;
   // trailing slash required by your ky client / API
-  return await getJSON(`risks/risk_scenario_contexts/${contextId}/details`);
+  return await getJSON(`risks/risk_scenario_contexts/${contextId}/details/`);
 }
 
 export async function updateRiskContextOwner(contextId, ownerId) {
-  const url = `risks/risk_scenario_contexts/${contextId}`; // trailing slash
+  const url = `risks/risk_scenario_contexts/${contextId}/`; // trailing slash
   return await putJSON(url, {json:{ owner_id: ownerId }});
+}
+
+/**
+ * Alias for per-row owner update (kept for clarity in bulk flows).
+ * Uses PUT under the hood; backend accepts it for partial updates of owner.
+ */
+export async function patchRiskContextOwner(contextId, ownerId) {
+  return updateRiskContextOwner(contextId, ownerId);
+}
+
+/**
+ * Bulk assign owner to multiple context IDs via fan-out of per-row updates.
+ * Returns { updated, failed } counts.
+ */
+export async function bulkAssignRiskContextOwner(ids = [], ownerId) {
+  let updated = 0, failed = 0;
+  for (const id of ids) {
+    try {
+      await updateRiskContextOwner(id, ownerId);
+      updated += 1;
+    } catch (_) {
+      failed += 1;
+    }
+  }
+  return { updated, failed };
 }
 
 export async function fetchScenarios({ q = '', limit = 500, offset = 0 } = {}) {

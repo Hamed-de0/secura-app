@@ -8,6 +8,8 @@ import ScopeProvider from './store/scope/ScopeProvider.jsx';
 import QueryProvider from './app/QueryProvider.jsx';
 import { parseViewParam } from './lib/views/urlParam';
 import I18nProvider from './store/i18n/I18nProvider.jsx';
+// Ensure generated API client base URL is configured
+import './api/client/config';
 
 if (typeof window !== 'undefined') {
   window.__parseViewParam = parseViewParam;

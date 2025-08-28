@@ -84,6 +84,7 @@ def list_contexts(
     return rsc_crud.list(db, risk_scenario_id, scope_type, scope_id)
 
 @router.get("/metrics")
+@router.get("/metrics/")
 def get_risk_context_metrics(
     scope: str = Query("all"),                           # asset|asset_type|asset_group|tag|bu|site|entity|service|org_group|all
     scope_id: int = Query(None),
@@ -104,6 +105,7 @@ def get_risk_context_metrics(
 # Paginated/managed list – keep existing integration
 # -------------------------------------------------------------
 @router.get("/contexts", response_model=RiskContextListResponse)
+@router.get("/contexts/", response_model=RiskContextListResponse)
 def get_contexts(
     offset: int = Query(0, ge=0),
     limit: int = Query(25, ge=1, le=200),
@@ -135,6 +137,7 @@ def get_contexts(
 
 
 @router.get("/{context_id}/details", response_model=RiskContextDetails)
+@router.get("/{context_id}/details/", response_model=RiskContextDetails)
 def get_risk_context_details(
     context_id: int,
     days: int = Query(90, ge=1, le=365),   # evidence freshness window & trend length
@@ -144,16 +147,19 @@ def get_risk_context_details(
 
 
 @router.get("/{context_id}", response_model=RiskScenarioContextOut)
+@router.get("/{context_id}/", response_model=RiskScenarioContextOut)
 def get_context(context_id: int, db: Session = Depends(get_db)):
     return rsc_crud.get(db, context_id)
 
 
 @router.put("/{context_id}", response_model=RiskScenarioContextOut)
+@router.put("/{context_id}/", response_model=RiskScenarioContextOut)
 def update_context(context_id: int, payload: RiskScenarioContextUpdate, db: Session = Depends(get_db)):
     return rsc_crud.update(db, context_id, payload)
 
 
 @router.delete("/{context_id}", status_code=204)
+@router.delete("/{context_id}/", status_code=204)
 def delete_context(context_id: int, db: Session = Depends(get_db)):
     rsc_crud.delete(db, context_id)
     return None

@@ -5,6 +5,10 @@
     "myWork": "Meine Arbeit",
     "controls": "Kontrollen",
     "control": "Kontrolle",
+    "assets": "Assets",
+    "tags": "Tags",
+    "persons": "Personen",
+    "settings": "Einstellungen",
     "risks": "Risiken",
     "risk": "Risiko",
     "compliance": "Compliance",
@@ -53,13 +57,25 @@
   "dialogs": {
     "uploadEvidence": "Nachweis anfordern / hochladen",
     "createException": "Ausnahme erstellen",
-    "mapControl": "Kontrolle → Anforderungen zuordnen"
+    "mapControl": "Kontrolle Anforderungen zuordnen"
   },
   "dashboard": {
     "controlsStatus": "Status der Kontrollen",
     "coverageByFramework": "Abdeckung nach Framework",
     "controlEffectiveness": "Wirksamkeit der Kontrollen (gestapelt)",
     "evidenceDueSoon": "Bald fällige Nachweise"
+  },
+  "nav": {
+    "operate": "Betrieb",
+    "reports": "Berichte",
+    "admin": "Admin",
+    "riskDashboard": "Risikodashboard",
+    "riskRegister": "Risikoregister",
+    "activities": "Aktivitäten",
+    "dashboardLegacy": "Dashboard (Legacy)",
+    "mainDashboard": "Haupt-Dashboard",
+    "mappingManager": "Mapping-Manager",
+    "toggleSidebar": "Seitenleiste umschalten"
   },
   "entities": {
     "control": { "one": "Kontrolle", "other": "Kontrollen" },

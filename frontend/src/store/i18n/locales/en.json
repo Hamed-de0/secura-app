@@ -5,6 +5,10 @@
     "myWork": "My Work",
     "controls": "Controls",
     "control": "Control",
+    "assets": "Assets",
+    "tags": "Tags",
+    "persons": "Persons",
+    "settings": "Settings",
     "risks": "Risks",
     "risk": "Risk",
     "compliance": "Compliance",
@@ -60,6 +64,18 @@
     "coverageByFramework": "Coverage by framework",
     "controlEffectiveness": "Control effectiveness (stacked)",
     "evidenceDueSoon": "Evidence due soon"
+  },
+  "nav": {
+    "operate": "Operate",
+    "reports": "Reports",
+    "admin": "Admin",
+    "riskDashboard": "Risk Dashboard",
+    "riskRegister": "Risk Register",
+    "activities": "Activities",
+    "dashboardLegacy": "Dashboard (legacy)",
+    "mainDashboard": "Main Dashboard",
+    "mappingManager": "Mapping Manager",
+    "toggleSidebar": "Toggle sidebar"
   },
   "entities": {
     "control": { "one": "Control", "other": "Controls" },

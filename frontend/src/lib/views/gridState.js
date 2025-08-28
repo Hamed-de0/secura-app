@@ -3,7 +3,7 @@ export const SNAPSHOT_VERSION = 1;
 export function makeDefaultSnapshot({
   columns = { visible: [], order: [] },
   sort = [],
-  pagination = { pageSize: 10 },
+  pagination = { pageSize: 10, page: 0 },
   density = 'standard',
   filters = {},
 } = {}) {
@@ -61,7 +61,11 @@ export function sanitizeSnapshot(snapshot, allowedColumnIds = []) {
 
   // pagination: keep to allowed set (project standard)
   const sz = Number(snapshot.pagination?.pageSize || 10);
-  safe.pagination = { pageSize: [10, 25, 50, 100].includes(sz) ? sz : 10 };
+  const pg = Number.isFinite(Number(snapshot.pagination?.page)) ? Number(snapshot.pagination.page) : 0;
+  safe.pagination = {
+    pageSize: [10, 25, 50, 100].includes(sz) ? sz : 10,
+    page: pg >= 0 ? pg : 0,
+  };
 
   // density
   safe.density = ['compact', 'standard', 'comfortable'].includes(snapshot.density)

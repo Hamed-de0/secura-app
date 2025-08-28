@@ -136,21 +136,43 @@ export default function useGridView({
     [columnIds]
   );
 
-  const paginationModel = { pageSize: snapshot.pagination.pageSize, page: 0 };
+  // Keep page in local state to ensure pagination arrows work even if sanitize drops page
+  const [pageState, setPageState] = React.useState(() => (
+    typeof snapshot.pagination?.page === 'number' ? snapshot.pagination.page : 0
+  ));
+  React.useEffect(() => {
+    const p = typeof snapshot.pagination.page === 'number' ? snapshot.pagination.page : 0;
+    if (p !== pageState) setPageState(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.pagination.page]);
+
+  const paginationModel = {
+    pageSize: snapshot.pagination.pageSize,
+    page: pageState,
+  };
   const onPaginationModelChange = React.useCallback(
-    (model) =>
+    (model) => {
+      const nextPage = typeof model?.page === 'number'
+        ? model.page
+        : (typeof snapshot.pagination.page === 'number' ? snapshot.pagination.page : 0);
+      const nextSize = typeof model?.pageSize === 'number'
+        ? model.pageSize
+        : snapshot.pagination.pageSize;
+      setPageState(nextPage);
       setSnapshot((s) =>
         sanitizeSnapshot(
           {
             ...s,
             pagination: {
-              pageSize: model?.pageSize ?? s.pagination.pageSize,
+              pageSize: nextSize,
+              page: nextPage,
             },
           },
           columnIds
         )
-      ),
-    [columnIds]
+      );
+    },
+    [columnIds, snapshot.pagination.pageSize]
   );
 
   const [density, setDensity] = React.useState(snapshot.density);
