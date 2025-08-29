@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import NoResultFound
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 import statistics
 from app.models.risks.risk_score import RiskScore, RiskScoreHistory
@@ -20,6 +20,21 @@ def get_score_history_by_context(db: Session, context_id: int) -> List[RiskScore
              .filter(RiskScoreHistory.risk_scenario_context_id == context_id)\
              .order_by(RiskScoreHistory.created_at.desc())\
              .all()
+
+
+def get_score_history_by_context_window(db: Session, context_id: int, *, days: int = 90) -> List[RiskScoreHistory]:
+    """Read-only helper to fetch RiskScoreHistory within a time window (days)."""
+    try:
+        cutoff = datetime.utcnow() if days is None else (datetime.utcnow() - timedelta(days=max(1, int(days))))
+    except Exception:
+        cutoff = datetime.utcnow()
+    q = (
+        db.query(RiskScoreHistory)
+          .filter(RiskScoreHistory.risk_scenario_context_id == context_id)
+          .filter(RiskScoreHistory.created_at >= cutoff)
+          .order_by(RiskScoreHistory.created_at.desc())
+    )
+    return q.all()
 
 
 def calculate_and_store_scores(db: Session, context_id: int) -> RiskScore:

@@ -13,10 +13,12 @@ from app.schemas.risks.risk_scenario_context import (
 )
 from app.schemas.risks.risk_context_list import RiskContextListResponse
 from app.schemas.risks.risk_context_details import RiskContextDetails
+from app.schemas.risks.change_feed import ContextChangesOut
 from app.services import calculate_risk_scores_by_context
 from app.crud.risks import risk_scenario_context as crud_legacy, risk_context_list, context_metrics
 from app.crud.risks.risk_scenario_context import RiskScenarioContextCRUD as rsc_crud
 from app.constants.scopes import normalize_scope, is_valid_scope, SCOPE_TYPES
+from app.services import risk_history
 
 router = APIRouter(prefix="/risk_scenario_contexts", tags=["Risk Contexts"])
 
@@ -163,6 +165,21 @@ def update_context(context_id: int, payload: RiskScenarioContextUpdate, db: Sess
 def delete_context(context_id: int, db: Session = Depends(get_db)):
     rsc_crud.delete(db, context_id)
     return None
+
+
+# -------------------------------------------------------------
+# Unified Change Feed (read-only)
+# -------------------------------------------------------------
+@router.get("/{context_id}/changes", response_model=ContextChangesOut)
+@router.get("/{context_id}/changes/", response_model=ContextChangesOut)
+def get_context_changes(
+    context_id: int,
+    days: int = Query(90, ge=1, le=365),
+    limit: int = Query(100, ge=1, le=500),
+    cursor: Optional[str] = Query(None),
+):
+    changes, next_cursor = risk_history.get_context_changes(context_id=context_id, days=days, limit=limit, cursor=cursor)
+    return ContextChangesOut(changes=changes, nextCursor=next_cursor)
 
 
 # -------------------------------------------------------------

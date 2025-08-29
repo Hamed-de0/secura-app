@@ -199,3 +199,12 @@ export async function fetchContextHistory(contextId, { days = 90 } = {}) {
   const resp = await getJSON(url, { });
   return Array.isArray(resp) ? resp : [];
 }
+
+// Unified change feed for a context (residual deltas + evidence lifecycle)
+export async function fetchContextChanges(contextId, { days = 90, limit = 100, cursor } = {}) {
+  if (!contextId) return { changes: [], nextCursor: null };
+  const url = `risks/risk_scenario_contexts/${contextId}/changes/`;
+  const searchParams = buildSearchParams({ days, limit, cursor });
+  const resp = await getJSON(url, { searchParams });
+  return resp || { changes: [], nextCursor: null };
+}
