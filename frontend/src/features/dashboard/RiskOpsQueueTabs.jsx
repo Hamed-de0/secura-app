@@ -174,7 +174,15 @@ export default function RiskOpsQueueTabs() {
         });
         if (!alive) return;
         const items = Array.isArray(resp?.items) ? resp.items : (Array.isArray(resp) ? resp : []);
-        setRdRows(mapReviewsDue(items, { horizonDays: 30 }));
+        const rows = mapReviewsDue(items, { horizonDays: 30 });
+        const normalized = rows.map((r) => {
+          const s = r?.policyOverlays?.reviewSLA?.status;
+          if (!s) return r;
+          const v = String(s || '').toLowerCase();
+          const flag = v.includes('overdue') ? 'OVERDUE' : (v.includes('soon') || v.includes('warn')) ? 'WARN' : 'OK';
+          return { ...r, slaFlag: flag };
+        });
+        setRdRows(normalized);
       } finally {
         if (alive) setRdLoading(false);
       }
@@ -199,7 +207,8 @@ export default function RiskOpsQueueTabs() {
         const id = c.contextId ?? c.id;
         const scope = c.scopeName || c.scopeDisplay || c.scope || c.scopeRef?.label || '—';
         const owner = c.owner || c.owner_name || 'Unassigned';
-        return [id, { scope, owner }];
+        const overdueOverlay = c?.policyOverlays?.evidence?.overdue;
+        return [id, { scope, owner, overdueOverlay }];
       }));
 
       const ctxIds = Array.from(metaById.keys());
@@ -237,6 +246,16 @@ export default function RiskOpsQueueTabs() {
       }
       await Promise.all(Array.from({ length: Math.max(1, maxConcurrency) }, () => worker()));
       if (!alive) return;
+      out.sort((a, b) => {
+        const ao = metaById.get(a.contextId)?.overdueOverlay;
+        const bo = metaById.get(b.contextId)?.overdueOverlay;
+        const an = Number.isFinite(ao) ? Number(ao) : -1;
+        const bn = Number.isFinite(bo) ? Number(bo) : -1;
+        if (an !== bn) return bn - an;
+        const at = a.lastEvidenceAt ? Date.parse(a.lastEvidenceAt) : 0;
+        const bt = b.lastEvidenceAt ? Date.parse(b.lastEvidenceAt) : 0;
+        return bt - at;
+      });
       setEvRows(out);
     } finally {
       if (alive) setEvLoading(false);

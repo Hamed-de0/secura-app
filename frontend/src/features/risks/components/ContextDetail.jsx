@@ -299,6 +299,44 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
             {overview.overAppetite ? <Chip size="small" label="Over Appetite" color="error" /> : <Chip size="small" label="Within Appetite" />}
           </Stack>
 
+          {/* Overlays pills (optional): Appetite, Review SLA, Evidence */}
+          {overview?.policyOverlays && (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: .5, flexWrap: 'wrap' }}>
+              {(() => {
+                const po = overview.policyOverlays || {};
+                const app = po.appetite || {};
+                const rev = po.reviewSLA || {};
+                const ev = po.evidence || {};
+                const appetColor = (b) => {
+                  const v = String(b || '').toLowerCase();
+                  if (v === 'red') return 'error';
+                  if (v === 'amber' || v === 'yellow') return 'warning';
+                  if (v === 'green') return 'success';
+                  return 'default';
+                };
+                return (
+                  <>
+                    {app.breach && (
+                      <Tooltip title={`G:${app.greenMax ?? '—'} A:${app.amberMax ?? '—'}${(app.deltaAbove != null) ? ` Δ+${app.deltaAbove}` : ''}`}>
+                        <Chip size="small" color={appetColor(app.breach)} label="Appetite" />
+                      </Tooltip>
+                    )}
+                    {rev.status && (
+                      <Tooltip title={rev.nextReview ? `Next: ${new Date(rev.nextReview).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}` : 'Next: —'}>
+                        <Chip size="small" color={(String(rev.status).toLowerCase().includes('overdue')) ? 'error' : (String(rev.status).toLowerCase().includes('soon') || String(rev.status).toLowerCase().includes('warn')) ? 'warning' : 'success'} label={`Review: ${rev.status}`} />
+                      </Tooltip>
+                    )}
+                    {(ev.ok != null || ev.warn != null || ev.overdue != null) && (
+                      <Tooltip title={ev.lastEvidenceAt ? `Last: ${new Date(ev.lastEvidenceAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}` : 'Last: —'}>
+                        <Chip size="small" color={(Number(ev.overdue) > 0) ? 'error' : (Number(ev.warn) > 0) ? 'warning' : 'success'} label={`Ev: ${ev.overdue ?? 0}/${ev.warn ?? 0}/${ev.ok ?? 0}`} />
+                      </Tooltip>
+                    )}
+                  </>
+                );
+              })()}
+            </Stack>
+          )}
+
           <Divider />
 
           <Stack direction="row" spacing={2} flexWrap="wrap">

@@ -45,13 +45,16 @@ export function mapOverAppetite(items = []) {
       greenMax: greenMax ?? null,
       amberMax: amberMax ?? null,
       deltaAbove,
+      overAppetite: (typeof it.overAppetite === 'boolean' ? it.overAppetite : undefined),
       owner: it.owner ?? it.owner_name ?? 'Unassigned',
       nextReview: toIso(it.nextReview ?? it.next_review),
       updatedAt: toIso(it.updatedAt ?? it.updated_at ?? it.lastUpdated),
+      // pass-through normalized overlays when provided by risks adapter
+      policyOverlays: it.policyOverlays,
     };
   });
-  // Client-side filter fallback: keep only rows where residual > amberMax
-  return rows.filter((r) => Number.isFinite(r.residual) && Number.isFinite(r.amberMax) && r.residual > r.amberMax);
+  // Prefer server overAppetite overlay; fallback to residual vs amberMax
+  return rows.filter((r) => (r.overAppetite === true) || (Number.isFinite(r.residual) && Number.isFinite(r.amberMax) && r.residual > r.amberMax));
 }
 
 function slaFromOverlayOrDate(item, { now = new Date(), horizonDays = 30 } = {}) {
@@ -88,6 +91,7 @@ export function mapReviewsDue(items = [], opts = {}) {
       nextReview: toIso(it.nextReview ?? it.next_review),
       slaFlag,
       updatedAt: toIso(it.updatedAt ?? it.updated_at ?? it.lastUpdated),
+      policyOverlays: it.policyOverlays,
     };
   });
   // Only rows that need attention (WARN or OVERDUE)
@@ -109,13 +113,14 @@ export function adaptQueueEvidenceOverdue(items = [], { status = 'active' } = {}
       freshness: ev.freshness,
       capturedAt: ev.capturedAt,
       status: ev.status || 'active',
+      policyOverlays: ev.policyOverlays,
     }));
   return rows;
 }
 
 // Controls Awaiting Verification: pass-through; evidence status filtering typically applied server-side
 export function adaptQueueControlsAwaitingVerification(items = []) {
-  return Array.isArray(items) ? items : [];
+  return Array.isArray(items) ? items.map((it) => ({ ...it, policyOverlays: it.policyOverlays })) : [];
 }
 
 export function mapExceptionsExpiring(items = [], { horizonDays = 30 } = {}) {
@@ -134,6 +139,7 @@ export function mapExceptionsExpiring(items = [], { horizonDays = 30 } = {}) {
       reference,
       endDate,
       owner: ex.owner || ex.requested_by || 'Unassigned',
+      policyOverlays: ex.policyOverlays,
     };
   });
   // filter: endDate within horizonDays from today
@@ -164,6 +170,7 @@ export function mapRecentChanges(items = [], { days = 7 } = {}) {
       scope: labelScope(it),
       owner: it.owner ?? it.owner_name ?? 'Unassigned',
       updatedAt: toIso(it.updatedAt ?? it.updated_at ?? it.lastUpdated),
+      policyOverlays: it.policyOverlays,
     };
   }).filter((r) => within(r.updatedAt));
 }

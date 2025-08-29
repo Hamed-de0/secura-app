@@ -79,6 +79,25 @@ export function adaptContextsToRegisterRows(
       rag,       // 'green' | 'yellow' | 'red'
       ragMui,    // 'success' | 'warning' | 'error'
       updatedAt: it.lastUpdated || it.updatedAt || null, // raw ISO if needed
+      // policyOverlays: normalized server overlays (optional)
+      policyOverlays: {
+        appetite: {
+          breach: it.rag,
+          greenMax: it.appetite?.greenMax,
+          amberMax: it.appetite?.amberMax,
+          deltaAbove: it.deltaAbove,
+        },
+        reviewSLA: {
+          status: it.reviewSLAStatus,
+          nextReview: it.nextReview,
+        },
+        evidence: {
+          ok: it.evidence?.ok,
+          warn: it.evidence?.warn,
+          overdue: it.evidence?.overdue,
+          lastEvidenceAt: (it.evidenceSummary?.lastEvidenceAt ?? it.evidence?.lastEvidenceAt),
+        },
+      },
     };
   });
 }
@@ -123,4 +142,31 @@ function formatRelative(iso, now = new Date()) {
 
   const y = Math.floor(days / 365);
   return `${y}y`;
+}
+
+
+// Additive detail adapter (optional): mirrors normalization without client math
+export function adaptRiskContextDetail(detail = {}) {
+  if (!detail || typeof detail !== 'object') return detail;
+  const out = { ...detail };
+  // policyOverlays: normalized server overlays (optional)
+  out.policyOverlays = {
+    appetite: {
+      breach: detail.rag,
+      greenMax: detail.appetite?.greenMax,
+      amberMax: detail.appetite?.amberMax,
+      deltaAbove: detail.deltaAbove,
+    },
+    reviewSLA: {
+      status: detail.reviewSLAStatus,
+      nextReview: detail.nextReview,
+    },
+    evidence: {
+      ok: detail.evidence?.ok,
+      warn: detail.evidence?.warn,
+      overdue: detail.evidence?.overdue,
+      lastEvidenceAt: (detail.evidenceSummary?.lastEvidenceAt ?? detail.evidence?.lastEvidenceAt ?? detail.evidenceSummary?.lastEvidenceMax),
+    },
+  };
+  return out;
 }
