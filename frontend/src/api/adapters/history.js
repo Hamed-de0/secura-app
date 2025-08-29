@@ -72,6 +72,7 @@ export function adaptContextChanges(items = []) {
   return arr.map((it) => {
     const ts = toIso(it.ts || it.created_at) || null;
     const type = String(it.type || '').toLowerCase();
+    const subtype = String(it.subtype || '').toLowerCase();
     let label = 'Change';
     let link = undefined;
     // prefer alias key 'from' but accept 'from_' as fallback
@@ -97,11 +98,22 @@ export function adaptContextChanges(items = []) {
         label = `${label} (to ${toVal})`;
       }
       if (it.entityId != null) link = { type: 'evidence', id: it.entityId };
+    } else if (type === 'acceptance') {
+      // Map acceptance change items to friendly labels
+      if (subtype === 'approved') {
+        label = 'Risk accepted';
+      } else if (subtype === 'expired') {
+        label = 'Acceptance expired';
+      } else {
+        label = 'Acceptance update';
+      }
+      if (it.entityId != null) link = { type: 'exception', id: it.entityId };
     }
 
     return {
       ts,
       type,
+      subtype,
       label,
       field: label,
       from: fromVal,

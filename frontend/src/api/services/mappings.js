@@ -91,9 +91,37 @@ export async function updateCrosswalkMapping(mapping_id, partial) {
       const ctlId = partial.control_id;
       console.log('error on update', reqId, ctlId, partial);
       // if (!reqId || !ctlId) throw e;
-      // await deleteJSON(`crosswalks/${mapping_id}`);
+      // await deleteJSON(`crosswalks/${mapping_id}/`);
       // return createCrosswalkMapping(partial);
     }
     throw e;
   }
+}
+
+/**
+ * CSV Import: POST /crosswalks/bulk/ (multipart form-data)
+ * Accepts a File/Blob and optional upsert flag; returns server summary.
+ * Note: Uses fetch directly to send FormData with trailing slash.
+ */
+export async function importCrosswalksBulk(file, { upsert_atoms = false } = {}) {
+  if (!file) throw new Error("file is required");
+  const form = new FormData();
+  form.append("file", file);
+  const base = (import.meta?.env?.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
+  const url = new URL("/crosswalks/bulk/", base);
+  if (upsert_atoms) url.searchParams.set("upsert_atoms", "true");
+  const resp = await fetch(url.toString(), {
+    method: "POST",
+    body: form,
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
+  if (!resp.ok) {
+    const payload = await resp.json().catch(() => ({}));
+    const msg = payload?.message || payload?.detail || resp.statusText || "Import failed";
+    const err = new Error(msg);
+    err.status = resp.status;
+    throw err;
+  }
+  return resp.json().catch(() => ({}));
 }

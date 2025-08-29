@@ -10,6 +10,7 @@ from app.crud.risks.risk_score import get_score_history_by_context
 from app.models.evidence.evidence_lifecycle_event import EvidenceLifecycleEvent
 from app.models.compliance.control_evidence import ControlEvidence
 from app.models.controls.control_context_link import ControlContextLink
+from app.models.compliance.exception import ComplianceException
 
 
 # Type alias for caller-friendly items (schema may formalize later)
@@ -164,8 +165,55 @@ def get_context_changes(
     except Exception:
         pass
 
+    # 3) Acceptance (exceptions marked as risk acceptance) for this context
+    acc_items: List[ChangeItem] = []
+    try:
+        q = (
+            db.query(ComplianceException)
+            .filter(ComplianceException.risk_scenario_context_id == context_id)
+            .filter(ComplianceException.risk_acceptance_ref.isnot(None))
+        )
+        for ex in q.all() or []:
+            try:
+                status = (getattr(ex, "status", None) or "").lower()
+                # approved/active event at start_date
+                sd = getattr(ex, "start_date", None)
+                if sd is not None:
+                    start_ts = datetime(sd.year, sd.month, sd.day)
+                    if status in {"approved", "active"} and start_ts >= cutoff:
+                        acc_items.append({
+                            "ts": start_ts,
+                            "type": "acceptance",
+                            "subtype": "approved",
+                            "field": "status",
+                            "from": "submitted",
+                            "to": status,
+                            "entityId": getattr(ex, "id", None),
+                            "actor": (getattr(ex, "owner", None) or getattr(ex, "requested_by", None) or None),
+                            "notes": (getattr(ex, "title", None) or getattr(ex, "reason", None) or None),
+                        })
+                # expired event at end_date
+                ed = getattr(ex, "end_date", None)
+                if ed is not None:
+                    end_ts = datetime(ed.year, ed.month, ed.day)
+                    if end_ts <= now and end_ts >= cutoff:
+                        acc_items.append({
+                            "ts": end_ts,
+                            "type": "acceptance",
+                            "subtype": "expired",
+                            "field": "status",
+                            "from": status or None,
+                            "to": "expired",
+                            "entityId": getattr(ex, "id", None),
+                        })
+            except Exception:
+                # ignore malformed rows
+                pass
+    except Exception:
+        pass
+
     # Merge and sort desc by timestamp
-    merged: List[ChangeItem] = [*score_items, *ev_items]
+    merged: List[ChangeItem] = [*score_items, *ev_items, *acc_items]
     merged.sort(key=lambda it: it.get("ts") or now, reverse=True)
 
     if limit and limit > 0:

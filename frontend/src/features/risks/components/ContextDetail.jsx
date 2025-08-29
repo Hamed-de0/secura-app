@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import GppGoodIcon from '@mui/icons-material/GppGood';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import Sparkline from '../../risks/charts/Sparkline';
 import { useSearchParams } from 'react-router-dom';
 import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextHistory, listContextEvidence, deleteContextEvidence, restoreEvidence, supersedeEvidence, fetchContextChanges } from '../../../api/services/risks';
@@ -676,6 +677,12 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
               {historyItems.map((h, idx) => (
                 <Stack key={idx} direction="row" spacing={1} alignItems="center" justifyContent="space-between">
                   <Typography variant="body2" sx={{ minWidth: 0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {String(h.type || '').toLowerCase() === 'acceptance' && String(h.subtype || '').toLowerCase() === 'approved' && (
+                      <GppGoodIcon fontSize="small" sx={{ mr: .5, color: 'success.main' }} />
+                    )}
+                    {String(h.type || '').toLowerCase() === 'acceptance' && String(h.subtype || '').toLowerCase() === 'expired' && (
+                      <AccessTimeIcon fontSize="small" sx={{ mr: .5, color: 'warning.main' }} />
+                    )}
                     <strong>{h.field}</strong>: {String(h.from)} → {String(h.to)}
                   </Typography>
                   <Chip size="small" variant="outlined" label={new Date(h.ts).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} />

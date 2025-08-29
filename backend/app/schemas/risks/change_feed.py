@@ -5,7 +5,7 @@ from datetime import datetime
 
 class ChangeItem(BaseModel):
     ts: datetime
-    type: Literal['residual', 'evidence']
+    type: Literal['residual', 'evidence', 'acceptance']
     subtype: Optional[str] = None
     entityId: Optional[int] = None
     field: Optional[str] = None
@@ -25,4 +25,3 @@ class ContextChangesOut(BaseModel):
 
     class Config:
         extra = "ignore"
-
