@@ -51,6 +51,31 @@ export function adaptContextsToRegisterRows(
     const status = it.status ?? 'Open';
     const { color: statusColor, variant: statusVariant } = statusChipMeta(status);
 
+    // Optional acceptance summary from exceptions collection if present
+    let acceptance;
+    try {
+      const ex = Array.isArray(it.exceptions) ? it.exceptions : [];
+      const acc = ex
+        .map((e) => ({
+          id: e.id,
+          isAcceptance: !!(e.risk_acceptance_ref),
+          status: e.status,
+          startDate: e.start_date || e.startDate,
+          endDate: e.end_date || e.endDate,
+        }))
+        .filter((e) => e.isAcceptance && ['approved','active'].includes(String(e.status || '').toLowerCase()))
+        .sort((a,b) => new Date(b.startDate || 0) - new Date(a.startDate || 0))[0];
+      if (acc) {
+        acceptance = {
+          isAccepted: true,
+          approvedAt: acc.startDate || null,
+          expiresAt: acc.endDate || null,
+          exceptionId: acc.id,
+          status: acc.status,
+        };
+      }
+    } catch {}
+
     return {
       id: it.contextId ?? it.id,
       scenario: it.scenarioTitle ?? it.scenario ?? '—',
@@ -98,6 +123,7 @@ export function adaptContextsToRegisterRows(
           lastEvidenceAt: (it.evidenceSummary?.lastEvidenceAt ?? it.evidence?.lastEvidenceAt),
         },
       },
+      acceptance,
     };
   });
 }
@@ -168,5 +194,28 @@ export function adaptRiskContextDetail(detail = {}) {
       lastEvidenceAt: (detail.evidenceSummary?.lastEvidenceAt ?? detail.evidence?.lastEvidenceAt ?? detail.evidenceSummary?.lastEvidenceMax),
     },
   };
+  // Optional acceptance summary from embedded exceptions
+  try {
+    const ex = Array.isArray(detail.exceptions) ? detail.exceptions : [];
+    const acc = ex
+      .map((e) => ({
+        id: e.id,
+        isAcceptance: !!(e.isAcceptance ?? e.risk_acceptance_ref),
+        status: e.status,
+        startDate: e.start_date || e.startDate,
+        endDate: e.end_date || e.endDate,
+      }))
+      .filter((e) => e.isAcceptance && ['approved','active'].includes(String(e.status || '').toLowerCase()))
+      .sort((a,b) => new Date(b.startDate || 0) - new Date(a.startDate || 0))[0];
+    if (acc) {
+      out.acceptance = {
+        isAccepted: true,
+        approvedAt: acc.startDate || null,
+        expiresAt: acc.endDate || null,
+        exceptionId: acc.id,
+        status: acc.status,
+      };
+    }
+  } catch {}
   return out;
 }

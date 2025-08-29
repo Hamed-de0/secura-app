@@ -237,6 +237,11 @@ export default function RiskRegisterPage() {
 
   // CSV Export (visible columns, current page rows)
   const handleExportCSV = React.useCallback(() => {
+    // Guardrail for very large exports
+    if (Array.isArray(rows) && rows.length > 10000) {
+      const ok = window.confirm('Large export: this will export more than 10,000 rows. Continue?');
+      if (!ok) return;
+    }
     const order = (gridView?.snapshot?.columns?.order || []).filter(Boolean);
     const visibility = gridView.columnVisibilityModel || {};
     const colById = new Map(columns.map((c) => [c.field, c]));
@@ -246,7 +251,18 @@ export default function RiskRegisterPage() {
     const header = selectedFields.map((id) => colById.get(id)?.headerName || id);
     const esc = (v) => {
       if (v == null) return '';
-      const s = String(v);
+      // Format dates in Europe/Berlin when possible
+      let s;
+      try {
+        const d = new Date(v);
+        if (!Number.isNaN(d.getTime())) {
+          s = d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
+        } else {
+          s = String(v);
+        }
+      } catch {
+        s = String(v);
+      }
       if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
       return s;
     };
@@ -315,8 +331,27 @@ export default function RiskRegisterPage() {
               onClick={async () => {
                 setBulkBusy(true);
                 try {
-                  const { updated, failed } = await bulkAssignRiskContextOwner(selection, bulkOwner?.id ?? null);
-                  setToast({ open: true, severity: failed ? 'warning' : 'success', message: `{updated:${updated}, failed:${failed}}` });
+                  // Concurrency-limited fan-out (max 5)
+                  const ids = Array.isArray(selection) ? selection.slice() : [];
+                  const maxConc = 5;
+                  let idx = 0, updated = 0, failed = 0;
+                  const failedIds = [];
+                  async function worker() {
+                    while (idx < ids.length) {
+                      const i = idx++;
+                      const id = ids[i];
+                      try {
+                        await updateRiskContextOwner(id, bulkOwner?.id ?? null);
+                        updated += 1;
+                      } catch {
+                        failed += 1;
+                        if (failedIds.length < 3) failedIds.push(id);
+                      }
+                    }
+                  }
+                  await Promise.all(Array.from({ length: Math.min(maxConc, Math.max(1, ids.length)) }, () => worker()));
+                  const suffix = failed ? ` (failed: ${failedIds.join(', ')})` : '';
+                  setToast({ open: true, severity: failed ? 'warning' : 'success', message: `updated: ${updated}, failed: ${failed}${suffix}` });
                   setSelection([]);
                   setBulkOwner(null);
                   reloadCurrentPage();

@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { Box, Tabs, Tab, Tooltip, Typography } from '@mui/material';
+import { Box, Tabs, Tab, Tooltip, Typography, Chip } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { DataGrid } from '@mui/x-data-grid';
-import { fetchRiskContexts, fetchContextControls, fetchContextEvidence } from '../../api/services/risks';
+import { fetchRiskContexts, fetchContextControls, fetchContextEvidence, fetchRiskContextDetail } from '../../api/services/risks';
 import { fetchExceptions } from '../../api/services/exceptions';
 import { mapOverAppetite, mapReviewsDue, mapExceptionsExpiring, mapRecentChanges } from '../../api/adapters/queues';
 import { adaptContextControlsResponse } from '../../api/adapters/controlsContext';
@@ -40,6 +40,17 @@ const COLUMNS = {
   overAppetite: [
     { field: 'contextId', headerName: 'ID', width: 72 },
     { field: 'scenarioTitle', headerName: 'Scenario', flex: 1.4, minWidth: 220 },
+    { field: 'accepted', headerName: 'Accepted', width: 110, sortable: false, renderCell: (p) => {
+      const isAccepted = !!(p?.row?.accepted);
+      if (!isAccepted) return '';
+      const exp = p?.row?.acceptedExpires;
+      const tip = exp ? `until ${new Date(exp).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })}` : 'Accepted';
+      return (
+        <Tooltip title={tip} placement="top" arrow>
+          <Chip size="small" label="Accepted" />
+        </Tooltip>
+      );
+    } },
     { field: 'scope', headerName: 'Scope', flex: 1.0, minWidth: 160 },
     { field: 'residual', headerName: 'Residual (Effective)', width: 140, valueFormatter: (p) => (p?.row?.residualDisplay ?? p?.row?.residualEffective ?? p?.value ?? '—') },
     { field: 'targetResidual', headerName: 'Target', width: 100, valueFormatter: (p) => (p?.row?.targetResidualDisplay ?? (p && p.value != null ? p.value : '—')) },
@@ -112,6 +123,9 @@ export default function RiskOpsQueueTabs() {
   const [oaRows, setOaRows] = React.useState([]);
   const [oaLoading, setOaLoading] = React.useState(false);
   const [oaModel, setOaModel] = React.useState({ page: 0, pageSize: 10 });
+  // Lazy acceptance cache for Over Appetite rows
+  const acceptedCacheRef = React.useRef(new Map()); // id -> { accepted, expiresAt }
+  const inflightRef = React.useRef(new Set());
   // Reviews Due state
   const [rdRows, setRdRows] = React.useState([]);
   const [rdLoading, setRdLoading] = React.useState(false);
@@ -159,6 +173,45 @@ export default function RiskOpsQueueTabs() {
     })();
     return () => { alive = false; };
   }, [value, oaModel.page, oaModel.pageSize]);
+
+  // Lazy-fetch acceptance for visible Over Appetite rows (concurrency <= 3)
+  React.useEffect(() => {
+    if (value !== 0) return;
+    const start = oaModel.page * oaModel.pageSize;
+    const end = Math.min(oaRows.length, start + oaModel.pageSize);
+    const visible = oaRows.slice(start, end);
+    const ids = visible.map((r) => r?.contextId || r?.id).filter(Boolean);
+    const toFetch = ids.filter((id) => !acceptedCacheRef.current.has(id) && !inflightRef.current.has(id));
+    if (toFetch.length === 0) return;
+    let alive = true;
+    let idx = 0;
+    const maxWorkers = Math.min(3, toFetch.length);
+    async function worker() {
+      while (idx < toFetch.length) {
+        const i = idx++;
+        const id = toFetch[i];
+        inflightRef.current.add(id);
+        try {
+          const detail = await fetchRiskContextDetail(id);
+          if (!alive) break;
+          const acc = !!(detail?.acceptance?.isAccepted);
+          const exp = detail?.acceptance?.expiresAt || null;
+          acceptedCacheRef.current.set(id, { accepted: acc, expiresAt: exp });
+          setOaRows((prev) => prev.map((r) => {
+            const rid = r?.contextId || r?.id;
+            if (rid === id) return { ...r, accepted: acc, acceptedExpires: exp };
+            return r;
+          }));
+        } catch (_) {
+          // ignore errors to keep UI smooth
+        } finally {
+          inflightRef.current.delete(id);
+        }
+      }
+    }
+    Promise.all(Array.from({ length: maxWorkers }, () => worker()));
+    return () => { alive = false; };
+  }, [value, oaRows, oaModel.page, oaModel.pageSize]);
 
   React.useEffect(() => {
     if (value !== 1) return; // only fetch when Reviews Due tab is active

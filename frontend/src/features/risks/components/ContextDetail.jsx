@@ -4,6 +4,7 @@ import {
   Button, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import GppGoodIcon from '@mui/icons-material/GppGood';
 import Sparkline from '../../risks/charts/Sparkline';
 import { useSearchParams } from 'react-router-dom';
 import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextHistory, listContextEvidence, deleteContextEvidence, restoreEvidence, supersedeEvidence, fetchContextChanges } from '../../../api/services/risks';
@@ -15,11 +16,13 @@ import OwnerPicker from './OwnerPicker';
 import { adaptContextControlsResponse } from '../../../api/adapters/controlsContext';
 import { adaptEvidenceResponse } from '../../../api/adapters/evidence';
 import { adaptHistoryChanges, adaptEvidenceLifecycle, adaptContextChanges } from '../../../api/adapters/history';
+import { adaptRiskContextDetail } from '../../../api/adapters/risks';
 import LinkIcon from '@mui/icons-material/Link';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import ScienceIcon from '@mui/icons-material/Science';
 import { fetchEvidenceLifecycle } from '../../../api/services/evidence';
+import RiskAcceptanceDialog from '../../exceptions/components/RiskAcceptanceDialog.jsx';
 
 const DOMAINS = ['C','I','A','L','R'];
 
@@ -57,9 +60,14 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
   const [historyItems, setHistoryItems] = React.useState([]);
   const [changesCursor, setChangesCursor] = React.useState(null);
   const [lifecycleItems, setLifecycleItems] = React.useState([]);
+  const [acceptOpen, setAcceptOpen] = React.useState(false);
   const reload = React.useCallback(async () => {
-    console.log('ContextDetail: reload');
-  });
+    if (!contextId) return;
+    try {
+      const data = await fetchRiskContextDetail(contextId);
+      setCtx(data);
+    } catch (_) {}
+  }, [contextId]);
     
   React.useEffect(() => {
     if (!contextId) return;
@@ -71,7 +79,7 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
       try {
         const data = await fetchRiskContextDetail(contextId);
         if (!alive) return;
-        setCtx(data);
+        setCtx(adaptRiskContextDetail(data));
         onLoadedTitle?.(data?.scenarioTitle);
       } catch (e) {
         if (!alive) return;
@@ -381,6 +389,26 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
               sx={{ minWidth: 300 }}
             />
             <Chip label={`Status: ${overview.status ?? '—'}`} />
+            {overview?.acceptance?.isAccepted && (
+              (() => {
+                const exp = overview?.acceptance?.expiresAt;
+                const tip = exp ? `until ${new Date(exp).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })}` : 'Accepted';
+                return (
+                  <Tooltip title={tip} placement="top" arrow>
+                    <Chip icon={<GppGoodIcon fontSize="small" />} color="success" label="Accepted" />
+                  </Tooltip>
+                );
+              })()
+            )}
+            {!overview?.acceptance?.isAccepted && (
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => setAcceptOpen(true)}
+              >
+                Accept risk
+              </Button>
+            )}
             <Chip label={`Last review: ${overview.lastReview ? new Date(overview.lastReview).toLocaleDateString() : '—'}`} />
             <Chip label={`Next review: ${overview.nextReview ? new Date(overview.nextReview).toLocaleDateString() : '—'}`} />
           </Stack>
@@ -677,6 +705,28 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
           )}
         </Box>
       )}
+      {/* Accept Risk Dialog */}
+      <RiskAcceptanceDialog
+        open={acceptOpen}
+        onClose={() => setAcceptOpen(false)}
+        contextId={contextId}
+        onSubmitted={async (created) => {
+          await reload();
+          // Optimistic: ensure chip shows even if server omits adapter fields
+          if (created && created.id) {
+            setCtx((prev) => (prev ? {
+              ...prev,
+              acceptance: {
+                isAccepted: true,
+                exceptionId: created.id,
+                status: created.status || 'approved',
+                approvedAt: created.start_date || created.startDate || new Date().toISOString(),
+                expiresAt: created.end_date || created.endDate || null,
+              },
+            } : prev));
+          }
+        }}
+      />
     </Box>
   );
 }

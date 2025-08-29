@@ -1,0 +1,40 @@
+{
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/venv": true,
+    "**/env": true,
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.next": true,
+    "**/coverage": true,
+    "**/.cache": true,
+    "**/.pnpm-store": true,
+    "**/.yarn/cache": true,
+    "**/.yarn/unplugged": true,
+    "**/.turbo": true,
+    "**/.parcel-cache": true,
+    "**/out": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.venv/**": true,
+    "**/venv/**": true,
+    "**/env/**": true,
+    "**/__pycache__/**": true,
+    "**/.pytest_cache/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true,
+    "**/.cache/**": true,
+    "**/.pnpm-store/**": true,
+    "**/.yarn/cache/**": true,
+    "**/.yarn/unplugged/**": true,
+    "**/.turbo/**": true,
+    "**/.parcel-cache/**": true,
+    "**/out/**": true
+  }
+}
