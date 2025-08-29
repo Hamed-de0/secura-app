@@ -67,10 +67,11 @@ def get_context_changes(
                         score_items.append({
                             "ts": ts,
                             "type": "residual",
-                            "field": "residual",
+                            "field": "overall",
                             "from": p,
                             "to": c,
                             "entityId": context_id,
+                            "actor": "system",
                         })
                 except Exception:
                     pass
@@ -85,10 +86,11 @@ def get_context_changes(
                             score_items.append({
                                 "ts": ts,
                                 "type": "residual",
-                                "field": f"residual.{d}",
+                                "field": d,
                                 "from": pv,
                                 "to": cv,
                                 "entityId": context_id,
+                                "actor": "system",
                             })
                 except Exception:
                     pass
@@ -107,13 +109,57 @@ def get_context_changes(
             .filter(EvidenceLifecycleEvent.created_at >= cutoff)
         )
         for ev in q.all() or []:
+            sub = (getattr(ev, "event", None) or "").lower()
+            meta = getattr(ev, "meta", {}) or {}
+            actor_name = getattr(ev, "actor_name", None)
+            actor_id = getattr(ev, "actor_id", None)
+            actor_val = actor_name or (str(actor_id) if actor_id is not None else "system")
+
+            field = "status"
+            from_val: Optional[str] = None
+            to_val: Optional[str] = None
+
+            if sub == "retired":
+                from_val, to_val = "active", "retired"
+            elif sub == "restored":
+                # previous could be retired or superseded; we reflect that ambiguity
+                from_val, to_val = "retired/superseded", "active"
+            elif sub == "superseded":
+                from_val, to_val = "active", "superseded"
+            elif sub == "created":
+                from_val, to_val = None, "active"
+            elif sub == "updated":
+                # reflect which attribute changed if present in meta
+                if isinstance(meta, dict):
+                    if "title" in meta:
+                        field = "title"
+                    elif "ref" in meta:
+                        field = "ref"
+                    elif "notes" in meta:
+                        field = "notes"
+                else:
+                    field = "updated"
+
+            # notes: include replacement_id if present
+            notes_val = getattr(ev, "notes", None)
+            try:
+                repl = meta.get("replacement_id") if isinstance(meta, dict) else None
+                if repl is not None:
+                    extra = f"replaced_by: {repl}"
+                    notes_val = (f"{notes_val}; {extra}" if notes_val else extra)
+            except Exception:
+                pass
+
             ev_items.append({
                 "ts": getattr(ev, "created_at", None) or now,
                 "type": "evidence",
-                "subtype": getattr(ev, "event", None),
+                "subtype": sub or None,
                 "entityId": getattr(ev, "evidence_id", None),
-                "actor": getattr(ev, "actor_id", None),
-                "notes": getattr(ev, "notes", None),
+                "field": field,
+                "from": from_val,
+                "to": to_val,
+                "actor": actor_val,
+                "notes": notes_val,
             })
     except Exception:
         pass
@@ -127,4 +173,3 @@ def get_context_changes(
 
     # Cursor: reserved for future paging (timestamp/id based)
     return merged, None
-

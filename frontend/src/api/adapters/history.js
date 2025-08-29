@@ -63,3 +63,51 @@ export function adaptEvidenceLifecycle(items = []) {
     notes: ev.notes || null,
   })).filter((r) => !!r.ts && !!r.action);
 }
+
+// Normalize unified context change feed into UI-friendly rows
+// Input: ChangeItem[] (from /risks/risk_scenario_contexts/{id}/changes/)
+// Output: [{ ts, type, label, from?, to?, actor?, link? }]
+export function adaptContextChanges(items = []) {
+  const arr = Array.isArray(items) ? items : [];
+  return arr.map((it) => {
+    const ts = toIso(it.ts || it.created_at) || null;
+    const type = String(it.type || '').toLowerCase();
+    let label = 'Change';
+    let link = undefined;
+    // prefer alias key 'from' but accept 'from_' as fallback
+    const fromVal = (it.hasOwnProperty('from') ? it.from : it.from_);
+    const toVal = it.to;
+    const actor = it.actor ?? it.actor_id ?? null;
+
+    if (type === 'residual') {
+      const fld = String(it.field || '').toLowerCase();
+      let domain = 'Overall';
+      if (fld === 'overall' || fld === 'residual' || !fld) {
+        domain = 'Overall';
+      } else {
+        domain = fld.toUpperCase();
+      }
+      label = `Residual (${domain}) changed`;
+    } else if (type === 'evidence') {
+      const sub = String(it.subtype || '').toLowerCase();
+      const idPart = (it.entityId != null ? `#${it.entityId} ` : '');
+      label = `Evidence ${idPart}${sub || 'event'}`.trim();
+      // if status changed, append destination
+      if (String(it.field || '').toLowerCase() === 'status' && (toVal != null)) {
+        label = `${label} (to ${toVal})`;
+      }
+      if (it.entityId != null) link = { type: 'evidence', id: it.entityId };
+    }
+
+    return {
+      ts,
+      type,
+      label,
+      field: label,
+      from: fromVal,
+      to: toVal,
+      actor,
+      link,
+    };
+  }).filter((r) => !!r.ts && !!r.type);
+}

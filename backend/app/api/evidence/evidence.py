@@ -1,5 +1,5 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Query
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Query, Header
 from sqlalchemy.orm import Session
 from typing import Optional, List
 
@@ -12,6 +12,7 @@ from app.crud.evidence import (
     list_evidence_for_link, delete_evidence_item,
     create_artifact_db, attach_artifact_to_evidence
 )
+from app.crud.evidence import lifecycle as lc
 
 router = APIRouter(prefix="/evidence", tags=["Evidence"])
 
@@ -20,8 +21,14 @@ router = APIRouter(prefix="/evidence", tags=["Evidence"])
 def create_evidence(link_id: int,
                     payload: EvidenceItemCreate,
                     db: Session = Depends(get_db),
-                    user_id: Optional[int] = None):
+                    user_id: Optional[int] = None,
+                    x_user: Optional[str] = Header(None)):
     row = create_evidence_item(db, link_id=link_id, submitted_by=user_id, payload=payload)
+    try:
+        meta = {"actor_name": (x_user or "system")}
+        lc.write_event(db, row.id, 'created', actor_id=user_id, notes=None, meta=meta)
+    except Exception:
+        pass
     return row
 
 # --- Upload/attach an artifact (DB-blob fallback, multipart) ---
@@ -45,10 +52,19 @@ async def upload_artifact_db(evidence_id: int,
 
 # --- Update evidence (status transitions, review) ---
 @router.patch("/{evidence_id}", response_model=EvidenceItemOut)
-def patch_evidence(evidence_id: int, payload: EvidenceItemUpdate, db: Session = Depends(get_db)):
+def patch_evidence(evidence_id: int, payload: EvidenceItemUpdate, db: Session = Depends(get_db), x_user: Optional[str] = Header(None)):
     row = update_evidence_item(db, evidence_id=evidence_id, payload=payload)
     if not row:
         raise HTTPException(404, "Evidence not found")
+    try:
+        meta = {"actor_name": (x_user or "system")}
+        # Mark fields hinted by payload
+        for k in ("title", "ref", "description"):
+            if getattr(payload, k, None) is not None:
+                meta[k] = True
+        lc.write_event(db, row.id, 'updated', meta=meta)
+    except Exception:
+        pass
     return row
 
 # --- Get / List / Delete ---
@@ -88,8 +104,13 @@ def list_evidence(
     return {"link_id": link_id, "items": items}
 
 @router.delete("/{evidence_id}")
-def delete_evidence(evidence_id: int, db: Session = Depends(get_db)):
+def delete_evidence(evidence_id: int, db: Session = Depends(get_db), x_user: Optional[str] = Header(None)):
     ok = delete_evidence_item(db, evidence_id)
     if not ok:
         raise HTTPException(404, "Evidence not found")
+    try:
+        meta = {"actor_name": (x_user or "system")}
+        lc.write_event(db, evidence_id, 'retired', meta=meta)
+    except Exception:
+        pass
     return {"deleted": True}

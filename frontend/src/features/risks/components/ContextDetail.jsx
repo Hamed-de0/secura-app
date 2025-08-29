@@ -6,7 +6,7 @@ import {
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Sparkline from '../../risks/charts/Sparkline';
 import { useSearchParams } from 'react-router-dom';
-import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextHistory, listContextEvidence, deleteContextEvidence, restoreEvidence, supersedeEvidence } from '../../../api/services/risks';
+import { fetchRiskContextDetail, fetchContextControls, fetchSuggestedControlsForContext, applySuggestedControlToContext, fetchContextHistory, listContextEvidence, deleteContextEvidence, restoreEvidence, supersedeEvidence, fetchContextChanges } from '../../../api/services/risks';
 import { postJSON } from '../../../api/httpClient';
 import UploadEvidenceDialog from '../../actions/UploadEvidenceDialog.jsx';
 import EvidenceLifecycleDialog from '../../../components/evidence/EvidenceLifecycleDialog.jsx';
@@ -14,7 +14,7 @@ import { updateRiskContextOwner } from '../../../api/services/risks';
 import OwnerPicker from './OwnerPicker';
 import { adaptContextControlsResponse } from '../../../api/adapters/controlsContext';
 import { adaptEvidenceResponse } from '../../../api/adapters/evidence';
-import { adaptHistoryChanges, adaptEvidenceLifecycle } from '../../../api/adapters/history';
+import { adaptHistoryChanges, adaptEvidenceLifecycle, adaptContextChanges } from '../../../api/adapters/history';
 import LinkIcon from '@mui/icons-material/Link';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
@@ -55,6 +55,7 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
   const [lifecycleForId, setLifecycleForId] = React.useState(null);
   const [historyLoading, setHistoryLoading] = React.useState(false);
   const [historyItems, setHistoryItems] = React.useState([]);
+  const [changesCursor, setChangesCursor] = React.useState(null);
   const [lifecycleItems, setLifecycleItems] = React.useState([]);
   const reload = React.useCallback(async () => {
     console.log('ContextDetail: reload');
@@ -128,9 +129,22 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
     setHistoryLoading(true);
     (async () => {
       try {
+        // Prefer unified change feed
+        try {
+          const ch = await fetchContextChanges(contextId, { days: 90, limit: 100 });
+          if (!alive) return;
+          const arr = Array.isArray(ch?.changes) ? ch.changes : [];
+          if (arr.length > 0) {
+            setHistoryItems(adaptContextChanges(arr));
+            setChangesCursor(ch?.nextCursor || null);
+            return;
+          }
+        } catch (_) {}
+        // Fallback to legacy residual history
         const raw = await fetchContextHistory(contextId, { days: 90 });
         if (!alive) return;
         setHistoryItems(adaptHistoryChanges(raw));
+        setChangesCursor(null);
       } finally {
         if (alive) setHistoryLoading(false);
       }
