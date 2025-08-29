@@ -13,6 +13,10 @@ from app.models.controls.control import Control
 from app.schemas.risks.risk_context_details import *
 
 from app.services.policy.resolver import *
+from app.services.risk_analysis import (
+    compute_residual_effective_only,
+    compute_target_residual_planned,
+)
 from app.services.evidence.freshness import evidence_aggregate_by_context, evidence_aggregate_for_context
 from app.crud.m4.context_details_summaries import (
     controls_summary_for_context,
@@ -626,6 +630,18 @@ def list_contexts(
         sev = _severity(impact_overall, int(c.likelihood or 0))
         sev_band = _severity_band(sev)
 
+        # Optional gated residuals (effective-only and planned target)
+        try:
+            _g = compute_residual_effective_only(c)
+            residual_gated_val = float(_g.get("overall") or 0.0)
+        except Exception:
+            residual_gated_val = None
+        try:
+            _t = compute_target_residual_planned(c)
+            target_residual_val = float(_t.get("overall") or 0.0)
+        except Exception:
+            target_residual_val = None
+
         # controls/evidence
         ev = impl_by_ctx.get(c.id, {"implemented": 0, "overdue": 0, "max_evidence": None})
         overdue = ev["overdue"]
@@ -689,6 +705,8 @@ def list_contexts(
             "impactOverall": impact_overall,     # NEW
             "initial": initial,
             "residual": residual,
+            "residual_gated": residual_gated_val,
+            "targetResidual": target_residual_val,
             "trend": [{"x": i, "y": 40 + ((i * 3) % 12)} for i in range(12)],  # placeholder
             "controls": {
                 "implemented": implemented_count,
@@ -992,7 +1010,19 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
     controls_summary = controls_summary_for_context(db, context_id)
     evidence_summary = evidence_summary_for_context(db, context_id)
 
-    # --- 10) Response ---
+    # --- 10) Optional gated/target residuals ---
+    try:
+        _g = compute_residual_effective_only(ctx)
+        residual_gated_val = float(_g.get("overall") or 0.0)
+    except Exception:
+        residual_gated_val = None
+    try:
+        _t = compute_target_residual_planned(ctx)
+        target_residual_val = float(_t.get("overall") or 0.0)
+    except Exception:
+        target_residual_val = None
+
+    # --- 11) Response ---
     return RiskContextDetails(
         contextId=ctx.id,
         scenarioId=scn.id,
@@ -1014,6 +1044,8 @@ def get_context_by_details(db: Session, context_id: int, days: int = 90):
 
         initial=initial,
         residual=residual,
+        residual_gated=residual_gated_val,
+        targetResidual=target_residual_val,
         severity=severity,
         severityBand=severity_band,
         overAppetite=over_appetite,

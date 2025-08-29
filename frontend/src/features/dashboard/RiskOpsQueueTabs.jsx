@@ -41,7 +41,7 @@ const COLUMNS = {
     { field: 'contextId', headerName: 'ID', width: 72 },
     { field: 'scenarioTitle', headerName: 'Scenario', flex: 1.4, minWidth: 220 },
     { field: 'scope', headerName: 'Scope', flex: 1.0, minWidth: 160 },
-    { field: 'residual', headerName: 'Residual', width: 100, valueFormatter: (p) => (p?.row?.residualDisplay ?? p?.value ?? '—') },
+    { field: 'residual', headerName: 'Residual (Effective)', width: 140, valueFormatter: (p) => (p?.row?.residualDisplay ?? p?.row?.residualEffective ?? p?.value ?? '—') },
     { field: 'targetResidual', headerName: 'Target', width: 100, valueFormatter: (p) => (p?.row?.targetResidualDisplay ?? (p && p.value != null ? p.value : '—')) },
     { field: 'greenMax', headerName: 'G', width: 70 },
     { field: 'amberMax', headerName: 'A', width: 70 },

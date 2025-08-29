@@ -64,6 +64,9 @@ export function adaptContextsToRegisterRows(
       I: maxImpact,
       initial: it.initial ?? 0,
       residual,
+      // TODO(gated): uses optional residual_gated/targetResidual
+      residualEffective: it.residual_gated,
+      targetResidual: it.targetResidual,
       owner: it.owner ?? 'Unassigned',
       // extras for renderers
       

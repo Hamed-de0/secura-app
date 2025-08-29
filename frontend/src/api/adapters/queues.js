@@ -20,10 +20,11 @@ function labelScope(it) {
 export function mapOverAppetite(items = []) {
   const rows = items.map((it) => {
     const id = it.contextId ?? it.id;
-    // Keep numeric fields for existing filters, but also pass-through raw for UI display
-    const residual = toNum(it.residual);
+    // Keep numeric fields for existing filters, prefer gated residual if provided
+    const residualEffective = toNum(it.residual_gated);
+    const residual = residualEffective ?? toNum(it.residual);
     const targetResidual = toNum(it.targetResidual ?? it.target_residual);
-    const residualDisplay = it.residual ?? null;
+    const residualDisplay = (it.residual_gated ?? it.residual ?? null);
     const targetResidualDisplay = (it.targetResidual ?? it.target_residual ?? null);
     const greenMax = toNum(it.appetite?.greenMax);
     const amberMax = toNum(it.appetite?.amberMax ?? it.appetite?.yellowMax);
@@ -37,6 +38,7 @@ export function mapOverAppetite(items = []) {
       scenarioTitle: it.scenarioTitle ?? it.scenario ?? '—',
       scope: labelScope(it),
       residual: residual ?? null,
+      residualEffective: residualEffective ?? null, // optional gated
       targetResidual: targetResidual ?? null,
       residualDisplay,
       targetResidualDisplay,

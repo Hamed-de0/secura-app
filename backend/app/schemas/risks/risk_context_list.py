@@ -68,6 +68,8 @@ class RiskContextListItem(BaseModel):
 
     initial: int
     residual: int
+    residual_gated: Optional[float] = None
+    targetResidual: Optional[float] = None
     trend: List[Dict[str, int]]
 
     controls: ControlsOut

@@ -84,6 +84,8 @@ class RiskContextDetails(BaseModel):
 
     initial: int
     residual: int
+    residual_gated: Optional[float] = None
+    targetResidual: Optional[float] = None
     severity: int
     severityBand: Literal["Low","Medium","High","Critical"]
     overAppetite: bool

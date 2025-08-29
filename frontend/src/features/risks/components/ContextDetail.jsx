@@ -304,6 +304,7 @@ export default function ContextDetail({ contextId, onLoadedTitle }) {
           <Stack direction="row" spacing={2} flexWrap="wrap">
             <Chip label={`Likelihood: ${overview.likelihood ?? '—'}`} />
             <Chip label={`Impacts: ${impactsStr}`} />
+            <Chip label={`Residual (Effective): ${overview.residualEffective ?? overview.residual ?? '�?"'}`} />
             <Chip label={`Initial: ${overview.initial ?? '—'}`} />
             <Chip label={`Residual: ${overview.residual ?? '—'}`} />
             <Chip label={`Target: ${overview.targetResidual ?? '—'}`} />
