@@ -8,3 +8,4 @@ from .evidence_policy import *
 from .evidence import *
 from .exceptions import *
 from .obligation_atom import *
+from .coverage_summary import *

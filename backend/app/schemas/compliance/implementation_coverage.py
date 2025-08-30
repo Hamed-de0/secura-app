@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from pydantic import BaseModel
 
 class ControlHit(BaseModel):
@@ -15,6 +15,10 @@ class RequirementImplementationCoverage(BaseModel):
     title: Optional[str] = None
     score: float                # 0..1
     hits: List[ControlHit]
+    # NEW:
+    status: Literal["met", "partial", "gap", "unknown"]
+    exception_applied: bool = False
+    exception_id: Optional[int] = None
 
 class FrameworkImplementationCoverage(BaseModel):
     version_id: int

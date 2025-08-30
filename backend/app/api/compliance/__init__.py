@@ -11,9 +11,18 @@ from .assurance import router as assurance_router
 from .exceptions import router as exception_router
 from .crosswalk_imports import router as crosswalks_imports_router
 from .obligations import router as obligation_router
+from .coverage_summary import router as coverage_summary_router
+from app.api.compliance.framework_activation import router as framework_activation_router
+from app.api.compliance.evidence_staleness import router as evidence_staleness_router
+from app.api.compliance.requirements_status import router as requirements_status_router
+from app.api.compliance.requirements_tree import router as requirement_tree_router
 
 router = APIRouter()
-
+router.include_router(requirement_tree_router)
+router.include_router(requirements_status_router)
+router.include_router(evidence_staleness_router)
+router.include_router(framework_activation_router)
+router.include_router(coverage_summary_router)
 router.include_router(framework_router)
 router.include_router(framework_requirements_router)
 router.include_router(control_framework_mapping_router)

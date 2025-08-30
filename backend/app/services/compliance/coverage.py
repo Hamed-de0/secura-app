@@ -11,10 +11,13 @@ from app.schemas.compliance.implementation_coverage import (
     ControlHit, RequirementImplementationCoverage, FrameworkImplementationCoverage
 )
 
-def _score_requirement(
+from .coverage_effective import _score_requirement
+
+def _score_requirement_old(
     db: Session,
     req: FrameworkRequirement,
     effective_by_ctrl: Dict[int, dict],
+
 ) -> RequirementImplementationCoverage:
     mappings: List[ControlFrameworkMapping] = (
         db.query(ControlFrameworkMapping)
@@ -86,7 +89,7 @@ def compute_version_effective_coverage(
     total = 0.0
     count = 0
     for r in reqs:
-        rc = _score_requirement(db, r, effective_by_ctrl)
+        rc = _score_requirement(db, r, effective_by_ctrl, scope_type, scope_id)
         req_cov.append(rc)
         total += rc.score
         count += 1
