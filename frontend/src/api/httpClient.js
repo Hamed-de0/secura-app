@@ -38,6 +38,17 @@ export class ApiError extends Error {
     this.requestId = requestId || null;
   }
 }
+
+
+function toReadableApiError(respBody, status) {
+  // FastAPI 422 shape: { detail: [{loc: [...], msg: "", type: ""}, ...] }
+  if (status === 422 && respBody?.detail) {
+    const msgs = respBody.detail.map(d => `${d.msg} at ${d.loc?.join(' > ')}`).join(' | ');
+    return new Error(`422 Unprocessable Content: ${msgs}`);
+  }
+  return new Error(respBody?.message || `HTTP ${status}`);
+}
+
 async function normalizeError(error, response) {
   try {
     const data = response ? await response.clone().json().catch(() => null) : null;
@@ -113,32 +124,63 @@ function createKy() {
 let api = createKy();
 
 // ---- Convenience helpers ----------------------------------------------------
-export function buildSearchParams({
-  limit,
-  offset,
-  sort,
-  sort_dir,
-  status,
-  q,
-  fields,
-  filter,
-} = {}) {
+
+// src/api/httpClient.js
+// Replace your buildSearchParams with this version
+
+export function buildSearchParams(obj = {}) {
   const params = new URLSearchParams();
+
+  const {
+    // common list/paging/sorting
+    limit, offset, page, size, sort, sort_dir, q, status, fields,
+    // compliance-specific
+    version_id, scope_type, scope_id, within_days, ancestor_id,
+    // optional structured filters (object)
+    filter,
+    // anything else → pass through
+    ...rest
+  } = obj;
+
+  // paging/sorting
   if (Number.isFinite(limit)) params.set("limit", String(limit));
   if (Number.isFinite(offset)) params.set("offset", String(offset));
-  if (q) params.set("q", q);
-  if (sort) params.set("sort_by", sort);
-  if (sort_dir) params.set("sort_dir", sort_dir === "asc" ? "asc" : "desc");
-  if (status) params.set("status", status );
-  if (fields) params.set("fields", fields);
+  if (Number.isFinite(page))  params.set("page",  String(page));
+  if (Number.isFinite(size))  params.set("size",  String(size));
+  if (q)       params.set("q", q);
+  if (sort)    params.set("sort_by", sort);
+  if (sort_dir)params.set("sort_dir", sort_dir === "asc" ? "asc" : "desc");
+
+  // list-y things can be string or array
+  if (status) params.set("status", Array.isArray(status) ? status.join(",") : status);
+  if (fields) params.set("fields", Array.isArray(fields) ? fields.join(",") : fields);
+
+  // compliance keys (required by backend)
+  if (version_id != null) params.set("version_id", String(version_id));
+  if (scope_type)         params.set("scope_type", scope_type);
+  if (scope_id != null)   params.set("scope_id", String(scope_id));
+
+  // other useful keys we use
+  if (within_days != null) params.set("within_days", String(within_days));
+  if (ancestor_id != null) params.set("ancestor_id", String(ancestor_id));
+
+  // filter.{k}=v (object)
   if (filter && typeof filter === "object") {
     for (const [k, v] of Object.entries(filter)) {
-      if (v === undefined || v === null) continue;
-      params.set(`filter.${k}`, String(v));
+      if (v === undefined || v === null || v === "") continue;
+      params.set(`filter.${k}`, Array.isArray(v) ? v.join(",") : String(v));
     }
   }
+
+  // pass-through any remaining primitives/arrays (safe default)
+  for (const [k, v] of Object.entries(rest)) {
+    if (v === undefined || v === null || v === "") continue;
+    params.set(k, Array.isArray(v) ? v.join(",") : String(v));
+  }
+
   return params;
 }
+
 
 export async function getJSON(path, { searchParams, signal } = {}) {
   const resp = await api.get(path, { searchParams, signal });

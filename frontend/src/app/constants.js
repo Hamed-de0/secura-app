@@ -20,3 +20,6 @@ export const LOOKUP_ENDPOINTS = {
     tag: "/asset-tags",
     type: "/asset-types"
 };
+
+export const DEFAULT_SCOPE = { scopeType: 'org', scopeId: 1 };
+

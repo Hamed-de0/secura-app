@@ -5,18 +5,22 @@ from app.database import get_db
 from app.schemas.compliance.framework_activation import ActiveFrameworksResponse, FrameworkActivationPolicyCreate, FrameworkActivationPolicyRead
 from app.services.compliance.framework_activation import get_active_frameworks_for_scope
 from app.models.policies.framework_activation_policy import FrameworkActivationPolicy
+from app.api.deps.scope import resolve_scope
+
 
 router = APIRouter(prefix="/policies/framework-activation", tags=["Compliance Policies"])
 
 @router.get("/active-for-scope", response_model=ActiveFrameworksResponse)
 def active_frameworks_for_scope(
-    scope_type: str = Query(..., description="Scope type (e.g., org, asset_group, asset_type, tag, asset)"),
-    scope_id: int = Query(..., description="Scope id"),
+    scope: tuple[str,int] = Depends(resolve_scope),
+    # scope_type: str = Query(..., description="Scope type (e.g., org, asset_group, asset_type, tag, asset)"),
+    # scope_id: int = Query(..., description="Scope id"),
     db: Session = Depends(get_db),
 ):
     """
     Lists framework versions activated by policy for the given EXACT scope, ordered by priority.
     """
+    scope_type, scope_id = scope
     return get_active_frameworks_for_scope(db=db, scope_type=scope_type, scope_id=scope_id)
 
 
