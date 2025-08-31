@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from .ai import router as ai_router
+from .types import router as scopes_router
 
 
 router = APIRouter()
-router.include_router(ai_router)
+router.include_router(scopes_router)

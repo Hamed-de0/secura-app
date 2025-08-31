@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Optional, List, Literal
 from pydantic import BaseModel
+from app.api.scopes.types import ScopeType
 
-ScopeType = Literal["org", "asset_group", "asset_type", "tag", "asset"]
+# ScopeType = Literal["org","entity", "bu", "service","site", "asset_group", "asset_type", "tag", "asset"]
 
 class ActiveFrameworkVersion(BaseModel):
     policy_id: int

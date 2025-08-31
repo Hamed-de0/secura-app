@@ -22,8 +22,10 @@ import {
 
 import { adaptSummaryToKpis, adaptStatusPage } from "../../../api/adapters/compliance";
 import { DEFAULT_SCOPE } from "../../../app/constants";
+import FrameworkTabs from "../components/FrameworkTabs";
 
-
+import { useContext, useEffect } from "react";
+import { ScopeContext } from "../../../store/scope/ScopeProvider.jsx";
 // --- Fallback chip if you don't have a StatusChip component ---
 const StatusChip = ({ value, exception }) => {
   const map = {
@@ -61,6 +63,9 @@ export default function ComplianceDashboard() {
   const scopeType = sp.get("scope_type") || DEFAULT_SCOPE.scopeType || "org";
   const scopeId   = Number(sp.get("scope_id") || DEFAULT_SCOPE.scopeId || 1);
 
+  // const { versionId, setVersionId, scope } = useContext(ScopeContext);
+
+  
   // Data state
   const [kpi, setKpi] = React.useState(null);
   const [activations, setActivations] = React.useState([]);
@@ -147,6 +152,11 @@ export default function ComplianceDashboard() {
     return () => { ignore = true; };
   }, [versionId, scopeType, scopeId]);
 
+
+
+  // when context version changes, ensure path matches it
+  
+
   // Q1: Framework tabs (pills)
   const handlePickFramework = (pickedVersionId) => {
     // reflect in URL (keep scope params)
@@ -203,11 +213,12 @@ export default function ComplianceDashboard() {
       </Stack>
 
       {/* Q1: Framework tabs row (pills) */}
-      <FrameworkTabs
+      <FrameworkTabs />
+      {/* <FrameworkTabs
         activations={activations}
         activeVersionId={versionId}
         onPick={handlePickFramework}
-      />
+      /> */}
 
       {/* KPI strip (Q4 layout: 4 cards) */}
       <Grid container spacing={2} sx={{ mt: 1, mb: 1 }}>
@@ -364,51 +375,52 @@ function KpiCard({ label, value, hint, tone, onClick }) {
 }
 
 // Q1: Framework tabs as pills
-function FrameworkTabs({ activations, activeVersionId, onPick }) {
-  const options = (activations || []).map((a) => ({
-    id: a.version_id,
-    label: `${a.framework_name}${a.version_label ? ` ${a.version_label}` : ""}`,
-    active: !!a.is_active_now,
-  }));
+// function FrameworkTabs({ activations, activeVersionId, onPick }) {
+//   const options = (activations || []).map((a) => ({
+//     id: a.version_id,
+//     label: `${a.framework_name}${a.version_label ? ` ${a.version_label}` : ""}`,
+//     active: !!a.is_active_now,
+//   }));
 
-  if (!options.length) {
-    return (
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Typography variant="body2" color="text.secondary">
-            No active frameworks at this scope. Configure under{" "}
-            <MuiLink component={RouterLink} to="/policies/framework-activation">Policies → Framework Activation</MuiLink>.
-          </Typography>
-        </CardContent>
-      </Card>
-    );
-  }
+//   if (!options.length) {
+//     return (
+//       <Card sx={{ mb: 2 }}>
+//         <CardContent>
+//           <Typography variant="body2" color="text.secondary">
+//             No active frameworks at this scope. Configure under{" "}
+//             <MuiLink component={RouterLink} to="/policies/framework-activation">Policies → Framework Activation</MuiLink>.
+//           </Typography>
+//         </CardContent>
+//       </Card>
+//     );
+//   }
 
-  return (
-    <Card sx={{ mb: 2 }}>
-      <CardContent sx={{ py: 1.5 }}>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
-          <Typography variant="overline" color="text.secondary" sx={{ mr: 1 }}>Frameworks</Typography>
-          <ToggleButtonGroup
-            value={activeVersionId}
-            exclusive
-            size="small"
-            onChange={(_, v) => v && onPick(v)}
-          >
-            {options.map((o) => (
-              <ToggleButton key={o.id} value={o.id} sx={{ textTransform: "none" }}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <span>{o.label}</span>
-                  {o.active && <Chip size="small" color="primary" label="Active" />}
-                </Stack>
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
+//   return (
+//     <Card sx={{ mb: 2 }}>
+//       <CardContent sx={{ py: 1.5 }}>
+//         <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap" }}>
+//           <Typography variant="overline" color="text.secondary" sx={{ mr: 1 }}>Frameworks</Typography>
+//           <ToggleButtonGroup
+//             value={activeVersionId}
+//             exclusive
+//             size="small"
+//             onChange={(_, v) => v && onPick(v)}
+//           >
+//             {options.map((o) => (
+//               <ToggleButton key={o.id} value={o.id} sx={{ textTransform: "none" }}>
+//                 <Stack direction="row" spacing={1} alignItems="center">
+//                   <span>{o.label}</span>
+//                   {o.active && <Chip size="small" color="primary" label="Active" />}
+//                 </Stack>
+//               </ToggleButton>
+//             ))}
+//           </ToggleButtonGroup>
+//         </Stack>
+//       </CardContent>
+//     </Card>
+//   );
+// }
+
 
 // Q2: Heatmap (simple, dependency-free, click to drill)
 function CoverageHeatmap({ rows, onCellClick }) {

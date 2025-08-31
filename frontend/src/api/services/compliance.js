@@ -19,16 +19,20 @@ export async function fetchComplianceSummary({
 }
 
 // Active frameworks at scope
-export async function fetchActiveFrameworks({
-  scopeType = DEFAULT_SCOPE.scopeType,
-  scopeId   = DEFAULT_SCOPE.scopeId,
-}) {
-  const searchParams = buildSearchParams({
-    scope_type: scopeType,
-    scope_id:   scopeId,
-  });
-  return await getJSON('policies/framework-activation/active-for-scope', { searchParams });
+export async function fetchActiveFrameworks({ scopeType, scopeId }) {
+  const qs = new URLSearchParams({ scope_type: scopeType, scope_id: String(scopeId) });
+  return getJSON(`policies/framework-activation/active-for-scope?${qs.toString()}`);
 }
+// export async function fetchActiveFrameworks({
+//   scopeType = DEFAULT_SCOPE.scopeType,
+//   scopeId   = DEFAULT_SCOPE.scopeId,
+// }) {
+//   const searchParams = buildSearchParams({
+//     scope_type: scopeType,
+//     scope_id:   scopeId,
+//   });
+//   return await getJSON('policies/framework-activation/active-for-scope', { searchParams });
+// }
 
 // Requirements status (page of gaps/partials etc.)
 export async function fetchRequirementsStatusPage({

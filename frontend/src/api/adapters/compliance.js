@@ -67,3 +67,32 @@ export function pickRequirementDetailFromCoverage(fcov, requirementId) {
     mapped_but_not_effective: r.mapped_but_not_effective || [],
   };
 }
+
+// append these helpers
+export function adaptActivations(resp) {
+  const items = resp?.items || [];
+  const byVersion = new Map(
+    items.map(i => [i.version_id, {
+      versionId: i.version_id,
+      frameworkId: i.framework_id,
+      frameworkName: i.framework_name,
+      versionLabel: i.version_label,
+      isActiveNow: !!i.is_active_now,
+      policyId: i.policy_id,
+    }])
+  );
+  return { scopeType: resp?.scope_type, scopeId: resp?.scope_id, items, byVersion };
+}
+
+export function buildFrameworkPills(frameworks = [], byVersion = new Map(), selectedVersionId) {
+  return frameworks.map(fw => {
+    const act = byVersion.get(fw.versionId);
+    return {
+      ...fw, // {versionId, frameworkId, label, frameworkName, versionLabel}
+      isActiveAtScope: !!act,
+      isActiveNow: !!act?.isActiveNow,
+      selected: fw.versionId === selectedVersionId,
+    };
+  });
+}
+

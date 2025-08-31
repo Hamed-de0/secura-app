@@ -8,6 +8,8 @@ import ScopeProvider from './store/scope/ScopeProvider.jsx';
 import QueryProvider from './app/QueryProvider.jsx';
 import { parseViewParam } from './lib/views/urlParam';
 import I18nProvider from './store/i18n/I18nProvider.jsx';
+import ComplianceStaticProvider from "./store/complianceStaticStore.jsx";
+
 // Ensure generated API client base URL is configured
 import './api/client/config';
 
@@ -19,11 +21,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <ColorModeProvider>
       <I18nProvider>
         <UiProvider>
-          <ScopeProvider>
-            <QueryProvider>
-              <App />
-            </QueryProvider>
-          </ScopeProvider>
+          <ComplianceStaticProvider>
+            <ScopeProvider>
+              <QueryProvider>
+                <App />
+              </QueryProvider>
+            </ScopeProvider>
+          </ComplianceStaticProvider>
         </UiProvider>
       </I18nProvider>
     </ColorModeProvider>
