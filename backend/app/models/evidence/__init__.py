@@ -1,2 +1,3 @@
 from .evidence_item import EvidenceItem
 from .evidence_artifact import EvidenceArtifact
+from .evidence_lifecycle_event import EvidenceLifecycleEvent

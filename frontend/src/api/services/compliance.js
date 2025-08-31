@@ -80,3 +80,21 @@ export async function fetchEffectiveCoverage({ versionId, scopeType, scopeId }) 
   const searchParams = buildSearchParams({ scope_type: scopeType, scope_id: scopeId });
   return await getJSON(`coverage/framework_versions/${versionId}/effective`, { searchParams });
 }
+
+export async function fetchCoverageRollup({ versionId, scopeTypes = [] }) {
+  const sp = new URLSearchParams();
+  sp.set("version_id", String(versionId));
+  for (const st of scopeTypes) sp.append("scope_types", st); // -> &scope_types=entity&scope_types=org...
+  return getJSON("coverage/rollup", { searchParams: sp });   // no leading slash
+}
+
+// export async function fetchCoverageRollup({ versionId, scopeTypes = [] }) {
+//   // IMPORTANT: no leading slash (prefixUrl in http client)
+//   const searchParams = {
+//     version_id: versionId,
+//     ...(scopeTypes.length ? { scope_types: scopeTypes.join(",") } : {}),
+//   };
+//   return getJSON("coverage/rollup", { searchParams });
+// }
+
+

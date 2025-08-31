@@ -26,6 +26,10 @@ import FrameworkTabs from "../components/FrameworkTabs";
 
 import { useContext, useEffect } from "react";
 import { ScopeContext } from "../../../store/scope/ScopeProvider.jsx";
+import CoverageHeatmap from "../components/CoverageHeatmap.jsx";
+// import { useNavigate } from "react-router-dom";
+// import { fetchCoverageRollup } from "../../../api/services/compliance.js";
+
 // --- Fallback chip if you don't have a StatusChip component ---
 const StatusChip = ({ value, exception }) => {
   const map = {
@@ -255,14 +259,13 @@ export default function ComplianceDashboard() {
             <CardContent>
               <Typography variant="overline" color="text.secondary">Heatmap</Typography>
               <Box sx={{ mt: 1 }}>
-                <CoverageHeatmap
-                  rows={heatmapRows}
-                  onCellClick={(row, column) => {
-                    if (!column) return;
-                    // deep-link with status + optional future scope row
-                    drillToExplorer(column);
+                {/* <CoverageHeatmap
+                  onCellClick={({ scopeType, status }) => {
+                    // Deep-link to explorer view with defaults (scope_id=1 if your backend requires it)
+                    navigate(`/compliance/versions/${versionId}?scope_type=${scopeType}&scope_id=1&status=${status}`);
                   }}
-                />
+                /> */}
+                <CoverageHeatmap versionId={Number(versionId)} />
               </Box>
             </CardContent>
           </Card>
@@ -423,69 +426,72 @@ function KpiCard({ label, value, hint, tone, onClick }) {
 
 
 // Q2: Heatmap (simple, dependency-free, click to drill)
-function CoverageHeatmap({ rows, onCellClick }) {
-  const columns = [
-    { key: "met", label: "Met", color: TOKENS.success },
-    { key: "partial", label: "Partial", color: TOKENS.warning },
-    { key: "gap", label: "Gap", color: TOKENS.error },
-    { key: "unknown", label: "Unknown", color: TOKENS.grey },
-  ];
+// function CoverageHeatmap({ rows, onCellClick }) {
+//   const columns = [
+//     { key: "met", label: "Met", color: TOKENS.success },
+//     { key: "partial", label: "Partial", color: TOKENS.warning },
+//     { key: "gap", label: "Gap", color: TOKENS.error },
+//     { key: "unknown", label: "Unknown", color: TOKENS.grey },
+//   ];
 
-  if (!rows || !rows.length) {
-    return <Typography variant="caption" color="text.secondary">No breakdown available for heatmap.</Typography>;
-  }
+//   if (!rows || !rows.length) {
+//     return <Typography variant="caption" color="text.secondary">No breakdown available for heatmap.</Typography>;
+//   }
 
-  return (
-    <Box sx={{ borderRadius: 2, overflow: "hidden", border: (t) => `1px solid ${t.palette.divider}` }}>
-      {/* header */}
-      <Stack direction="row" sx={{ bgcolor: "background.default", px: 1.5, py: 1 }}>
-        <Box sx={{ width: 180, fontSize: 12, color: "text.secondary" }}>Scope</Box>
-        <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
-          {columns.map((c) => (
-            <Box key={c.key} sx={{ flex: 1, fontSize: 12, color: "text.secondary" }}>{c.label}</Box>
-          ))}
-        </Stack>
-      </Stack>
-      <Divider />
-      {/* rows */}
-      <Stack>
-        {rows.map((r, idx) => (
-          <Stack key={`${r.scope}-${idx}`} direction="row" alignItems="center" sx={{ px: 1.5, py: 1 }}>
-            <Box sx={{ width: 180, fontSize: 14 }}>{r.scope}</Box>
-            <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
-              {columns.map((c) => (
-                <Tooltip key={c.key} title={`${c.label}: ${r[c.key] ?? 0}`} placement="top">
-                  <Box
-                    role="button"
-                    onClick={() => onCellClick?.(r, c.key)}
-                    sx={{
-                      flex: 1,
-                      height: 28,
-                      borderRadius: 1,
-                      bgcolor: c.color,
-                      opacity: (r[c.key] ?? 0) === 0 ? 0.18 : 0.9,
-                      color: "#fff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {r[c.key] ?? 0}
-                  </Box>
-                </Tooltip>
-              ))}
-            </Stack>
-          </Stack>
-        ))}
-      </Stack>
-    </Box>
-  );
-}
+//   return (
+//     <Box sx={{ borderRadius: 2, overflow: "hidden", border: (t) => `1px solid ${t.palette.divider}` }}>
+//       {/* header */}
+//       <Stack direction="row" sx={{ bgcolor: "background.default", px: 1.5, py: 1 }}>
+//         <Box sx={{ width: 180, fontSize: 12, color: "text.secondary" }}>Scope</Box>
+//         <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
+//           {columns.map((c) => (
+//             <Box key={c.key} sx={{ flex: 1, fontSize: 12, color: "text.secondary" }}>{c.label}</Box>
+//           ))}
+//         </Stack>
+//       </Stack>
+//       <Divider />
+//       {/* rows */}
+//       <Stack>
+//         {rows.map((r, idx) => (
+//           <Stack key={`${r.scope}-${idx}`} direction="row" alignItems="center" sx={{ px: 1.5, py: 1 }}>
+//             <Box sx={{ width: 180, fontSize: 14 }}>{r.scope}</Box>
+//             <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
+//               {columns.map((c) => (
+//                 <Tooltip key={c.key} title={`${c.label}: ${r[c.key] ?? 0}`} placement="top">
+//                   <Box
+//                     role="button"
+//                     onClick={() => onCellClick?.(r, c.key)}
+//                     sx={{
+//                       flex: 1,
+//                       height: 28,
+//                       borderRadius: 1,
+//                       bgcolor: c.color,
+//                       opacity: (r[c.key] ?? 0) === 0 ? 0.18 : 0.9,
+//                       color: "#fff",
+//                       display: "flex",
+//                       alignItems: "center",
+//                       justifyContent: "center",
+//                       fontSize: 12,
+//                       cursor: "pointer",
+//                     }}
+//                   >
+//                     {r[c.key] ?? 0}
+//                   </Box>
+//                 </Tooltip>
+//               ))}
+//             </Stack>
+//           </Stack>
+//         ))}
+//       </Stack>
+//     </Box>
+//   );
+// }
 
 // Q3/Q4: Trend (line chart with graceful empty state)
 // Uses current KPI to render a single point if no history exists.
+
+
+
 function CoverageTrend({ trend, kpi }) {
   const data = (trend && trend.length ? trend : (kpi ? [{
     ts: kpi.lastComputedAt,

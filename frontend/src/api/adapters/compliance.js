@@ -96,3 +96,26 @@ export function buildFrameworkPills(frameworks = [], byVersion = new Map(), sele
   });
 }
 
+// add this export
+export function adaptCoverageRollupToHeatmap(resp, scopeTypes = []) {
+  // resp: { version_id, items: [{scope_type, met, partial, gap, unknown, applicable_requirements}] }
+  const byType = new Map(scopeTypes.map(s => [s.scope_type, s.title]));
+  const items = Array.isArray(resp?.items) ? resp.items : [];
+
+  return items.map(row => {
+    const met     = Number(row.met ?? 0);
+    const partial = Number(row.partial ?? 0);
+    const gap     = Number(row.gap ?? 0);
+    const unknown = Number(row.unknown ?? 0);
+    const total   = met + partial + gap + unknown;
+
+    return {
+      scopeType: row.scope_type,
+      title: byType.get(row.scope_type) ?? row.scope_type,
+      counts: { met, partial, gap, unknown, total }
+    };
+  });
+}
+
+
+
