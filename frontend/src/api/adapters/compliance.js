@@ -117,5 +117,21 @@ export function adaptCoverageRollupToHeatmap(resp, scopeTypes = []) {
   });
 }
 
+// ADD THIS
+export function adaptCoverageList(resp) {
+  const items = (resp?.items || []).map((r, i) => ({
+    id: r.requirement_id ?? i,
+    requirement_id: r.requirement_id,
+    code: r.code || r.requirement_code,
+    title: r.title || r.requirement_title,
+    status: r.status,
+    score: r.score,
+    scope_type: r.scope_type,
+    scope_id: r.scope_id,
+  }));
+  return { items, total: resp?.total ?? items.length };
+}
+
+
 
 

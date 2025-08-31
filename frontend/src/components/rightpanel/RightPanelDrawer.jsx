@@ -1,3 +1,4 @@
+//file: src/components/rightpanel/RightPanelDrawer.css
 import * as React from 'react';
 import { Drawer, Box, IconButton, Typography, Divider } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -86,7 +87,7 @@ export default function RightPanelDrawer({
         aria-label="Resize panel"
       />
 
-      {/* Header */}
+      {/* Header
       <Box sx={{ p: 1.25, pl: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 700, pr: 1 }} noWrap>
           {title || ''}
@@ -95,18 +96,53 @@ export default function RightPanelDrawer({
           <CloseIcon />
         </IconButton>
       </Box>
-      <Divider />
+      <Divider /> */}
+      {/* STICKY HEADER */}
+      <Box
+        sx={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 3,
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Box sx={{ p: 1.25, pl: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, pr: 1 }} noWrap>
+            {title || ''}
+          </Typography>
+          <IconButton size="small" onClick={onClose} aria-label="Close">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </Box>
 
       {/* Content */}
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {children}
       </Box>
 
-      {footer && (
+      {/* {footer && (
         <>
           <Divider />
           <Box sx={{ p: 1.25 }}>{footer}</Box>
         </>
+      )} */}
+      {/* STICKY FOOTER (if provided) */}
+      {footer && (
+        <Box
+          sx={{
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 3,
+            bgcolor: 'background.paper',
+            borderTop: 1,
+            borderColor: 'divider',
+          }}
+        >
+          <Box sx={{ p: 1.25 }}>{footer}</Box>
+        </Box>
       )}
     </Drawer>
   );

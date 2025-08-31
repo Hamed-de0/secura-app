@@ -88,6 +88,23 @@ export async function fetchCoverageRollup({ versionId, scopeTypes = [] }) {
   return getJSON("coverage/rollup", { searchParams: sp });   // no leading slash
 }
 
+// ADD THIS
+export async function fetchCoverageList({
+  versionId, scopeType, status, page = 1, size = 10, sortBy = "score", sortDir = "asc",
+}) {
+  const qs = new URLSearchParams({
+    version_id: String(versionId),
+    scope_type: scopeType,
+    status, // e.g. "gap" | "partial" | "met" | "unknown"
+    page: String(page),
+    size: String(size),
+    sort_by: sortBy,
+    sort_dir: sortDir,
+  });
+  return getJSON(`coverage/list?${qs.toString()}`); // NOTE: no leading slash
+}
+
+
 // export async function fetchCoverageRollup({ versionId, scopeTypes = [] }) {
 //   // IMPORTANT: no leading slash (prefixUrl in http client)
 //   const searchParams = {

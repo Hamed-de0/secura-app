@@ -40,6 +40,12 @@ export default function createAppTheme(mode = 'light') {
     palette,
     shape: { borderRadius: 12 },
     spacing: 8,
+    typography: {
+      // keep the rest
+      h3: { fontWeight: 700 },
+      h4: { fontWeight: 700 },
+      overline: { textTransform: 'none', letterSpacing: 0.3 },
+    },
     shadows: [
       'none',
       '0px 1px 2px rgba(0,0,0,0.04)',
@@ -48,6 +54,12 @@ export default function createAppTheme(mode = 'light') {
       ...Array(22).fill('none'),
     ],
     components: {
+      // subtle, consistent chips everywhere
+      MuiChip: {
+        styleOverrides: {
+          root: { borderRadius: 999, fontWeight: 600 },
+        },
+      },
       MuiDataGrid: {
         defaultProps: {
           density: 'compact',
