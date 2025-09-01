@@ -1,8 +1,8 @@
 // src/pages/compliance/ComplianceDashboard.jsx
 import * as React from "react";
 import {
-  Box, Grid, Card, CardContent, Typography, Stack, Chip, Button, Tooltip,
-  Divider, Skeleton, ToggleButtonGroup, ToggleButton, Link as MuiLink
+  Box, Grid, Card, CardContent, Typography, Stack, Chip, Button, Tooltip as MuiTooltip,
+  Divider, Skeleton, Link as MuiLink
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { Link as RouterLink, useSearchParams, useParams, useNavigate } from "react-router-dom";
@@ -11,27 +11,20 @@ import {
   fetchActiveFrameworks,
   fetchStaleEvidence,
   fetchRequirementsStatusPage,
-  
-  // (optional future) fetchComplianceSummaryHistory
 } from "../../../api/services/compliance";
+import { adaptSummaryToKpis, adaptStatusPage } from "../../../api/adapters/compliance";
+import { DEFAULT_SCOPE } from "../../../app/constants";
+import FrameworkTabs from "../components/FrameworkTabs";
+import CoverageHeatmap from "../components/CoverageHeatmap.jsx";
+import RightPanelDrawer from "../../../components/rightpanel/RightPanelDrawer.jsx";
+import RequirementDetailPanel from "../components/RequirementDetailPanel.jsx";
+import RequirementsTree from "../components/RequirementsTree.jsx";
 
-// Recharts (alias Tooltip to avoid clash with MUI Tooltip)
+// Recharts (keep as-is; we already use it)
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer
 } from "recharts";
-
-import { adaptSummaryToKpis, adaptStatusPage, adaptCoverageList } from "../../../api/adapters/compliance";
-import { DEFAULT_SCOPE } from "../../../app/constants";
-import FrameworkTabs from "../components/FrameworkTabs";
-
-import { useContext, useEffect } from "react";
-import { ScopeContext } from "../../../store/scope/ScopeProvider.jsx";
-import CoverageHeatmap from "../components/CoverageHeatmap.jsx";
-import RightPanelDrawer from "../../../components/rightpanel/RightPanelDrawer.jsx";
-
-// import { useNavigate } from "react-router-dom";
-// import { fetchCoverageRollup } from "../../../api/services/compliance.js";
 
 // --- Fallback chip if you don't have a StatusChip component ---
 const StatusChip = ({ value, exception }) => {
@@ -46,7 +39,7 @@ const StatusChip = ({ value, exception }) => {
   return <Chip size="small" label={m.label} color={m.color} variant="filled" />;
 };
 
-// Color tokens (Q5)
+// Color tokens
 const TOKENS = {
   success: "#2e7d32",
   warning: "#ed6c02",
@@ -54,12 +47,8 @@ const TOKENS = {
   grey:    "#9e9e9e",
 };
 
-// Small helper to format %
 const fmtPct = (n) => (n == null ? "—" : `${Math.round(n)}%`);
 
-// ---------------------------------
-//  Main Page
-// ---------------------------------
 export default function ComplianceDashboard() {
   const { versionId: routeVersion } = useParams();
   const [sp, setSp] = useSearchParams();
@@ -70,25 +59,21 @@ export default function ComplianceDashboard() {
   const scopeType = sp.get("scope_type") || DEFAULT_SCOPE.scopeType || "org";
   const scopeId   = Number(sp.get("scope_id") || DEFAULT_SCOPE.scopeId || 1);
 
-  // const { versionId, setVersionId, scope } = useContext(ScopeContext);
+  // Right panel state
   const [panel, setPanel] = React.useState({ open:false, mode:null, payload:null, title:'' });
-  const openPanel = (mode, payload, title) => setPanel({ open:true, mode, payload, title });
+  const openPanel  = (mode, payload, title) => setPanel({ open:true, mode, payload, title });
   const closePanel = () => setPanel(p => ({ ...p, open:false }));
-  
+
   // Data state
   const [kpi, setKpi] = React.useState(null);
   const [activations, setActivations] = React.useState([]);
   const [evi, setEvi] = React.useState({ expired_count: 0, expiring_soon_count: 0 });
-  const [gaps, setGaps] = React.useState([]);
-  const [heatmapRows, setHeatmapRows] = React.useState([]); // Q2
-  const [trend, setTrend] = React.useState([]);             // Q3/Q4 (graceful empty)
-
-  // NEW: slice + rows state
-  const [slice, setSlice] = React.useState(null); // { scopeType, status }
+  const [trend, setTrend] = React.useState([]);
+  const [slice, setSlice] = React.useState(null); // { scopeType, scopeId, status }
   const [rows, setRows] = React.useState([]);
   const [rowsLoading, setRowsLoading] = React.useState(false);
 
-  // Load data
+  // Load page data
   React.useEffect(() => {
     let ignore = false;
     (async () => {
@@ -119,62 +104,18 @@ export default function ComplianceDashboard() {
         if (!ignore) setEvi({ expired_count: 0, expiring_soon_count: 0 });
       }
 
-      try {
-        // Top gaps
-        const page = await fetchRequirementsStatusPage({
-          versionId, scopeType, scopeId,
-          status: "gap,partial",
-          sortBy: "score", sortDir: "asc",
-          page: 1, size: 5,
-        });
-        if (!ignore) setGaps(adaptStatusPage(page).items || []);
-      } catch (e) {
-        console.error("gaps", e);
-        if (!ignore) setGaps([]);
-      }
-
-      try {
-        // Build a lightweight heatmap from a larger page snapshot (until a dedicated endpoint exists)
-        const hp = await fetchRequirementsStatusPage({
-          versionId, scopeType, scopeId,
-          status: "met,partial,gap,unknown",
-          sortBy: "code",
-          sortDir: "asc",
-          page: 1,
-          size: 400, // enough to get a representative slice
-        });
-        if (!ignore) {
-          const items = adaptStatusPage(hp).items || [];
-          // If backend doesn’t send a per-item scope name, we’ll group into a single “Current Scope” row.
-          // If you have a field like row.scope_name or row.asset_group, replace the key below.
-          const rows = groupIntoHeatmap(items);
-          setHeatmapRows(rows);
-        }
-      } catch (e) {
-        console.error("heatmap page", e);
-        if (!ignore) setHeatmapRows([]);
-      }
-
-      // (Optional) Load trend when backend provides it.
-      // try {
-      //   const hist = await fetchComplianceSummaryHistory({ versionId, scopeType, scopeId, last: 30 });
-      //   if (!ignore) setTrend(hist.items || []);
-      // } catch {
-      //   if (!ignore) setTrend([]);
-      // }
+      // (Trend optional – keep empty if not provided)
+      setTrend([]);
     })();
     return () => { ignore = true; };
   }, [versionId, scopeType, scopeId]);
 
+  // Heatmap → list fetch
   const handleHeatmapCell = React.useCallback((cell) => {
-    console.log("heatmap cell click", cell);
-    // cell = { scopeType, status }
+    // cell = { scopeType, scopeId, status }
     setSlice(cell);
-    // OPTIONAL: scroll to table or set a chip showing active slice
   }, []);
 
-  // when context version changes, ensure path matches it
-  // Fetch list when slice changes
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -183,8 +124,8 @@ export default function ComplianceDashboard() {
       try {
         const resp = await fetchRequirementsStatusPage({
           versionId,
-          scopeType: slice.scopeType,
-          scopeId: slice.scopeId,
+          scopeType: slice.scopeType ?? scopeType,
+          scopeId:   slice.scopeId   ?? scopeId,
           status: slice.status,            // e.g. "met" or "gap,partial"
           page: 1,
           size: 50,
@@ -192,8 +133,7 @@ export default function ComplianceDashboard() {
           sortDir: "asc",
         });
         const { items } = adaptStatusPage(resp);
-        console.log("coverage list resp", items);
-        if (alive) setRows(items);
+        if (alive) setRows(items || []);
       } catch (e) {
         console.error("coverage list error", e);
         if (alive) setRows([]);
@@ -202,68 +142,73 @@ export default function ComplianceDashboard() {
       }
     })();
     return () => { alive = false; };
-  }, [slice, versionId]);
+  }, [slice, versionId, scopeType, scopeId]);
 
-  const onRowClick = React.useCallback((params) => {
-    // e.g. openRequirementDrawer(params.row)
-    // (keep whatever you already wired for the RightPanel)
-    console.log("row click", params);
-    // openPanel("requirement", { versionId, ...params.row }, `Requirement ${params.row.code || params.row.id || ""}`);
-  }, []);
-  // Q1: Framework tabs (pills)
-  const handlePickFramework = (pickedVersionId) => {
-    // reflect in URL (keep scope params)
-    const next = new URLSearchParams(sp);
-    next.set("version_id", String(pickedVersionId));
-    setSp(next, { replace: true });
-    // if route path contains :versionId, keep it synced:
-    if (routeVersion) navigate(`/compliance/dashboard/${pickedVersionId}?scope_type=${scopeType}&scope_id=${scopeId}`, { replace: true });
-  };
-
-  // KPI quick drill
-  const drillToExplorer = (status) => {
-    navigate(`/compliance/versions/${versionId}?scope_type=${scopeType}&scope_id=${scopeId}&status=${status}`);
-  };
-
-  // Top Gaps table
-  const gapCols = [
-    { field: "code", headerName: "Code", width: 120 },
-    { field: "title", headerName: "Requirement", flex: 1, minWidth: 240 },
-    { field: "scope", headerName: "Scope", width: 140, valueGetter: (p) => p?.row?.scope || scopeType },
-    { field: "status", headerName: "Status", width: 120, renderCell: (p) => <StatusChip value={p.row?.status} exception={p.row?.exception_applied} /> },
-    { field: "score", headerName: "Score", width: 110, valueFormatter: ({ value }) => `${Math.round((value ?? 0) * 100)}%` },
-    {
-      field: "actions",
-      headerName: "",
-      width: 150,
-      sortable: false,
-      renderCell: (p) => (
-        <Button
-          size="small"
-          variant="outlined"
-          component={RouterLink}
-          to={`/tickets/new?source=requirement&code=${encodeURIComponent(p.row.code || "")}`}
-        >
-          Create ticket
-        </Button>
-      ),
-    },
-  ];
-
+  // DataGrid columns
   const cols = React.useMemo(() => [
     { field: "code", headerName: "Code", width: 120 },
     { field: "title", headerName: "Requirement", flex: 1, minWidth: 240 },
     { field: "scope_type", headerName: "Scope", width: 120,
-      valueGetter: (p) => scopeType },
+      valueGetter: () => scopeType },
     { field: "status", headerName: "Status", width: 120,
       renderCell: (p) => <StatusChip value={p.row?.status} /> },
     { field: "score", headerName: "Score", width: 110,
       valueFormatter: ({ value }) => `${Math.round((value ?? 0) * 100)}%` },
-  ], []);
+  ], [scopeType]);
+
+  // Row click → open drawer with detail panel
+  const handleRowClick = React.useCallback(({ row }) => {
+    const requirementId = row.id ?? row.requirement_id;
+    openPanel(
+      "requirement",
+      {
+        requirementId,
+        code: row.code,
+        title: row.title,
+        versionId,
+        scopeType,
+        scopeId,
+      },
+      `Requirement ${row.code || requirementId || ""}`
+    );
+  }, [versionId, scopeType, scopeId]);
+
+    // From tree → open same drawer (current scope)
+  const handlePickRequirementFromTree = React.useCallback((node) => {
+    openPanel(
+      "requirement",
+      {
+        requirementId: node.id,
+        code: node.code,
+        title: node.title,
+        versionId,
+        scopeType,
+        scopeId,
+      },
+      `Requirement ${node.code}`
+    );
+  }, [versionId, scopeType, scopeId]);
+
+  // Framework tab pick (optional; keep if you support it)
+  const handlePickFramework = (pickedVersionId) => {
+    const next = new URLSearchParams(sp);
+    next.set("version_id", String(pickedVersionId));
+    setSp(next, { replace: true });
+    if (routeVersion) {
+      navigate(
+        `/compliance/dashboard/${pickedVersionId}?scope_type=${scopeType}&scope_id=${scopeId}`,
+        { replace: true }
+      );
+    }
+  };
+
+  const drillToExplorer = (status) => {
+    navigate(`/compliance/versions/${versionId}?scope_type=${scopeType}&scope_id=${scopeId}&status=${status}`);
+  };
 
   return (
     <Box sx={{ p: 2 }}>
-      {/* Header row */}
+      {/* Header */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>Compliance Dashboard</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
@@ -276,15 +221,10 @@ export default function ComplianceDashboard() {
         </Stack>
       </Stack>
 
-      {/* Q1: Framework tabs row (pills) */}
-      <FrameworkTabs />
-      {/* <FrameworkTabs
-        activations={activations}
-        activeVersionId={versionId}
-        onPick={handlePickFramework}
-      /> */}
+      {/* Framework tabs */}
+      <FrameworkTabs onPick={handlePickFramework} />
 
-      {/* KPI strip (Q4 layout: 4 cards) */}
+      {/* KPIs */}
       <Grid container spacing={2} sx={{ mt: 1, mb: 1 }}>
         <Grid item xs={12} sm={6} md={3}>
           <KpiCard label="Coverage %" hint="Includes exceptions"
@@ -312,32 +252,43 @@ export default function ComplianceDashboard() {
         </Grid>
       </Grid>
 
-      {/* Main: Heatmap (8 cols) + Right column (Evidence + Exceptions) */}
+      {/* Main layout */}
+      {/* Main layout — Row 1: Heatmap + Requirements tree */}
       <Grid container spacing={2}>
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={7}>
           <Card>
             <CardContent>
-              <Typography variant="overline" color="text.secondary">Heatmap</Typography>
+              
               <Box sx={{ mt: 1 }}>
-                {/* <CoverageHeatmap
-                  onCellClick={({ scopeType, status }) => {
-                    // Deep-link to explorer view with defaults (scope_id=1 if your backend requires it)
-                    navigate(`/compliance/versions/${versionId}?scope_type=${scopeType}&scope_id=1&status=${status}`);
-                  }}
-                /> */}
-                <CoverageHeatmap 
-                versionId={Number(versionId)} 
-                onCellClick={handleHeatmapCell}
+                <CoverageHeatmap
+                  versionId={Number(versionId)}
+                  onCellClick={handleHeatmapCell}
                 />
               </Box>
             </CardContent>
           </Card>
+        </Grid>
+        <Grid item xs={12} md={5}>
+          <Card>
+            <CardContent>
+              <RequirementsTree
+                versionId={Number(versionId)}
+                onPick={handlePickRequirementFromTree}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-          {/* Bottom: Top gaps table */}
-          <Card sx={{ mt: 2 }}>
+      {/* Row 2: Slice table (from heatmap), Trend, Evidence/Exceptions */}
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        <Grid item xs={12} md={7}>
+          <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                <Typography variant="overline" color="text.secondary">Top gaps Scope {scopeType}</Typography>
+                <Typography variant="overline" color="text.secondary">
+                  {slice ? `Requirements — ${slice.scopeType || scopeType} • ${slice.status}` : "Requirements"}
+                </Typography>
                 <Button
                   component={RouterLink}
                   to={`/compliance/versions/${versionId}?scope_type=${scopeType}&scope_id=${scopeId}`}
@@ -350,24 +301,21 @@ export default function ComplianceDashboard() {
               <Box sx={{ height: 360 }}>
                 <DataGrid
                   rows={rows}
+                  loading={rowsLoading}
                   columns={cols}
                   density="compact"
                   disableColumnMenu
                   hideFooterSelectedRowCount
                   pageSizeOptions={[5]}
                   initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
-                  getRowId={(r) => `${r.id || r.code}-${r.title}`}
-                  onRowClick={({ row }) => {
-                    openPanel("requirement", { versionId, ...row }, `Requirement ${row.code || row.id || ""}`);
-                  }}
+                  getRowId={(r) => r.id ?? `${r.code}-${r.title}`}
+                  onRowClick={handleRowClick}
                 />
               </Box>
             </CardContent>
           </Card>
         </Grid>
-
-        <Grid item xs={12} md={4}>
-          {/* Coverage trend */}
+        <Grid item xs={12} md={5}>
           <Card sx={{ mb: 2 }}>
             <CardContent>
               <Typography variant="overline" color="text.secondary">30/30-Day Coverage Trend</Typography>
@@ -376,8 +324,6 @@ export default function ComplianceDashboard() {
               </Box>
             </CardContent>
           </Card>
-
-          {/* Evidence */}
           <Card>
             <CardContent>
               <Typography variant="overline" color="text.secondary">Evidence</Typography>
@@ -398,8 +344,6 @@ export default function ComplianceDashboard() {
               )}
             </CardContent>
           </Card>
-
-          {/* Exceptions (from KPI) */}
           <Card sx={{ mt: 2 }}>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -415,21 +359,21 @@ export default function ComplianceDashboard() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Right Panel */}
       <RightPanelDrawer
         open={panel.open}
         onClose={closePanel}
         title={panel.title}
         initialWidth={560}
       >
-        {renderPanelContent(panel)}
+        {renderPanelContent(panel, { versionId, scopeType, scopeId, navigate })}
       </RightPanelDrawer>
     </Box>
   );
 }
 
-// ---------------------------------
-//  Components
-// ---------------------------------
+// ---------------- Components ----------------
 
 function KpiCard({ label, value, hint, tone, onClick }) {
   const clickable = Boolean(onClick);
@@ -488,107 +432,28 @@ function CoverageTrend({ trend, kpi }) {
   );
 }
 
-
-
-// ---------------------------------
-//  Helpers
-// ---------------------------------
-function RequirementDetailMini({ payload }) {
-  if (!payload) return null;
-  const { code, title, status, score, versionId } = payload;
-
-  return (
-    <Box>
-      <Typography variant="overline" color="text.secondary">Requirement</Typography>
-      <Typography variant="h6" sx={{ mb: 1 }}>{code || "—"}</Typography>
-      {title && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {title}
-        </Typography>
-      )}
-
-      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: "wrap" }}>
-        {typeof status !== "undefined" && <StatusChip value={status} />}
-        {typeof score !== "undefined" && (
-          <Chip size="small" label={`Score ${Math.round((score ?? 0) * 100)}%`} />
-        )}
-      </Stack>
-
-      <Divider sx={{ my: 2 }} />
-
-      <Typography variant="subtitle2" sx={{ mb: 1 }}>What’s next?</Typography>
-      <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-        <Button
-          variant="contained"
-          size="small"
-          component={RouterLink}
-          to={`/compliance/versions/${versionId || ""}`}
-        >
-          Open Explorer
-        </Button>
-        <Button variant="outlined" size="small" disabled>
-          View Evidence (soon)
-        </Button>
-        <Button variant="outlined" size="small" disabled>
-          Lifecycle (soon)
-        </Button>
-      </Stack>
-
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2 }}>
-        Tip: we’ll wire this to real detail (lifecycle + evidence) next—this stub just shows the row you clicked.
-      </Typography>
-    </Box>
-  );
-}
-
-function renderPanelContent(panel) {
+// Right panel router
+function renderPanelContent(panel, ctx) {
   if (!panel?.open) return null;
   switch (panel.mode) {
-    case "requirement":
-      return <RequirementDetailMini payload={panel.payload} />;
-    case "slice-list":
-      return <Typography variant="body2">Slice list (coming soon)</Typography>;
+    case "requirement": {
+      const p = panel.payload || {};
+      return (
+        <RequirementDetailPanel
+          requirementId={p.requirementId}
+          versionId={p.versionId ?? ctx.versionId}
+          scopeType={p.scopeType ?? ctx.scopeType}
+          scopeId={p.scopeId ?? ctx.scopeId}
+          onOpenExplorer={() =>
+            ctx.navigate(`/compliance/versions/${ctx.versionId}?scope_type=${ctx.scopeType}&scope_id=${ctx.scopeId}`)
+          }
+          headerFallback={{ code: p.code, title: p.title }}
+        />
+      );
+    }
     case "evidence-bucket":
       return <Typography variant="body2">Evidence bucket (coming soon)</Typography>;
     default:
       return null;
   }
 }
-
-
-
-// Build a minimal heatmap dataset.
-// If per-item scope is unavailable, return a single "Current scope" row.
-function groupIntoHeatmap(items) {
-  if (!Array.isArray(items) || !items.length) {
-    return [];
-  }
-
-  // Try to detect a scope-like field
-  const scopeKey = ["scope_name", "asset_group", "asset_type", "scope"]
-    .find(k => items.some(i => i[k]));
-  if (!scopeKey) {
-    // Single row from counts
-    const counts = { met: 0, partial: 0, gap: 0, unknown: 0 };
-    items.forEach(i => {
-      const s = (i.status || "unknown").toLowerCase();
-      if (counts[s] == null) counts.unknown += 1;
-      else counts[s] += 1;
-    });
-    return [{ scope: "Current Scope", ...counts }];
-  }
-
-  // Group by detected scopeKey
-  const map = new Map();
-  for (const i of items) {
-    const key = i[scopeKey] || "—";
-    if (!map.has(key)) map.set(key, { met: 0, partial: 0, gap: 0, unknown: 0 });
-    const s = (i.status || "unknown").toLowerCase();
-    const row = map.get(key);
-    if (row[s] == null) row.unknown += 1;
-    else row[s] += 1;
-  }
-
-  return Array.from(map.entries()).map(([scope, counts]) => ({ scope, ...counts }));
-}
-

@@ -121,6 +121,42 @@ export async function fetchCoverageRollup({ versionId, scopeTypes = [] }) {
   return getJSON("coverage/rollup", { searchParams: sp });   // no leading slash
 }
 
+export async function fetchRequirementDetail({ requirementId, versionId, scopeType, scopeId, include }) {
+  const params = new URLSearchParams();
+  params.set('version_id', String(versionId));
+  params.set('scope_type', String(scopeType));
+  params.set('scope_id', String(scopeId));
+
+  // Accept array or comma-separated string; default to desired set.
+  const includes = Array.isArray(include)
+    ? include
+    : (typeof include === 'string'
+        ? include.split(',').map(s => s.trim()).filter(Boolean)
+        : ['mappings', 'evidence', 'exceptions', 'status']);
+
+  // Append as repeated query keys: &include=...&include=...
+  const seen = new Set();
+  for (const inc of includes) {
+    if (!seen.has(inc)) {
+      params.append('include', inc);
+      seen.add(inc);
+    }
+  }
+
+  return getJSON(`compliance/requirements/${requirementId}/detail`, { searchParams: params });
+}
+
+// export async function fetchRequirementDetail({ requirementId, versionId, scopeType, scopeId, include }) {
+//   const params = new URLSearchParams({
+//     version_id: String(versionId),
+//     scope_type: String(scopeType),
+//     scope_id: String(scopeId),
+//     include: include || "status,controls,evidence,lifecycle,exceptions",
+//   });
+//   // assuming you already export a shared http client or use fetch wrapper in this file
+//   return getJSON(`compliance/requirements/${requirementId}/detail`, { searchParams: params });
+// }
+
 // ADD THIS
 // make sure getJSON is your existing wrapper that uses prefixUrl
 
