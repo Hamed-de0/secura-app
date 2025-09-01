@@ -8,3 +8,4 @@ from app.models.controls.control_context_link import ControlContextLink
 from .exception import ComplianceException, ComplianceExceptionComment
 from .obligation_atom import ObligationAtom
 from .control_evidence_view import ControlEvidenceView
+from .requirement_owner import RequirementOwner

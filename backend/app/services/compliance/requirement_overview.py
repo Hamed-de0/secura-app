@@ -19,6 +19,8 @@ from app.models.compliance.control_evidence import ControlEvidence
 from app.models.evidence.evidence_lifecycle_event import EvidenceLifecycleEvent
 from app.models.compliance.exception import ComplianceException
 
+from app.models.compliance.requirement_owner import RequirementOwner
+
 from app.core.utils import _to_dt
 
 # Utility: derive breadcrumbs from requirement code (e.g., "9.2.1" -> ["9","9.2","9.2.1"])
@@ -270,6 +272,20 @@ class RequirementOverviewService:
 
         # owners (placeholder for R2)
         owners: List[OwnerItem] = []
+        if "owners" in inc:
+            q = select(RequirementOwner).where(RequirementOwner.framework_requirement_id == requirement_id)
+            if scope_type:
+                q = q.where(RequirementOwner.scope_type == scope_type)
+            if scope_id is not None:
+                q = q.where(RequirementOwner.scope_id == scope_id)
+            for o in db.execute(q).scalars().all():
+                owners.append(OwnerItem(
+                    scope_type=o.scope_type,
+                    scope_id=o.scope_id,
+                    user_id=o.user_id,
+                    name=None,  # populate when you have a users table
+                    role=o.role
+                ))
 
         # suggested controls (placeholder for R4)
         suggested_controls: List[SuggestedControl] = []

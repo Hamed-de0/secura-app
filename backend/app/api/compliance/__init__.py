@@ -18,12 +18,14 @@ from app.api.compliance.requirements_status import router as requirements_status
 from app.api.compliance.requirements_tree import router as requirement_tree_router
 from app.api.compliance.requirement_detail import router as requirement_detail_router
 from app.api.compliance.requirement_overview import router as requirement_overview_router
+from app.api.compliance.requirement_owners import router as requirement_owner_router
 
 router = APIRouter()
 router.include_router(requirement_tree_router)
 router.include_router(requirements_status_router)
 router.include_router(requirement_detail_router)
 router.include_router(requirement_overview_router)
+router.include_router(requirement_owner_router)
 router.include_router(evidence_staleness_router)
 router.include_router(framework_activation_router)
 router.include_router(coverage_summary_router)
