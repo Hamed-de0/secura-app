@@ -19,3 +19,6 @@ def get_common_params(
     fields: Optional[str] = None  # e.g., "id,name"
 ):
     return {"offset": offset, "limit": limit, "fields": fields}
+
+def get_current_user():
+    return {"user_id": 1, "user_name": "Hamed"}

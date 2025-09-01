@@ -41,15 +41,30 @@ export function adaptStatusItem(it) {
   };
 }
 
-export function adaptStatusPage(page) {
-  const items = (page?.items || []).map(adaptStatusItem);
+export function adaptStatusPage(resp) {
   return {
-    total: page?.total ?? items.length,
-    items,
-    page: page?.page ?? 1,
-    size: page?.size ?? items.length,
+    versionId: resp.version_id,
+    scopeType: resp.scope_type,
+    scopeId: resp.scope_id,
+    page: resp.page,
+    size: resp.size,
+    total: resp.total,
+    items: (resp.items || []).map(r => ({
+      id: r.requirement_id,           // <-- DataGrid needs this
+      requirement_id: r.requirement_id,
+      code: r.code,
+      title: r.title,
+      status: r.status,
+      score: r.score,
+      exception_applied: r.exception_applied,
+      parent_id: r.parent_id,
+      top_level_id: r.top_level_id,
+      top_level_code: r.top_level_code,
+      breadcrumb: r.breadcrumb,
+    })),
   };
 }
+
 
 export function pickRequirementDetailFromCoverage(fcov, requirementId) {
   const r = (fcov?.requirements || []).find(x => Number(x.requirement_id) === Number(requirementId));

@@ -1,20 +1,53 @@
+# requirements_status.py
+
 from typing import List, Optional, Dict, Tuple, Set
+from datetime import datetime, timezone
+from sqlalchemy import select, func, distinct, or_
 from sqlalchemy.orm import Session
+from sqlalchemy.inspection import inspect as sa_inspect
 
 from app.schemas.compliance.requirements_status import (
     RequirementsStatusPage,
     RequirementStatusItem,
 )
-
-# C-1 compute
-from app.services.compliance.coverage_effective import compute_version_effective_coverage
 from app.models.compliance.framework_requirement import FrameworkRequirement
+from app.models.compliance.control_framework_mapping import ControlFrameworkMapping
+from app.models.controls.control_context_link import ControlContextLink
+from app.models.compliance.control_evidence import ControlEvidence
+
+
+def _now_utc():
+    try:
+        return datetime.now(timezone.utc)
+    except Exception:
+        return datetime.utcnow()
+
+
+def _try_pick_col(model, *preferred, endswith: Optional[str] = None, contains: Optional[list[str]] = None):
+    cols = {c.key for c in sa_inspect(model).columns}
+    for name in preferred:
+        if name and name in cols:
+            return getattr(model, name)
+    if endswith:
+        for k in cols:
+            if k.endswith(endswith):
+                return getattr(model, k)
+    if contains:
+        for k in cols:
+            if all(token in k for token in contains):
+                return getattr(model, k)
+    return None
+
+
+def _required_col(model, *candidates, **kw):
+    col = _try_pick_col(model, *candidates, **kw)
+    if col is None:
+        have = sorted(c.key for c in sa_inspect(model).columns)
+        raise RuntimeError(f"{model.__name__}: cannot find a matching column among {have}")
+    return col
 
 
 def _load_req_meta(db: Session, version_id: int) -> Dict[int, Dict]:
-    """
-    Return {id: {code, title, parent_id, sort_index}} for the version.
-    """
     rows = (
         db.query(
             FrameworkRequirement.id,
@@ -26,40 +59,28 @@ def _load_req_meta(db: Session, version_id: int) -> Dict[int, Dict]:
         .filter(FrameworkRequirement.framework_version_id == version_id)
         .all()
     )
-    meta = {}
-    for r in rows:
-        meta[r.id] = {
+    return {
+        r.id: {
             "code": r.code,
             "title": r.title,
             "parent_id": r.parent_id,
             "sort_index": r.sort_index,
         }
-    return meta
+        for r in rows
+    }
 
 
-def _compute_path(
-    meta_by_id: Dict[int, Dict],
-    req_id: int,
-    _cache: Dict[int, Tuple[List[int], List[str]]]  # id -> (ids_path, codes_path)
-) -> Tuple[List[int], List[str]]:
-    """
-    Compute ancestor path from top-level to req_id using parent links.
-    Cache results. Returns (ids_path, codes_path).
-    """
+def _compute_path(meta_by_id: Dict[int, Dict], req_id: int, _cache: Dict[int, Tuple[List[int], List[str]]]):
     if req_id in _cache:
         return _cache[req_id]
-
-    visited: Set[int] = set()
-    ids_rev: List[int] = []
-    codes_rev: List[str] = []
+    ids_rev, codes_rev, seen = [], [], set()
     cur = req_id
-    while cur and cur in meta_by_id and cur not in visited:
-        visited.add(cur)
+    while cur and cur in meta_by_id and cur not in seen:
+        seen.add(cur)
         m = meta_by_id[cur]
         ids_rev.append(cur)
         codes_rev.append(m.get("code") or str(cur))
         cur = m.get("parent_id")
-
     ids_path = list(reversed(ids_rev))
     codes_path = list(reversed(codes_rev))
     _cache[req_id] = (ids_path, codes_path)
@@ -72,41 +93,120 @@ def list_requirements_status(
     scope_type: str,
     scope_id: int,
     q: Optional[str] = None,
-    # removed domain; use ancestor_id to filter a subtree
     ancestor_id: Optional[int] = None,
-    status: Optional[str] = None,            # "met,partial" etc.
-    sort_by: str = "code",                   # "code" | "title" | "status" | "score" | "sort_index"
-    sort_dir: str = "asc",                   # "asc" | "desc"
+    status: Optional[str] = None,          # "met,partial" etc.
+    sort_by: str = "code",
+    sort_dir: str = "asc",
     page: int = 1,
     size: int = 50,
 ) -> RequirementsStatusPage:
     """
-    Paginated/filterable list of requirement statuses (hierarchy-aware).
+    Status per requirement using the SAME logic as coverage_rollup:
+    - unknown: no mapping row at all
+    - gap: mapped but no implementation (no CCL for this scope_type+scope_id)
+    - partial: implementation exists (CCL) but no valid evidence now
+    - met: valid evidence now on a CCL under this requirement
     """
-    fcov = compute_version_effective_coverage(
-        db=db, version_id=version_id, scope_type=scope_type, scope_id=scope_id
+
+    # Column resolution (robust to naming differences)
+    CFM_REQ_ID = _required_col(
+        ControlFrameworkMapping,
+        "requirement_id", "framework_requirement_id", endswith="requirement_id",
     )
+    CFM_CTRL_ID = _required_col(
+        ControlFrameworkMapping,
+        "control_id", endswith="control_id", contains=["control","id"],
+    )
+
+    CCL_ID       = _required_col(ControlContextLink, "id")
+    CCL_CTRL_ID  = _required_col(ControlContextLink, "control_id", endswith="control_id")
+    CCL_CTX_TYPE = _required_col(ControlContextLink, "context_type", "scope_type", endswith="context_type")
+    CCL_CTX_ID   = _required_col(ControlContextLink, "context_id", "scope_id", endswith="context_id")
+
+    CE_LINK_ID   = _required_col(ControlEvidence, "control_context_link_id", "context_link_id", "ccl_id", endswith="link_id")
+    CE_STATUS    = _required_col(ControlEvidence, "status", "state")
+    CE_VALID_FROM = _try_pick_col(ControlEvidence, "valid_from", "effective_from", "start_date", endswith="valid_from")
+    CE_VALID_TO   = _try_pick_col(ControlEvidence, "valid_to", "effective_to", "end_date", endswith="valid_to")
+
+    now = _now_utc()
 
     meta_by_id = _load_req_meta(db, version_id)
     path_cache: Dict[int, Tuple[List[int], List[str]]] = {}
 
-    # Build items with hierarchy decorations
+    # All requirement ids for the version
+    all_req_ids = [r for (r,) in db.execute(
+        select(FrameworkRequirement.id)
+        .where(FrameworkRequirement.framework_version_id == version_id)
+    ).all()]
+
+    # Mapped requirement ids (has a CFM row)
+    mapped_req_ids = {r for (r,) in db.execute(
+        select(distinct(CFM_REQ_ID))
+        .join(FrameworkRequirement, FrameworkRequirement.id == CFM_REQ_ID)
+        .where(FrameworkRequirement.framework_version_id == version_id)
+    ).all() if r is not None}
+
+    # Implemented (has a CCL for this scope)
+    impl_req_ids = {r for (r,) in db.execute(
+        select(distinct(CFM_REQ_ID))
+        .join(FrameworkRequirement, FrameworkRequirement.id == CFM_REQ_ID)
+        .join(ControlContextLink, ControlContextLink.__table__.c[CCL_CTRL_ID.key] == CFM_CTRL_ID)
+        .where(
+            FrameworkRequirement.framework_version_id == version_id,
+            ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == scope_type,
+            ControlContextLink.__table__.c[CCL_CTX_ID.key] == scope_id,
+        )
+    ).all() if r is not None}
+
+    # Met (has valid evidence now on a CCL for this scope)
+    ev_filters = [CE_STATUS == "valid"]
+    if CE_VALID_FROM is not None:
+        ev_filters.append(or_(CE_VALID_FROM.is_(None), CE_VALID_FROM <= now))
+    if CE_VALID_TO is not None:
+        ev_filters.append(or_(CE_VALID_TO.is_(None), CE_VALID_TO >= now))
+
+    met_req_ids = {r for (r,) in db.execute(
+        select(distinct(CFM_REQ_ID))
+        .join(FrameworkRequirement, FrameworkRequirement.id == CFM_REQ_ID)
+        .join(ControlContextLink, ControlContextLink.__table__.c[CCL_CTRL_ID.key] == CFM_CTRL_ID)
+        .join(ControlEvidence, ControlEvidence.__table__.c[CE_LINK_ID.key] == ControlContextLink.__table__.c[CCL_ID.key])
+        .where(
+            FrameworkRequirement.framework_version_id == version_id,
+            ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == scope_type,
+            ControlContextLink.__table__.c[CCL_CTX_ID.key] == scope_id,
+            *ev_filters,
+        )
+    ).all() if r is not None}
+
+    def _status_for(req_id: int) -> str:
+        if req_id not in mapped_req_ids:
+            return "unknown"
+        if req_id in met_req_ids:
+            return "met"
+        if req_id in impl_req_ids:
+            return "partial"
+        return "gap"
+
+    # Build items
     items: List[RequirementStatusItem] = []
-    for r in fcov.requirements:
-        m = meta_by_id.get(r.requirement_id, {})
-        ids_path, codes_path = _compute_path(meta_by_id, r.requirement_id, path_cache)
+    for req_id in all_req_ids:
+        m = meta_by_id.get(req_id, {})
+        ids_path, codes_path = _compute_path(meta_by_id, req_id, path_cache)
         top_level_id = ids_path[0] if ids_path else None
         top_level_code = codes_path[0] if codes_path else None
         breadcrumb = " > ".join(codes_path) if codes_path else None
 
+        s = _status_for(req_id)
+        score = 1.0 if s == "met" else (0.5 if s == "partial" else 0.0)
+
         items.append(
             RequirementStatusItem(
-                requirement_id=r.requirement_id,
-                code=(r.code or m.get("code") or str(r.requirement_id)),
-                title=(r.title or m.get("title")),
-                status=r.status,
-                score=r.score or 0.0,
-                exception_applied=getattr(r, "exception_applied", False),
+                requirement_id=req_id,
+                code=m.get("code") or str(req_id),
+                title=m.get("title"),
+                status=s,
+                score=score,
+                exception_applied=False,
                 parent_id=m.get("parent_id"),
                 top_level_id=top_level_id,
                 top_level_code=top_level_code,
@@ -121,14 +221,14 @@ def list_requirements_status(
 
     if q:
         qnorm = q.strip().lower()
-        items = [
-            x for x in items
-            if qnorm in (x.code or "").lower() or qnorm in (x.title or "").lower() or qnorm in (x.breadcrumb or "").lower()
-        ]
+        items = [x for x in items if qnorm in (x.code or "").lower()
+                 or qnorm in (x.title or "").lower()
+                 or qnorm in (x.breadcrumb or "").lower()]
 
-    # Subtree filter: include items whose path contains ancestor_id
     if ancestor_id:
-        items = [x for x in items if x.top_level_id == ancestor_id or x.parent_id == ancestor_id or str(ancestor_id) in (x.breadcrumb or "")]
+        items = [x for x in items if x.top_level_id == ancestor_id
+                 or x.parent_id == ancestor_id
+                 or str(ancestor_id) in (x.breadcrumb or "")]
 
     # Sort
     reverse = (sort_dir.lower() == "desc")
@@ -140,10 +240,8 @@ def list_requirements_status(
     elif sort_by == "score":
         items.sort(key=lambda x: x.score, reverse=reverse)
     elif sort_by == "sort_index":
-        # Need sort_index from meta
         items.sort(key=lambda x: meta_by_id.get(x.requirement_id, {}).get("sort_index", 0), reverse=reverse)
     else:
-        # default by code (breadcrumb-aware)
         items.sort(key=lambda x: (x.code or ""), reverse=reverse)
 
     # Pagination

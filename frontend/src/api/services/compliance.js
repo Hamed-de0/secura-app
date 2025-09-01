@@ -35,7 +35,7 @@ export async function fetchActiveFrameworks({ scopeType, scopeId }) {
 // }
 
 // Requirements status (page of gaps/partials etc.)
-export async function fetchRequirementsStatusPage({
+export async function fetchRequirementsStatusPage_({
   versionId,
   scopeType = DEFAULT_SCOPE.scopeType,
   scopeId   = DEFAULT_SCOPE.scopeId,
@@ -55,6 +55,39 @@ export async function fetchRequirementsStatusPage({
   });
   return await getJSON('compliance/requirements/status', { searchParams });
 }
+
+export async function fetchRequirementsStatusPage({
+  versionId,
+  scopeType,
+  scopeId,
+  status,          // string | string[] e.g. "met" or ["gap","partial"]
+  q,
+  ancestorId,
+  page = 1,
+  size = 50,
+  sortBy = "code",
+  sortDir = "asc",
+}) {
+  const searchParams = {
+    version_id: versionId,
+    scope_type: scopeType,
+    scope_id: scopeId,
+    page,
+    size,
+    sort_by: sortBy,
+    sort_dir: sortDir,
+  };
+  if (scopeId === undefined || scopeId === null) delete searchParams.scope_id;
+  if (q) searchParams.q = q;
+  if (ancestorId != null) searchParams.ancestor_id = ancestorId;
+  if (status && (Array.isArray(status) ? status.length : true)) {
+    searchParams.status = Array.isArray(status) ? status.join(",") : status;
+  }
+
+  // NOTE: no leading slash here because your http client sets prefixUrl
+  return getJSON("compliance/requirements/status", { searchParams });
+}
+
 
 
 
@@ -89,20 +122,8 @@ export async function fetchCoverageRollup({ versionId, scopeTypes = [] }) {
 }
 
 // ADD THIS
-export async function fetchCoverageList({
-  versionId, scopeType, status, page = 1, size = 10, sortBy = "score", sortDir = "asc",
-}) {
-  const qs = new URLSearchParams({
-    version_id: String(versionId),
-    scope_type: scopeType,
-    status, // e.g. "gap" | "partial" | "met" | "unknown"
-    page: String(page),
-    size: String(size),
-    sort_by: sortBy,
-    sort_dir: sortDir,
-  });
-  return getJSON(`coverage/list?${qs.toString()}`); // NOTE: no leading slash
-}
+// make sure getJSON is your existing wrapper that uses prefixUrl
+
 
 
 // export async function fetchCoverageRollup({ versionId, scopeTypes = [] }) {

@@ -11,7 +11,7 @@ import {
   fetchActiveFrameworks,
   fetchStaleEvidence,
   fetchRequirementsStatusPage,
-  fetchCoverageList
+  
   // (optional future) fetchComplianceSummaryHistory
 } from "../../../api/services/compliance";
 
@@ -167,6 +167,7 @@ export default function ComplianceDashboard() {
   }, [versionId, scopeType, scopeId]);
 
   const handleHeatmapCell = React.useCallback((cell) => {
+    console.log("heatmap cell click", cell);
     // cell = { scopeType, status }
     setSlice(cell);
     // OPTIONAL: scroll to table or set a chip showing active slice
@@ -180,16 +181,18 @@ export default function ComplianceDashboard() {
       if (!slice || !versionId) return;
       setRowsLoading(true);
       try {
-        const resp = await fetchCoverageList({
+        const resp = await fetchRequirementsStatusPage({
           versionId,
           scopeType: slice.scopeType,
-          status: slice.status,
+          scopeId: slice.scopeId,
+          status: slice.status,            // e.g. "met" or "gap,partial"
           page: 1,
-          size: 10,
-          sortBy: "score",
+          size: 50,
+          sortBy: "code",
           sortDir: "asc",
         });
-        const { items } = adaptCoverageList(resp);
+        const { items } = adaptStatusPage(resp);
+        console.log("coverage list resp", items);
         if (alive) setRows(items);
       } catch (e) {
         console.error("coverage list error", e);
@@ -251,9 +254,9 @@ export default function ComplianceDashboard() {
     { field: "code", headerName: "Code", width: 120 },
     { field: "title", headerName: "Requirement", flex: 1, minWidth: 240 },
     { field: "scope_type", headerName: "Scope", width: 120,
-      valueGetter: (p) => p.row.scope_type },
+      valueGetter: (p) => scopeType },
     { field: "status", headerName: "Status", width: 120,
-      renderCell: (p) => <StatusChip value={p.row.status} /> },
+      renderCell: (p) => <StatusChip value={p.row?.status} /> },
     { field: "score", headerName: "Score", width: 110,
       valueFormatter: ({ value }) => `${Math.round((value ?? 0) * 100)}%` },
   ], []);
@@ -334,7 +337,7 @@ export default function ComplianceDashboard() {
           <Card sx={{ mt: 2 }}>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                <Typography variant="overline" color="text.secondary">Top gaps (lowest scores)</Typography>
+                <Typography variant="overline" color="text.secondary">Top gaps Scope {scopeType}</Typography>
                 <Button
                   component={RouterLink}
                   to={`/compliance/versions/${versionId}?scope_type=${scopeType}&scope_id=${scopeId}`}
