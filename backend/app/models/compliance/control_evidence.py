@@ -1,6 +1,6 @@
 # app/models/compliance/control_evidence.py
 
-from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -40,3 +40,5 @@ class ControlEvidence(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     link = relationship("ControlContextLink", backref="evidence")
+
+    # __table_args__ = (Index("ix_control_evidence_link_valid_until", "control_context_link_id", "valid_until"))

@@ -9,6 +9,8 @@ from app.services.compliance.requirement_timeline import RequirementTimelineServ
 
 router = APIRouter(prefix="/compliance", tags=["compliance:timeline"])
 
+ALLOWED_KINDS = {"evidence", "exception", "mapping"}
+
 @router.get(
     "/requirement/{requirement_id}/timeline",
     response_model=List[UnifiedTimelineItem],
@@ -24,6 +26,13 @@ def requirement_timeline(
     size: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
+    bad = [k for k in kinds if k not in ALLOWED_KINDS]
+    if bad:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid kinds: {bad}. Allowed: {sorted(ALLOWED_KINDS)}"
+        )
     return RequirementTimelineService.get_timeline(
         db,
         requirement_id=requirement_id,

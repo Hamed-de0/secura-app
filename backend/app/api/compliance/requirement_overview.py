@@ -7,7 +7,11 @@ from app.database import get_db  # adjust to your project's dependency
 from app.schemas.compliance.requirement_overview import RequirementOverviewResponse
 from app.services.compliance.requirement_overview import RequirementOverviewService
 
+from app.common.includes import parse_includes
+
 router = APIRouter(prefix="/compliance", tags=["Compliance Requirements"])
+
+_DEFAULT_INCLUDES = ["usage", "mappings", "evidence", "exceptions", "lifecycle", "owners", "suggested_controls"]
 
 
 @router.get(
@@ -21,11 +25,13 @@ def get_requirement_overview(
     scope_type: Optional[str] = Query(None),
     scope_id: Optional[int] = Query(None),
     include: List[str] = Query(
-        default=["usage", "mappings", "evidence", "exceptions", "lifecycle", "owners", "suggested_controls"],
+        default=_DEFAULT_INCLUDES,
         description="Repeatable include flags"
     ),
     db: Session = Depends(get_db),
 ):
+    inc = parse_includes(include, default=_DEFAULT_INCLUDES)
+
     try:
         return RequirementOverviewService.get_overview(
             db,
@@ -33,7 +39,7 @@ def get_requirement_overview(
             version_id=version_id,
             scope_type=scope_type,
             scope_id=scope_id,
-            include=include,
+            include=list(inc),
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

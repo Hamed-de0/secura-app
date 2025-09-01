@@ -6,10 +6,28 @@ from app.schemas.compliance.evidence import ControlEvidenceCreate, ControlEviden
 from app.crud.compliance import control_evidence as crud
 from app.crud.evidence import lifecycle, create_artifact_db
 
+from app.models.evidence.evidence_artifact import EvidenceArtifact  # import
+from app.schemas.evidence.evidence import EvidenceArtifactOut
 
 from app.crud.evidence import create_artifact_db  # NEW (reuse existing CRUD)
 
+
+# add near top
+ALLOWED_CONTENT_TYPES = {
+    "application/pdf", "image/png", "image/jpeg",
+    "text/plain", "text/csv", "application/json"
+}
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB
 router = APIRouter(prefix="/evidence", tags=["Compliance - Evidence"])
+
+
+@router.get("/artifacts/{artifact_id}", response_model=EvidenceArtifactOut, summary="Get artifact metadata")
+def get_artifact_meta(artifact_id: int, db: Session = Depends(get_db)):
+    obj = db.get(EvidenceArtifact, artifact_id)
+    if not obj:
+        from fastapi import HTTPException, status
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Artifact not found")
+    return obj
 
 @router.post("", response_model=ControlEvidenceOut)
 def add_evidence(payload: ControlEvidenceCreate, db: Session = Depends(get_db)):
@@ -69,6 +87,15 @@ async def upload_artifact_to_control_evidence(
 ):
     # Save artifact (DB-blob storage) using existing CRUD
     content = await file.read()
+
+    # ... inside upload_artifact_to_control_evidence(...)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large")
+
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                            detail=f"Unsupported content type: {file.content_type}")
+
     art = create_artifact_db(
         db,
         filename=file.filename,
