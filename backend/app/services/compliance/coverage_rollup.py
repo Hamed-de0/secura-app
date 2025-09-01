@@ -10,6 +10,7 @@ from app.models.compliance.control_framework_mapping import ControlFrameworkMapp
 from app.models.controls.control_context_link import ControlContextLink
 from app.models.compliance.control_evidence import ControlEvidence
 
+from app.services.compliance.requirements_status import valid_evidence_filters
 
 def _now_utc():
     try:
@@ -61,6 +62,7 @@ def coverage_rollup_by_scope_type(db: Session, version_id: int, scope_types: lis
       - ControlFrameworkMapping.<...control_id...> ↔ ControlContextLink.<...control_id...>
       - ControlEvidence.<...control_context_link_id...> ↔ ControlContextLink.id
     """
+    ev_pred = valid_evidence_filters()
 
     # Resolve column names robustly (works with framework_requirement_id / requirement_id, etc.)
     CFM_REQ_ID = _required_col(
@@ -142,6 +144,7 @@ def coverage_rollup_by_scope_type(db: Session, version_id: int, scope_types: lis
                 .where(
                     FrameworkRequirement.framework_version_id == version_id,
                     ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == st,
+                    ev_pred,
                 )
             ).all()
             if r is not None

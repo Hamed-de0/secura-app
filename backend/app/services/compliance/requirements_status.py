@@ -2,7 +2,7 @@
 
 from typing import List, Optional, Dict, Tuple, Set
 from datetime import datetime, timezone
-from sqlalchemy import select, func, distinct, or_
+from sqlalchemy import select, func, distinct, or_, and_
 from sqlalchemy.orm import Session
 from sqlalchemy.inspection import inspect as sa_inspect
 
@@ -21,6 +21,21 @@ def _now_utc():
         return datetime.now(timezone.utc)
     except Exception:
         return datetime.utcnow()
+
+
+def valid_evidence_filters(now_db=None):
+    """
+    Reusable SQLAlchemy predicates for 'valid evidence'.
+    We standardize on DB time (func.now()) to avoid date vs datetime issues.
+    """
+    now_db = now_db or func.now()
+    filters = [ControlEvidence.status == "valid"]
+    # If your schema has these columns, include time bounds; otherwise they’re ignored by SQLA.
+    if hasattr(ControlEvidence, "valid_from"):
+        filters.append(or_(ControlEvidence.valid_from.is_(None), ControlEvidence.valid_from <= now_db))
+    if hasattr(ControlEvidence, "valid_until"):
+        filters.append(or_(ControlEvidence.valid_until.is_(None), ControlEvidence.valid_until >= now_db))
+    return and_(*filters)
 
 
 def _try_pick_col(model, *preferred, endswith: Optional[str] = None, contains: Optional[list[str]] = None):
@@ -175,6 +190,7 @@ def list_requirements_status(
             ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == scope_type,
             ControlContextLink.__table__.c[CCL_CTX_ID.key] == scope_id,
             *ev_filters,
+            valid_evidence_filters()
         )
     ).all() if r is not None}
 

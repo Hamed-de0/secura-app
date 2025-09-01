@@ -10,7 +10,7 @@ from app.schemas.compliance.requirement_detail import (
     RequirementDetailResponse, RequirementBasic, StatusOut, MappingOut, EvidenceOut
 )
 from app.services.compliance.requirements_status_core import query_requirements_status_items
-
+from app.services.compliance.requirements_status import valid_evidence_filters
 # Models (names match your project structure)
 from app.models.compliance.framework_requirement import FrameworkRequirement
 from app.models.compliance.control_framework_mapping import ControlFrameworkMapping
@@ -56,8 +56,9 @@ def _control_status(db, *, control_id: int, scope_type: str, scope_id: int) -> s
     has_valid = db.query(
         sa.exists().where(
             ControlEvidence.control_context_link_id.in_(select(ccl_ids_subq.c.id)),
-            ControlEvidence.valid_until.isnot(None),
-            ControlEvidence.valid_until > sa.func.now(),   # DB comparison; works for DATE or TIMESTAMP
+            valid_evidence_filters()
+            # ControlEvidence.valid_until.isnot(None),
+            # ControlEvidence.valid_until > sa.func.now(),   # DB comparison; works for DATE or TIMESTAMP
         )
     ).scalar()
 
