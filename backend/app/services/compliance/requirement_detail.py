@@ -17,15 +17,9 @@ from app.models.compliance.control_framework_mapping import ControlFrameworkMapp
 from app.models.controls.control import Control
 from app.models.controls.control_context_link import ControlContextLink
 from app.models.compliance.control_evidence import ControlEvidence
+from app.core.utils import _to_dt
 
-def _to_dt(d):
-    if d is None:
-        return None
-    if isinstance(d, datetime):
-        return d
-    if isinstance(d, date):
-        return datetime.combine(d, time.min)
-    return None
+
 
 def _control_status(db, *, control_id: int, scope_type: str, scope_id: int) -> str:
     """
