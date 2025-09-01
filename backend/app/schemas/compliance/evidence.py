@@ -1,9 +1,17 @@
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional, Literal, Dict, Any
 from datetime import date, datetime
 
 EvidenceType = Literal["file","url","screenshot","report","other"]
 EvidenceStatus = Literal["valid","needs_review","invalid","expired"]
+
+# --- Lifecycle write payload ---
+class LifecycleEventIn(BaseModel):
+    event: str
+    actor_id: Optional[int] = None
+    notes: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+
 
 class ControlEvidenceCreate(BaseModel):
     control_context_link_id: int

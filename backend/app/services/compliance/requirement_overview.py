@@ -236,30 +236,32 @@ class RequirementOverviewService:
                     expires_at=_iso(getattr(r, "expires_at", None)),
                 ))
 
-        # lifecycle (evidence events → simple timeline)
+        # lifecycle (unified -> simplified TimelineEvent used by Overview)
         lifecycle: List[TimelineEvent] = []
-        if "lifecycle" in inc and evidence:
-            ev_ids = [e.evidence_id for e in evidence]
-            evlog_rows = db.execute(
-                select(
-                    EvidenceLifecycleEvent.id,
-                    EvidenceLifecycleEvent.created_at,
-                    EvidenceLifecycleEvent.event,
-                    getattr(EvidenceLifecycleEvent, "actor", None),
-                    getattr(EvidenceLifecycleEvent, "note", None),
-                    EvidenceLifecycleEvent.evidence_id,
-                ).where(EvidenceLifecycleEvent.evidence_id.in_(ev_ids))
-                 .order_by(EvidenceLifecycleEvent.created_at.desc())
-            ).all()
-            for r in evlog_rows:
+        if "lifecycle" in inc:
+            from app.services.compliance.requirement_timeline import RequirementTimelineService
+            uni = RequirementTimelineService.get_timeline(
+                db,
+                requirement_id=requirement_id,
+                version_id=version_id,
+                scope_type=scope_type,
+                scope_id=scope_id,
+                limit=50,  # a concise slice for overview
+                page=1,
+                kinds=["evidence", "exception", "mapping"],
+            )
+            for it in uni:
+                # event text like "evidence:verified", "exception:status_changed", "mapping:added"
+                ev_text = f"{it.kind}:{it.subtype}"
                 lifecycle.append(TimelineEvent(
-                    id=r.id,
-                    ts=_iso(r.created_at),
-                    event=r.event,
-                    actor=getattr(r, "actor", None),
-                    note=getattr(r, "note", None),
-                    evidence_id=r.evidence_id,
+                    id=None,  # unified id is string; keep None to avoid type clash
+                    ts=it.ts,
+                    event=ev_text,
+                    actor=it.actor,
+                    note=it.note or it.summary,
+                    evidence_id=it.evidence_id,
                 ))
+
 
         # status summary (very light: count contexts by derived status)
         status_summary = StatusSummary()
@@ -289,6 +291,16 @@ class RequirementOverviewService:
 
         # suggested controls (placeholder for R4)
         suggested_controls: List[SuggestedControl] = []
+        if "suggested_controls" in inc:
+            from app.services.compliance.suggested_controls import get_suggested_controls
+            suggested_controls = get_suggested_controls(
+                db,
+                requirement_id=requirement_id,
+                version_id=version_id,
+                scope_type=scope_type,
+                scope_id=scope_id,
+                limit=5,
+            )
 
         return RequirementOverviewResponse(
             header=header,
