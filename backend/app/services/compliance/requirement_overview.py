@@ -176,10 +176,10 @@ class RequirementOverviewService:
                 getattr(ComplianceException, "created_at", None),
                 getattr(ComplianceException, "updated_at", None),
             ).where(getattr(ComplianceException, "framework_requirement_id") == requirement_id)
-            if scope_type:
-                exc_stmt = exc_stmt.where(getattr(ComplianceException, "scope_type") == scope_type)
-            if scope_id is not None:
-                exc_stmt = exc_stmt.where(getattr(ComplianceException, "scope_id") == scope_id)
+            # if scope_type:
+            #    exc_stmt = exc_stmt.where(getattr(ComplianceException, "scope_type") == scope_type)
+            # if scope_id is not None:
+            #    exc_stmt = exc_stmt.where(getattr(ComplianceException, "scope_id") == scope_id)
             for r in db.execute(exc_stmt.order_by(ComplianceException.id.desc())).all():
                 exceptions.append(ExceptionItem(
                     id=r.id,
@@ -253,7 +253,7 @@ class RequirementOverviewService:
                 scope_id=scope_id,
                 limit=5,
             )
-            
+
         return RequirementOverviewResponse(
             header=header,
             status_summary=status_summary,

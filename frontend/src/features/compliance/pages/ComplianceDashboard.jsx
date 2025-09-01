@@ -203,7 +203,18 @@ export default function ComplianceDashboard() {
   };
 
   const drillToExplorer = (status) => {
+
     navigate(`/compliance/versions/${versionId}?scope_type=${scopeType}&scope_id=${scopeId}&status=${status}`);
+  };
+
+  const drillToRequirement = (requirementId, opts = {}) => {
+    const params = new URLSearchParams();
+    params.set("version_id", String(versionId));
+    if (scopeType) params.set("scope_type", scopeType);
+    if (scopeId != null) params.set("scope_id", String(scopeId));
+    if (opts.tab) params.set("tab", opts.tab);            // optional (e.g., 'evidence')
+    if (Array.isArray(opts.kinds)) opts.kinds.forEach(k => params.append("kinds", k)); // optional for timeline
+    navigate(`/compliance/requirement/${requirementId}?${params.toString()}`);
   };
 
   return (
@@ -445,7 +456,7 @@ function renderPanelContent(panel, ctx) {
           scopeType={p.scopeType ?? ctx.scopeType}
           scopeId={p.scopeId ?? ctx.scopeId}
           onOpenExplorer={() =>
-            ctx.navigate(`/compliance/versions/${ctx.versionId}?scope_type=${ctx.scopeType}&scope_id=${ctx.scopeId}`)
+            ctx.navigate(`/compliance/requirement/${p.requirementId}`)
           }
           headerFallback={{ code: p.code, title: p.title }}
         />

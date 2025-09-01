@@ -38,7 +38,7 @@ import ComplianceDashboard from '../features/compliance/pages/ComplianceDashboar
 import ComplianceDashboardMulti from '../features/compliance/pages/ComplianceDashboardMulti.jsx';
 import ControlsDashboard from '../features/controls/pages/ControlsDashboard.jsx';
 import RiskRegisterPage from '../features/risks/pages/RiskRegisterPage.jsx';
-
+import RequirementPage from '../features/compliance/requirement/RequirementPage.jsx';
 
 // Add others progressively...
 
@@ -73,6 +73,8 @@ function AppRouter() {
       <Route path="/risk-register" element={<MainView><RiskRegisterPage /></MainView>} />
       {/* <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} /> */}
       <Route path="/controls" element={<MainView><ControlsDashboard /></MainView>} />
+      <Route path="/compliance/requirement/:requirementId" element={<MainView><RequirementPage /></MainView>} />
+
       <Route path="/providers" element={<MainView><ProvidersPage /></MainView>} />
       <Route path="/activities" element={<MainView><ActivitiesPage /></MainView>} />
       <Route path="/my-work" element={<MainView><MyWork /></MainView>} />
