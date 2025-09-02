@@ -7,9 +7,10 @@ from app.api.dashboards import router as dashboard_router
 from app.api.policies import router as policy_router
 from app.api.compliance import router as compliance_router
 from app.api.org import router as org_router
-from app.api import ai_router
+from app.api import ai_router, auth_router
 from app.api.scopes import router as scope_router
 from app.api.evidence import router as ev_router
+from app.api.iam import router as iam_router
 
 from app.api.assets import asset_lifecycle_event, asset_type, asset_relation, asset_group, asset_maintenance, \
     asset_security_profile, asset_tag, asset_scan, asset_owner, asset
@@ -31,6 +32,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+app.include_router(auth_router)
+app.include_router(iam_router)
 app.include_router(scope_router)
 app.include_router(ai_router)
 app.include_router(ev_router)
