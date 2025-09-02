@@ -138,10 +138,10 @@ class RequirementTimelineService:
                 getattr(ComplianceException, "updated_at", None),
                 getattr(ComplianceException, "expires_at", None),
             ).where(getattr(ComplianceException, "framework_requirement_id") == requirement_id)
-            if scope_type:
-                exc_stmt = exc_stmt.where(getattr(ComplianceException, "scope_type") == scope_type)
-            if scope_id is not None:
-                exc_stmt = exc_stmt.where(getattr(ComplianceException, "scope_id") == scope_id)
+            # if scope_type:
+            #     exc_stmt = exc_stmt.where(getattr(ComplianceException, "scope_type") == scope_type)
+            # if scope_id is not None:
+            #     exc_stmt = exc_stmt.where(getattr(ComplianceException, "scope_id") == scope_id)
             exc_rows = db.execute(exc_stmt).all()
             for r in exc_rows:
                 # created

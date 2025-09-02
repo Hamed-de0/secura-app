@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Box, Stack, TextField, MenuItem, List, ListItem, ListItemText, Chip, IconButton, Tooltip } from "@mui/material";
+import { Box, Stack, TextField, MenuItem, List, ListItem, Chip, IconButton, Tooltip, Divider, Typography } from "@mui/material";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import CheckIcon from "@mui/icons-material/Check";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
@@ -14,7 +14,6 @@ export default function EvidencePanel({ evidence, mappings, activeScope, onVerif
   const list = React.useMemo(() => {
     let arr = Array.isArray(evidence) ? evidence : [];
     if (activeScope?.scopeType && activeScope?.scopeId != null) {
-      // filter by scope via mappings contexts
       const allowedLinks = new Set(
         (mappings||[]).flatMap(m => (m.contexts||[])
           .filter(c => c.scope_type===activeScope.scopeType && c.scope_id===activeScope.scopeId)
@@ -30,7 +29,7 @@ export default function EvidencePanel({ evidence, mappings, activeScope, onVerif
 
   return (
     <Box>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: "wrap" }}>
         <TextField size="small" placeholder="Search evidence…" value={q} onChange={e=>setQ(e.target.value)} />
         <TextField size="small" select label="State" value={state} onChange={e=>setState(e.target.value)}>
           <MenuItem value="all">All</MenuItem>
@@ -46,41 +45,72 @@ export default function EvidencePanel({ evidence, mappings, activeScope, onVerif
         </TextField>
       </Stack>
 
-      <List dense>
-        {list.map(ev => (
-          <ListItem key={ev.evidence_id}
-            secondaryAction={
-              <Stack direction="row" spacing={1}>
-                {ev.url && (
-                  <Tooltip title="Open link">
-                    <IconButton size="small" href={ev.url} target="_blank" rel="noopener"><CloudDownloadIcon fontSize="small" /></IconButton>
+      <List dense disablePadding>
+        {list.map((ev, idx) => (
+          <React.Fragment key={ev.evidence_id}>
+            <ListItem sx={{ py: 0.75 }}>
+              <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: "100%" }}>
+                {/* LEFT: text */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" noWrap title={ev.title}>{ev.title}</Typography>
+
+                  {/* Line 1: date range (YYYY-MM-DD → YYYY-MM-DD) */}
+                  {(ev.collected_at || ev.valid_until) && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      component="div"          // ⬅️ force block
+                    >
+                      {fmtYMD(ev.collected_at)} → {fmtYMD(ev.valid_until)}
+                    </Typography>
+                  )}
+
+                  {/* Line 2: context (always below dates) */}
+                  {ev.control_context_link_id && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      component="div"          // ⬅️ force block
+                      sx={{ mt: 0.25 }}        // subtle spacing
+                    >
+                      ctx#{ev.control_context_link_id}
+                    </Typography>
+                  )}
+                </Box>
+
+
+                {/* RIGHT: actions */}
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+                  <Chip size="small" label={ev.status || "unknown"} sx={{ bgcolor: STATUS_COLOR[(ev.status||"unknown")], color:"#fff" }} />
+                  {ev.url && (
+                    <Tooltip title="Open link">
+                      <IconButton size="small" href={ev.url} target="_blank" rel="noopener"><CloudDownloadIcon fontSize="small" /></IconButton>
+                    </Tooltip>
+                  )}
+                  <Tooltip title="Verify">
+                    <IconButton size="small" onClick={()=>onVerify(ev.evidence_id)}><CheckIcon fontSize="small" /></IconButton>
                   </Tooltip>
-                )}
-                <Tooltip title="Verify">
-                  <IconButton size="small" onClick={()=>onVerify(ev.evidence_id)}><CheckIcon fontSize="small" /></IconButton>
-                </Tooltip>
-                <Tooltip title="Upload/replace file">
-                  <IconButton size="small" onClick={()=>onUpload(ev.evidence_id)}><UploadFileIcon fontSize="small" /></IconButton>
-                </Tooltip>
+                  <Tooltip title="Upload/replace file">
+                    <IconButton size="small" onClick={()=>onUpload(ev.evidence_id)}><UploadFileIcon fontSize="small" /></IconButton>
+                  </Tooltip>
+                </Stack>
               </Stack>
-            }
-          >
-            <ListItemText
-              primary={ev.title}
-              secondary={[
-                ev.type && `Type: ${ev.type}`,
-                ev.collected_at && `From: ${ev.collected_at}`,
-                ev.valid_until && `To: ${ev.valid_until}`,
-                ev.control_context_link_id && `ctx#${ev.control_context_link_id}`
-              ].filter(Boolean).join(" • ")}
-            />
-            <Chip size="small" label={ev.status || "unknown"} sx={{ bgcolor: STATUS_COLOR[(ev.status||"unknown")], color:"#fff", ml: 1 }} />
-          </ListItem>
+            </ListItem>
+            {idx < list.length - 1 && <Divider />}
+          </React.Fragment>
         ))}
-        {list.length === 0 && (
-          <Box sx={{ p: 1 }}><em>No evidence matches the filters.</em></Box>
-        )}
+        {list.length === 0 && <Box sx={{ p: 1 }}><em>No evidence matches the filters.</em></Box>}
       </List>
     </Box>
   );
+}
+
+function fmtYMD(s) {
+  if (!s) return "—";
+  try {
+    const d = new Date(s);
+    if (!isNaN(d)) return d.toISOString().slice(0, 10);
+  } catch {}
+  // fallback if backend already sends YYYY-MM-DD
+  return String(s).slice(0, 10);
 }
