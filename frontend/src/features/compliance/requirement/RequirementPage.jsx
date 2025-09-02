@@ -18,6 +18,8 @@ import VerifyEvidencePanel from "./panels/VerifyEvidencePanel.jsx";
 import AssignOwnerPanel from "./panels/AssignOwnerPanel.jsx";
 import CreateExceptionPanel from "./panels/CreateExceptionPanel.jsx";
 import AddMappingPanel from "./panels/AddMappingPanel.jsx";
+import ExceptionActionPanel from "./panels/ExceptionActionPanel.jsx";
+import AddExceptionCommentPanel from "./panels/AddExceptionCommentPanel.jsx";
 
 const STATUS_COLOR = { met:"#2e7d32", partial:"#ed6c02", gap:"#d32f2f", unknown:"#9e9e9e" };
 const PANEL_MAP = {
@@ -26,7 +28,9 @@ const PANEL_MAP = {
   "verify-evidence": VerifyEvidencePanel,
   "assign-owner": AssignOwnerPanel,
   "create-exception": CreateExceptionPanel, 
-  "add-mapping": AddMappingPanel, // NEW
+  "add-mapping": AddMappingPanel, 
+  "exception-action": ExceptionActionPanel,          // NEW
+  "exception-comment": AddExceptionCommentPanel,     // NEW
 };
 
 export default function RequirementPage() {
@@ -154,7 +158,11 @@ export default function RequirementPage() {
                   Create exception
                 </Link>
               </Stack>
-              <ExceptionsPanel exceptions={exceptions} />
+              <ExceptionsPanel
+                exceptions={exceptions}
+                onAction={(exceptionId, action) => openPanel("exception-action", { exceptionId, action }, `${action[0].toUpperCase()+action.slice(1)} exception`)}
+                onComment={(exceptionId) => openPanel("exception-comment", { exceptionId }, "Add comment")}
+              />
             </CardContent>
           </Card>
 
@@ -183,7 +191,8 @@ export default function RequirementPage() {
             onCreateException={() => openPanel("create-exception", { requirementId, scopeType, scopeId }, "Create Exception")}
             onAssignOwner={() => openPanel("assign-owner", { requirementId, scopeType, scopeId }, "Assign Owner")}
             onExport={() => openPanel("export-report", { requirementId, versionId }, "Export")}
-            suggestions={<SuggestedControls items={suggested_controls} onAddMapping={(controlId) => openPanel("add-mapping", { requirementId, controlId }, "Add Mapping")} />}
+            suggestions={<SuggestedControls items={suggested_controls} onAddMapping={(controlId, prefill) =>
+                openPanel("add-mapping", { requirementId, controlId, rationale: prefill?.reason }, "Add Mapping")}/>}
           />
         </Grid>
       </Grid>

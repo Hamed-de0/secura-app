@@ -88,6 +88,9 @@ def coverage_rollup_by_scope_type(db: Session, version_id: int, scope_types: lis
         endswith="context_type",
     )
 
+    # SoA applicability (optional column; if missing, no-op)
+    CCL_APPL = _try_pick_col(ControlContextLink, "applicability")
+
     CE_LINK_ID = _required_col(
         ControlEvidence,
         "control_context_link_id",
@@ -145,6 +148,8 @@ def coverage_rollup_by_scope_type(db: Session, version_id: int, scope_types: lis
                     FrameworkRequirement.framework_version_id == version_id,
                     ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == st,
                     ev_pred,
+                    *([or_(ControlContextLink.__table__.c[CCL_APPL.key].is_(None),
+                            ControlContextLink.__table__.c[CCL_APPL.key] != "na")] if CCL_APPL is not None else []),
                 )
             ).all()
             if r is not None
@@ -168,6 +173,8 @@ def coverage_rollup_by_scope_type(db: Session, version_id: int, scope_types: lis
                     FrameworkRequirement.framework_version_id == version_id,
                     ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == st,
                     *ev_filters,
+                    * ([or_(ControlContextLink.__table__.c[CCL_APPL.key].is_(None),
+                        ControlContextLink.__table__.c[CCL_APPL.key] != "na")] if CCL_APPL is not None else []),
                 )
             ).all()
             if r is not None

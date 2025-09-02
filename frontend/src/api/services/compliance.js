@@ -280,3 +280,22 @@ export async function createCrosswalk({
   return postJSON(url, { json });
 }
 
+// --- Exceptions workflow + comments (no leading slash) ---
+export async function submitException(exceptionId) {
+  return postJSON(`exceptions/${exceptionId}/submit`, { json: {} });
+}
+export async function approveException(exceptionId) {
+  return postJSON(`exceptions/${exceptionId}/approve`, { json: {} });
+}
+export async function rejectException(exceptionId) {
+  return postJSON(`exceptions/${exceptionId}/reject`, { json: {} });
+}
+export async function withdrawException(exceptionId) {
+  return postJSON(`exceptions/${exceptionId}/withdraw`, { json: {} });
+}
+export async function addExceptionComment(exceptionId, { author, body }) {
+  return postJSON(`exceptions/${exceptionId}/comments`, { json: { author, body } });
+}
+
+
+

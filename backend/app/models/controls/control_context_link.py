@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint, Text, Index
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint, Text, Index, Date
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.base import Base
@@ -21,6 +21,13 @@ class ControlContextLink(Base):
     implemented_at = Column(DateTime, nullable=True)
     status_updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     notes = Column(Text, nullable=True)
+
+    applicability = Column(String(16), nullable=False, default="applicable")  # "applicable" | "na"
+    justification = Column(Text, nullable=True)
+    approver = Column(String(120), nullable=True)
+    decided_at = Column(Date, nullable=True)
+    expires_at = Column(Date, nullable=True)
+    owner = Column(String(120), nullable=True)
 
     context = relationship("RiskScenarioContext", backref="control_links", lazy="joined")
     control = relationship("Control", lazy="joined")

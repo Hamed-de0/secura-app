@@ -138,10 +138,19 @@ def list_requirements_status(
     CCL_CTX_TYPE = _required_col(ControlContextLink, "context_type", "scope_type", endswith="context_type")
     CCL_CTX_ID   = _required_col(ControlContextLink, "context_id", "scope_id", endswith="context_id")
 
+
     CE_LINK_ID   = _required_col(ControlEvidence, "control_context_link_id", "context_link_id", "ccl_id", endswith="link_id")
     CE_STATUS    = _required_col(ControlEvidence, "status", "state")
     CE_VALID_FROM = _try_pick_col(ControlEvidence, "valid_from", "effective_from", "start_date", endswith="valid_from")
     CE_VALID_TO   = _try_pick_col(ControlEvidence, "valid_to", "effective_to", "end_date", endswith="valid_to")
+
+    CCL_APPL = _try_pick_col(ControlContextLink, "applicability")
+    appl_filters = []
+
+    if CCL_APPL is not None:
+        appl_filters.append(
+            or_(ControlContextLink.__table__.c[CCL_APPL.key].is_(None),
+            ControlContextLink.__table__.c[CCL_APPL.key] != "na"))
 
     now = _now_utc()
 
@@ -170,6 +179,7 @@ def list_requirements_status(
             FrameworkRequirement.framework_version_id == version_id,
             ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == scope_type,
             ControlContextLink.__table__.c[CCL_CTX_ID.key] == scope_id,
+            *appl_filters
         )
     ).all() if r is not None}
 
@@ -190,6 +200,7 @@ def list_requirements_status(
             ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == scope_type,
             ControlContextLink.__table__.c[CCL_CTX_ID.key] == scope_id,
             *ev_filters,
+            *appl_filters,
             valid_evidence_filters()
         )
     ).all() if r is not None}

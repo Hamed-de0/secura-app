@@ -21,11 +21,12 @@ from app.api.compliance.requirement_overview import router as requirement_overvi
 from app.api.compliance.requirement_owners import router as requirement_owner_router
 from .suggested_controls import router as suggested_controls_router
 from .requirement_timeline import router as requirement_timeline_router
-
+from .soa import router as soa_router
 
 router = APIRouter()
 router.include_router(requirement_tree_router)
 router.include_router(requirements_status_router)
+router.include_router(soa_router)
 router.include_router(requirement_detail_router)
 router.include_router(requirement_overview_router)
 router.include_router(requirement_owner_router)
