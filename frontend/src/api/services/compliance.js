@@ -1,5 +1,7 @@
 // src/api/services/compliance.js
-import { getJSON, buildSearchParams } from '../../api/httpClient';
+import { getJSON, postJSON, buildSearchParams } from '../../api/httpClient';
+import { uploadFile } from "../fileClient";
+
 import { DEFAULT_SCOPE } from '../../app/constants';
 
 
@@ -23,16 +25,7 @@ export async function fetchActiveFrameworks({ scopeType, scopeId }) {
   const qs = new URLSearchParams({ scope_type: scopeType, scope_id: String(scopeId) });
   return getJSON(`policies/framework-activation/active-for-scope?${qs.toString()}`);
 }
-// export async function fetchActiveFrameworks({
-//   scopeType = DEFAULT_SCOPE.scopeType,
-//   scopeId   = DEFAULT_SCOPE.scopeId,
-// }) {
-//   const searchParams = buildSearchParams({
-//     scope_type: scopeType,
-//     scope_id:   scopeId,
-//   });
-//   return await getJSON('policies/framework-activation/active-for-scope', { searchParams });
-// }
+
 
 // Requirements status (page of gaps/partials etc.)
 export async function fetchRequirementsStatusPage_({
@@ -88,9 +81,6 @@ export async function fetchRequirementsStatusPage({
   return getJSON("compliance/requirements/status", { searchParams });
 }
 
-
-
-
 // Requirements tree (for left panel)
 export async function fetchRequirementsTree({ versionId }) {
       if (!versionId) throw new Error('fetchComplianceSummary: versionId is required');
@@ -98,7 +88,6 @@ export async function fetchRequirementsTree({ versionId }) {
   const searchParams = buildSearchParams({ version_id: versionId });
   return await getJSON('compliance/requirements/tree', { searchParams });
 }
-
 
 // Evidence: expired / expiring soon (right column widget)
 export async function fetchStaleEvidence({ withinDays = 30, scopeType, scopeId, status, page = 1, size = 10 }) {
@@ -173,3 +162,121 @@ export async function fetchRequirementTimeline({ requirementId, versionId, scope
   params.set('size', String(size));
   return getJSON(`compliance/requirement/${requirementId}/timeline`, { searchParams: params });
 }
+
+// --- ADD these helpers (leave existing exports as-is) ---
+// --- Evidence CRUD (align with backend payloads) ---
+
+export async function createEvidence({
+  control_context_link_id,
+  title,
+  evidence_type,        // "url" | "file" | "text"
+  evidence_url,         // string | null
+  description,          // string | null (used for "text" content too)
+  collected_at,         // "YYYY-MM-DD"
+  valid_until = null,   // "YYYY-MM-DD" | null
+  status = "valid",
+  created_by = "ui",
+}) {
+  const url = `evidence`; // no leading slash
+  const json = {
+    control_context_link_id: Number(control_context_link_id),
+    title,
+    description: description ?? null,
+    evidence_type,
+    evidence_url: evidence_url ?? null,
+    file_path: null, // set by /evidence/{id}/artifact
+    collected_at,
+    valid_until,
+    status,
+    created_by,
+  };
+  return postJSON(url, { json });
+}
+
+export async function uploadEvidenceArtifact(evidenceId, file) {
+  // leading slash ensures proper join with fileClient baseURL
+  return uploadFile({
+    url: `/evidence/${evidenceId}/artifact`,
+    file,
+    // meta: { /* optional extra fields */ },
+    // onProgress: (p) => console.debug("upload %", p),
+  });
+}
+
+export async function appendEvidenceLifecycle(evidenceId, body /* {event, note?} */) {
+  const url = `evidence/${evidenceId}/lifecycle`;
+  return postJSON(url, { json: body });
+}
+
+export async function assignRequirementOwner(requirementId, body /* {scope_type?, scope_id?, user_id, role} */) {
+  const url = `compliance/requirement/${requirementId}/owners`;
+  return postJSON(url, { json: body });
+}
+
+// local helper for fetch fallback
+async function _safeErr(res) {
+  try { return await res.json(); } catch { return { status: res.status, message: res.statusText }; }
+}
+
+export async function createException({
+  risk_scenario_context_id = null,
+  control_id = null,
+  framework_requirement_id,
+  title,
+  description = "",
+  reason = "",
+  risk_acceptance_ref = "",
+  compensating_controls = "",
+  requested_by = "ui",
+  owner = "",
+  start_date,      // "YYYY-MM-DD"
+  end_date = null, // "YYYY-MM-DD" | null
+  status = "draft"
+}) {
+  const url = `exceptions`; // no leading slash
+  const json = {
+    risk_scenario_context_id: Number(risk_scenario_context_id) > 0 ? Number(risk_scenario_context_id) : null,
+    control_id: Number(control_id) > 0 ? Number(control_id) : null,
+    framework_requirement_id: Number(framework_requirement_id),
+    title,
+    description,
+    reason,
+    risk_acceptance_ref,
+    compensating_controls,
+    requested_by,
+    owner,
+    start_date,
+    end_date,
+    status
+  };
+  return postJSON(url, { json });
+}
+
+export async function createCrosswalk({
+  framework_requirement_id,
+  control_id,
+  obligation_atom_id = null,
+  relation_type = "implements",
+  coverage_level = "partial",
+  applicability = {},          // object
+  evidence_hint = [],          // array of strings
+  rationale = "",
+  weight = 100,
+  notes = ""
+}) {
+  const url = `crosswalks`;
+  const json = {
+    framework_requirement_id: Number(framework_requirement_id),
+    control_id: Number(control_id),
+    obligation_atom_id: obligation_atom_id != null ? Number(obligation_atom_id) : null,
+    relation_type,
+    coverage_level,
+    applicability: applicability || {},
+    evidence_hint: Array.isArray(evidence_hint) ? evidence_hint : [],
+    rationale,
+    weight: Number.isFinite(Number(weight)) ? Number(weight) : 100,
+    notes
+  };
+  return postJSON(url, { json });
+}
+

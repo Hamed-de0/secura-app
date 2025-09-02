@@ -45,7 +45,11 @@ def update(db: Session, exc_id: int, payload: ComplianceExceptionUpdate) -> Opti
 
 def _activate_if_in_window(obj: ComplianceException):
     today = date.today()
-    if obj.status == "approved" and obj.start_date <= today <= obj.end_date:
+    # handle open-ended window: end_date can be NULL
+    in_window = (obj.start_date is not None and obj.start_date <= today) and (
+        obj.end_date is None or today <= obj.end_date
+    )
+    if obj.status == "approved" and in_window:
         obj.status = "active"
 
 def submit(db: Session, exc_id: int) -> Optional[ComplianceException]:
@@ -78,9 +82,10 @@ def withdraw(db: Session, exc_id: int) -> Optional[ComplianceException]:
     return obj
 
 def expire_due(db: Session) -> int:
-    """Optional helper to expire approved/active exceptions past end_date."""
+    """Expire approved/active exceptions past end_date (when end_date is set)."""
     today = date.today()
     q = db.query(ComplianceException).filter(
+        ComplianceException.end_date.isnot(None),
         ComplianceException.end_date < today,
         ComplianceException.status.in_(["approved","active"])
     )

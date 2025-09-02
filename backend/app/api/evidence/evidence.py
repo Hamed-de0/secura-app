@@ -14,7 +14,7 @@ from app.crud.evidence import (
 )
 from app.crud.evidence import lifecycle as lc
 
-router = APIRouter(prefix="/evidence", tags=["Evidence"])
+router = APIRouter(prefix="/evidence/evidence", tags=["Evidence"])
 
 # --- Create evidence metadata (no file yet) ---
 @router.post("/controls/{link_id}", response_model=EvidenceItemOut)

@@ -12,8 +12,22 @@ import ExceptionsPanel from "./sections/ExceptionsPanel.jsx";
 import LifecycleAudit from "./sections/LifecycleAudit.jsx";
 import OwnersAndMeta from "./sections/OwnersAndMeta.jsx";
 import SuggestedControls from "./sections/SuggestedControls.jsx";
+import AddEvidencePanel from "./panels/AddEvidencePanel.jsx";
+import UploadArtifactPanel from "./panels/UploadArtifactPanel.jsx";
+import VerifyEvidencePanel from "./panels/VerifyEvidencePanel.jsx";
+import AssignOwnerPanel from "./panels/AssignOwnerPanel.jsx";
+import CreateExceptionPanel from "./panels/CreateExceptionPanel.jsx";
+import AddMappingPanel from "./panels/AddMappingPanel.jsx";
 
 const STATUS_COLOR = { met:"#2e7d32", partial:"#ed6c02", gap:"#d32f2f", unknown:"#9e9e9e" };
+const PANEL_MAP = {
+  "add-evidence": AddEvidencePanel,
+  "upload-artifact": UploadArtifactPanel,
+  "verify-evidence": VerifyEvidencePanel,
+  "assign-owner": AssignOwnerPanel,
+  "create-exception": CreateExceptionPanel, 
+  "add-mapping": AddMappingPanel, // NEW
+};
 
 export default function RequirementPage() {
   const { requirementId: reqIdParam } = useParams();
@@ -32,6 +46,18 @@ export default function RequirementPage() {
   const [panel, setPanel] = React.useState({ open:false, key:null, title:"", props:{} });
   const openPanel = (key, props, title) => setPanel({ open:true, key, props:props||{}, title: title || "" });
   const closePanel = () => setPanel(p => ({ ...p, open:false }));
+
+  const refetchOverview = React.useCallback(async () => {
+    try {
+      const res = await fetchRequirementOverview({
+        requirementId, versionId, scopeType, scopeId,
+        include: "usage,mappings,evidence,exceptions,lifecycle,owners,suggested_controls"
+      });
+      setData(res?.data ?? res);
+    } catch (e) {
+      console.error("Refetch failed", e);
+    }
+  }, [requirementId, versionId, scopeType, scopeId]);
 
   // Fetch overview
   React.useEffect(() => {
@@ -52,6 +78,8 @@ export default function RequirementPage() {
     })();
     return () => { alive = false; };
   }, [requirementId, versionId, scopeType, scopeId]);
+
+  
 
   if (!versionId || !requirementId) {
     return <Box p={2}><Typography color="error">Missing version_id or requirementId in URL.</Typography></Box>;
@@ -161,7 +189,35 @@ export default function RequirementPage() {
       </Grid>
 
       {/* Right panel (stubs for now; you already have forms you can wire later) */}
-      <RightPanelDrawer
+      <RightPanelDrawer open={panel.open} title={panel.title} onClose={closePanel}>
+        <Box p={2}>
+          {(() => {
+            const Comp = PANEL_MAP[panel.key];
+            if (!Comp) {
+              return (
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    TODO form: <strong>{panel.key}</strong>
+                  </Typography>
+                  <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{JSON.stringify(panel.props, null, 2)}</pre>
+                </>
+              );
+            }
+            return (
+              <Comp
+                {...panel.props}
+                onCancel={closePanel}
+                onSuccess={async (_payload) => {
+                  await refetchOverview();
+                  closePanel();
+                }}
+              />
+            );
+          })()}
+        </Box>
+      </RightPanelDrawer>
+
+      {/* <RightPanelDrawer
         open={panel.open}
         title={panel.title}
         onClose={closePanel}
@@ -172,7 +228,7 @@ export default function RequirementPage() {
           </Typography>
           <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(panel.props, null, 2)}</pre>
         </Box>
-      </RightPanelDrawer>
+      </RightPanelDrawer> */}
     </Box>
   );
 }

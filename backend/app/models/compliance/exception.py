@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from sqlalchemy import (
-    Column, Integer, String, Text, Date, DateTime, ForeignKey, Index
+    Column, Integer, String, Text, Date, DateTime, ForeignKey, Index, CheckConstraint
 )
 from sqlalchemy.orm import relationship
 from app.core.base import Base
@@ -10,13 +10,13 @@ class ComplianceException(Base):
 
     id = Column(Integer, primary_key=True)
 
-    # scope (your existing context)
+    # scope (optional linkage to risk scenario context)
     risk_scenario_context_id = Column(
         Integer, ForeignKey("risk_scenario_contexts.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=True  # <-- changed: was False
     )
 
-    # targets (one or both can be set)
+    # targets (at least one must be set)
     control_id = Column(Integer, ForeignKey("controls.id", ondelete="SET NULL"), nullable=True)
     framework_requirement_id = Column(Integer, ForeignKey("framework_requirements.id", ondelete="SET NULL"), nullable=True)
 
@@ -32,13 +32,13 @@ class ComplianceException(Base):
 
     # lifecycle
     start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)  # <-- changed: was False
     status = Column(String(30), default="draft", nullable=False)  # draft|submitted|approved|rejected|active|expired|withdrawn
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # relationships (lazy keep default to avoid heavy joins)
+    # relationships
     context = relationship("RiskScenarioContext")
     control = relationship("Control")
     requirement = relationship("FrameworkRequirement")
@@ -48,7 +48,18 @@ class ComplianceException(Base):
         Index("ix_exc_status", "status"),
         Index("ix_exc_target_ctrl", "control_id"),
         Index("ix_exc_target_req", "framework_requirement_id"),
+        # NEW: must target at least one of requirement/control
+        CheckConstraint(
+            "(framework_requirement_id IS NOT NULL) OR (control_id IS NOT NULL)",
+            name="ck_exc_has_target"
+        ),
+        # NEW: valid date window when end_date is provided
+        CheckConstraint(
+            "(end_date IS NULL) OR (start_date <= end_date)",
+            name="ck_exc_date_order"
+        ),
     )
+
 
 class ComplianceExceptionComment(Base):
     __tablename__ = "compliance_exception_comments"

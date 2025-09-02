@@ -33,7 +33,7 @@ app.add_middleware(
 
 app.include_router(scope_router)
 app.include_router(ai_router)
-# app.include_router(ev_router)
+app.include_router(ev_router)
 app.include_router(org_router)
 app.include_router(compliance_router)
 app.include_router(policy_router)
