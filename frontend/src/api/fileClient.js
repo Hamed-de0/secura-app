@@ -1,92 +1,75 @@
-// Dedicated client for file upload/download with progress (axios).
-// Keep axios *only* here; use ky/fetch for the rest.
+// src/api/fileClient.js
+//
+// Axios instance for file uploads/downloads.
+// - Attaches Authorization from setFileAuthToken() OR localStorage('auth_token')
+// - Base URL from VITE_API_BASE or window.__API_BASE__
+// - Redirect to /login on 401/403 (except when already on /login)
+//
 
 import axios from "axios";
 
-let BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-let AUTH_TOKEN = null;
+let AUTH_TOKEN = ""; // optional in-memory cache
+let API_BASE =
+  (typeof window !== "undefined" && window.__API_BASE__) ||
+  import.meta.env.VITE_API_BASE ||
+  "http://localhost:8001/";
 
-export function setFileBaseURL(url) {
-  BASE_URL = String(url || "").replace(/\/+$/, "");
-  instance = createInstance();
-}
 export function setFileAuthToken(token) {
-  AUTH_TOKEN = token || null;
-  instance.defaults.headers.common["Authorization"] = AUTH_TOKEN ? `Bearer ${AUTH_TOKEN}` : undefined;
+  AUTH_TOKEN = token || "";
 }
 
-function createInstance() {
-  const inst = axios.create({
-    baseURL: BASE_URL,
-    timeout: 5 * 60 * 1000, // 5 minutes for big files
-    withCredentials: false,
-  });
-  inst.interceptors.request.use((config) => {
-    if (AUTH_TOKEN) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${AUTH_TOKEN}`;
+export function setFileApiBase(url) {
+  if (url) API_BASE = url.endsWith("/") ? url : url + "/";
+}
+
+const fileClient = axios.create({
+  baseURL: API_BASE, // relative URLs resolve here
+  withCredentials: false,
+});
+
+// keep base in sync if changed after creation
+fileClient.interceptors.request.use((config) => {
+  config.baseURL = API_BASE;
+  const token = AUTH_TOKEN || (typeof localStorage !== "undefined" && localStorage.getItem("auth_token")) || "";
+  if (token) {
+    config.headers = config.headers || {};
+    if (!config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return config;
-  });
-  return inst;
+  }
+  return config;
+});
+
+export function setBaseURL(url) {         // if any code calls setBaseURL on file client
+  return setFileApiBase(url);
 }
+// global 401/403 handler (no loops on /login)
+fileClient.interceptors.response.use(
+  (resp) => resp,
+  (error) => {
+    const status = error?.response?.status;
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
+    const onLogin = path.startsWith("/login");
+    if ((status === 401 || status === 403) && !onLogin) {
+      try { localStorage.removeItem("auth_token"); } catch {}
+      const from = typeof window !== "undefined"
+        ? encodeURIComponent(window.location.pathname + window.location.search)
+        : "";
+      if (typeof window !== "undefined") window.location.assign(`/login?from=${from}`);
+    }
+    return Promise.reject(error);
+  }
+);
 
-let instance = createInstance();
+export default fileClient;
 
-/**
- * Upload a single file with optional metadata.
- * @param {Object} opts
- * @param {string} opts.url - endpoint path (e.g., "/files/upload")
- * @param {File|Blob} opts.file
- * @param {Object} [opts.meta] - JSON metadata merged into form
- * @param {(p:number)=>void} [opts.onProgress] - 0..100
- */
-export async function uploadFile({ url, file, meta = {}, onProgress }) {
+// Convenience helper for multipart upload
+export async function uploadFile({ url, file, fields = {}, headers = {} }) {
   const form = new FormData();
   form.append("file", file);
-  for (const [k, v] of Object.entries(meta || {})) form.append(k, String(v));
-
-  const resp = await instance.post(url, form, {
-    headers: { "Content-Type": "multipart/form-data" },
-    onUploadProgress: (e) => {
-      if (!onProgress || !e.total) return;
-      const pct = Math.round((e.loaded / e.total) * 100);
-      onProgress(pct);
-    },
+  Object.entries(fields || {}).forEach(([k, v]) => form.append(k, v));
+  const resp = await fileClient.post(url, form, {
+    headers: { ...(headers || {}), "Content-Type": "multipart/form-data" },
   });
   return resp.data;
-}
-
-/**
- * Download a file as Blob; optionally auto-save.
- * @param {Object} opts
- * @param {string} opts.url - endpoint path (e.g., "/files/export.csv")
- * @param {Object} [opts.params]
- * @param {(p:number)=>void} [opts.onProgress]
- * @param {string} [opts.saveAs] - if provided, auto-saves with this file name
- * @returns {Promise<Blob>}
- */
-export async function downloadFile({ url, params, onProgress, saveAs }) {
-  const resp = await instance.get(url, {
-    params,
-    responseType: "blob",
-    onDownloadProgress: (e) => {
-      if (!onProgress || !e.total) return;
-      const pct = Math.round((e.loaded / e.total) * 100);
-      onProgress(pct);
-    },
-  });
-
-  const blob = resp.data;
-  if (saveAs) {
-    const href = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = href;
-    a.download = saveAs;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(href);
-  }
-  return blob;
 }

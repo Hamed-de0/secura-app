@@ -20,6 +20,7 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import { ColorModeContext } from '../theme/ColorModeProvider.jsx'; // ← adjust path if needed
 import { useI18n } from '../store/i18n/I18nProvider.jsx';
 import LangSwitch from '../components/LangSwitch.jsx';
+import UserNameBadge from "./UserNameBadge.jsx";
 
 export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar }) {
   const [params] = useSearchParams();
@@ -127,6 +128,7 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
             </IconButton>
           </Tooltip>
           <LangSwitch />
+          <UserNameBadge />
         </Toolbar>
       </AppBar>
 

@@ -1,10 +1,12 @@
 import os, bcrypt, jwt
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
+from jwt import ExpiredSignatureError, InvalidTokenError
 
 JWT_SECRET = os.getenv("AUTH_SECRET", "dev-secret-change-me")
 JWT_ALG = os.getenv("AUTH_ALGORITHM", "HS256")
-JWT_EXPIRES_MIN = int(os.getenv("AUTH_EXPIRES_MINUTES", "60"))
+JWT_EXPIRES_MIN = int(os.getenv("AUTH_EXPIRES_MINUTES", "600"))
+JWT_LEEWAY_SEC = int(os.getenv("AUTH_LEEWAY_SEC", "600"))  # allow small clock skew
 
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -22,5 +24,5 @@ def create_access_token(sub: str, extra: Optional[Dict[str, Any]] = None, minute
     if extra: payload.update(extra)
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
 
-def decode_token(token: str) -> Dict[str, Any]:
-    return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+def decode_token(token: str):
+    return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG], leeway=JWT_LEEWAY_SEC)

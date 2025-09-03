@@ -39,13 +39,14 @@ import ComplianceDashboardMulti from '../features/compliance/pages/ComplianceDas
 import ControlsDashboard from '../features/controls/pages/ControlsDashboard.jsx';
 import RiskRegisterPage from '../features/risks/pages/RiskRegisterPage.jsx';
 import RequirementPage from '../features/compliance/requirement/RequirementPage.jsx';
+import LoginPage from "../auth/LoginPage.jsx";
 
 // Add others progressively...
 
 function AppRouter() {
   return (
     <Routes>
-
+      <Route path="/login" element={<LoginPage />} />
       {/* <Route path="/" element={<MainView><Dashboard /></MainView>} /> */}
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
       <Route path="/main-dashboard" element={<MainView><Dashboard /></MainView>} />

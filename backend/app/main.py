@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from app.api.risks import router as risk_router
 from app.api.controls import router as control_router
 from app.api.users import person
@@ -11,13 +11,15 @@ from app.api import ai_router, auth_router
 from app.api.scopes import router as scope_router
 from app.api.evidence import router as ev_router
 from app.api.iam import router as iam_router
+from app.services.iam.deps import require_default_access
 
 from app.api.assets import asset_lifecycle_event, asset_type, asset_relation, asset_group, asset_maintenance, \
     asset_security_profile, asset_tag, asset_scan, asset_owner, asset
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
-
+app = FastAPI(
+    swagger_ui_parameters={"persistAuthorization": True},
+    dependencies=[Depends(require_default_access)],)
 origins = [
     "*",
     # "http://localhost:9001",  # Vite dev server
