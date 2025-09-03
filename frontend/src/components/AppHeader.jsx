@@ -119,9 +119,7 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
               <KeyboardIcon />
             </IconButton>
           </Tooltip>
-          <IconButton size="small" aria-label="Account">
-            <AccountCircle />
-          </IconButton>
+          
           <Tooltip title={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}>
             <IconButton onClick={toggleColorMode} edge="end" aria-label="toggle theme">
               {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}

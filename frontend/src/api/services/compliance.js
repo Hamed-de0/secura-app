@@ -302,5 +302,9 @@ export async function addExceptionComment(exceptionId, { author, body }) {
   return postJSON(`exceptions/${exceptionId}/comments`, { json: { author, body } });
 }
 
+export async function upsertSoA(row) {
+  // row = { scope_type, scope_id, control_id, applicability, justification?, decided_at?, expires_at?, owner?, approver? }
+  return postJSON('compliance/soa', row);
+}
 
 

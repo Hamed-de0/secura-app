@@ -20,6 +20,7 @@ import CreateExceptionPanel from "./panels/CreateExceptionPanel.jsx";
 import AddMappingPanel from "./panels/AddMappingPanel.jsx";
 import ExceptionActionPanel from "./panels/ExceptionActionPanel.jsx";
 import AddExceptionCommentPanel from "./panels/AddExceptionCommentPanel.jsx";
+import SoAQuickAssignPanel from "./panels/SoAQuickAssignPanel.jsx";
 
 const STATUS_COLOR = { met:"#2e7d32", partial:"#ed6c02", gap:"#d32f2f", unknown:"#9e9e9e" };
 const PANEL_MAP = {
@@ -31,6 +32,7 @@ const PANEL_MAP = {
   "add-mapping": AddMappingPanel, 
   "exception-action": ExceptionActionPanel,          // NEW
   "exception-comment": AddExceptionCommentPanel,     // NEW
+  "assign-requirement": SoAQuickAssignPanel,         // NEW
 };
 
 export default function RequirementPage() {
@@ -127,7 +129,15 @@ export default function RequirementPage() {
           {/* Controls */}
           <Card id="controls" sx={{ mb: 2 }}>
             <CardContent>
-              <Typography variant="overline" color="text.secondary">Controls</Typography>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography variant="overline" color="text.secondary">Controls</Typography>
+                <Link
+                  component="button"
+                  onClick={() => openPanel("assign-requirement",
+                    { requirementId, versionId, scopeType, scopeId, mappings },
+                    "Assign requirement to scope")}
+                >Assign to scope</Link>
+              </Stack>
               <MappingsControls
                 mappings={mappings}
                 onAddEvidence={(ctxLinkId) => openPanel("add-evidence", { contextLinkId: ctxLinkId }, "Add Evidence")}
