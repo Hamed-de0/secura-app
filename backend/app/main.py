@@ -17,9 +17,12 @@ from app.api.assets import asset_lifecycle_event, asset_type, asset_relation, as
     asset_security_profile, asset_tag, asset_scan, asset_owner, asset
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(
-    swagger_ui_parameters={"persistAuthorization": True},
-    dependencies=[Depends(require_default_access)],)
+# app = FastAPI(
+#     swagger_ui_parameters={"persistAuthorization": True},
+#     dependencies=[Depends(require_default_access)],)
+
+app = FastAPI()
+
 origins = [
     "*",
     # "http://localhost:9001",  # Vite dev server

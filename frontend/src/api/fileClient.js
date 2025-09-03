@@ -50,7 +50,7 @@ fileClient.interceptors.response.use(
     const status = error?.response?.status;
     const path = typeof window !== "undefined" ? window.location.pathname : "";
     const onLogin = path.startsWith("/login");
-    if ((status === 401 || status === 403) && !onLogin) {
+    if ((status === 401 ) && !onLogin) {
       try { localStorage.removeItem("auth_token"); } catch {}
       const from = typeof window !== "undefined"
         ? encodeURIComponent(window.location.pathname + window.location.search)

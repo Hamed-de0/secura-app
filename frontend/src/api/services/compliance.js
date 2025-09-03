@@ -104,10 +104,16 @@ export async function fetchEffectiveCoverage({ versionId, scopeType, scopeId }) 
 }
 
 export async function fetchCoverageRollup({ versionId, scopeTypes = [] }) {
+  if (!versionId) throw new Error('fetchCoverageRollup: versionId is required');
+  // console.log("fetchCoverageRollup", { versionId, scopeTypes });
   const sp = new URLSearchParams();
-  sp.set("version_id", String(versionId));
+  sp.append("version_id", String(versionId));
   for (const st of scopeTypes) sp.append("scope_types", st); // -> &scope_types=entity&scope_types=org...
-  return getJSON("coverage/rollup", { searchParams: sp });   // no leading slash
+  
+  // const sp_ = buildSearchParams({
+  // return getJSON("coverage/rollup", { searchParams: sp });   // no leading slash
+  return getJSON(`coverage/rollup`, {searchParams: sp}); // no leading slash
+
 }
 
 export async function fetchRequirementDetail({ requirementId, versionId, scopeType, scopeId, include }) {
@@ -122,7 +128,6 @@ export async function fetchRequirementDetail({ requirementId, versionId, scopeTy
     : (typeof include === 'string'
         ? include.split(',').map(s => s.trim()).filter(Boolean)
         : ['mappings', 'evidence', 'exceptions', 'status']);
-
   // Append as repeated query keys: &include=...&include=...
   const seen = new Set();
   for (const inc of includes) {
@@ -132,7 +137,7 @@ export async function fetchRequirementDetail({ requirementId, versionId, scopeTy
     }
   }
 
-  return getJSON(`compliance/requirements/${requirementId}/detail`, { searchParams: params });
+  return getJSON(`compliance/requirements/${requirementId}/detail?${params.toString()}`, {  });
 }
 
 // --- ADD BELOW your existing exports (keep getJSON wrapper as-is) ---
