@@ -31,6 +31,7 @@ def list_frameworks_with_versions(
             f.id.label("framework_id"),
             fv.version_label.label("version_label"),
             f.name.label("framework_name"),
+            fv.enabled.label("enabled"),
         )
         .join(f, fv.framework_id == f.id)  # INNER JOIN; use .outerjoin(...) if needed
     )
@@ -45,6 +46,7 @@ def list_frameworks_with_versions(
         "framework_id": f.id,
         "version_label": fv.version_label,
         "framework_name": f.name,
+
     }
     order_col = sort_map.get(sort_by, f.name)
     order = desc(order_col) if sort_dir.lower() == "desc" else asc(order_col)
