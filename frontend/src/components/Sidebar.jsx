@@ -64,63 +64,72 @@ const writeOpen = (obj) => {
 const TOP = [
   { label: 'common.overview', icon: <SpeedIcon />, to: '/overview' },
   { label: 'common.myWork', icon: <AssignmentTurnedInIcon />, to: '/my-work' },
-  { label: 'nav.riskDashboard', icon: <WarningAmberIcon />, to: 'risk-dashboard' },
-  { label: 'nav.riskRegister', icon: <WarningAmberIcon />, to: 'risk-register' },
+  //{ label: 'nav.riskDashboard', icon: <WarningAmberIcon />, to: 'risk-dashboard' },
 ];
 
 const GROUPS = [
+  // Compliance — outside-in
   {
-    id: 'operate',
-    label: 'nav.operate',
+    id: 'compliance',
+    label: 'common.compliance',
     items: [
-      { label: 'common.controls', icon: <VerifiedUserIcon />, to: '/controls' },
-      {
-        label: 'common.attestations',
-        icon: <FactCheckIcon />,
-        to: '/attestations',
-        parent: '/controls',
-      },
-      { label: 'common.risks', icon: <WarningAmberIcon />, to: '/risk-view' },
-      {
-        label: 'common.exceptions',
-        icon: <ReportGmailerrorredIcon />,
-        to: '/exceptions',
-        parent: '/risk-view',
-      },
       { label: 'common.compliance', icon: <RuleIcon />, to: '/compliance/dashboard' },
-      {
-        label: 'common.evidence',
-        icon: <UploadFileIcon />,
-        to: '/evidence',
-        parent: '/compliance',
-      },
-      {
-        label: 'common.soa',
-        icon: <TableViewIcon />,
-        to: '/soa',
-        parent: '/compliance',
-      },
-      { label: 'common.providers', icon: <HandshakeIcon />, to: '/providers' },
-      { label: 'common.assets', icon: <Inventory2Icon />, to: '/assetgroups/tree' },
+      { label: 'common.soa',        icon: <TableViewIcon />, to: '/soa', parent: '/compliance' },
+      { label: 'common.evidence',   icon: <UploadFileIcon />, to: '/evidence', parent: '/compliance' },
+      { label: 'common.exceptions', icon: <ReportGmailerrorredIcon />, to: '/exceptions', parent: '/compliance' },
+      { label: 'nav.mappingManager', icon: <LinkIcon />, to: '/mapping' },
     ],
   },
+
+  // Risk — inside-out
+  {
+    id: 'risk',
+    label: 'common.risks',
+    items: [
+      { label: 'nav.riskDashboard', icon: <WarningAmberIcon />, to: '/risk-dashboard' },
+      { label: 'common.risks',      icon: <WarningAmberIcon />, to: '/risk-view' },
+    ],
+  },
+
+  // Controls — what we operate
+  {
+    id: 'controls',
+    label: 'common.controls',
+    items: [
+      { label: 'common.controls',      icon: <VerifiedUserIcon />, to: '/controls' },
+      { label: 'common.attestations',  icon: <FactCheckIcon />,    to: '/attestations', parent: '/controls' },
+      { label: 'common.providers',     icon: <HandshakeIcon />,    to: '/providers' },
+    ],
+  },
+
+  // Assets & Org — where controls apply
+  {
+    id: 'assets',
+    label: 'common.assets',
+    items: [
+      { label: 'common.assets',  icon: <Inventory2Icon />, to: '/assetgroups/tree' },
+      { label: 'common.tags',    icon: <LocalOfferIcon />, to: '/tags' },
+      { label: 'common.persons', icon: <GroupIcon />,      to: '/persons' },
+    ],
+  },
+
+  // Reports — evidence of progress
   {
     id: 'reports',
     label: 'nav.reports',
     items: [
-      { label: 'nav.activities', icon: <FactCheckIcon />, to: '/activities' },
+      { label: 'nav.activities',      icon: <FactCheckIcon />,     to: '/activities' },
+      { label: 'nav.mainDashboard',   icon: <SpaceDashboardIcon />, to: '/main-dashboard' },
       { label: 'nav.dashboardLegacy', icon: <SpaceDashboardIcon />, to: '/dashboard' },
-      { label: 'nav.mainDashboard', icon: <SpaceDashboardIcon />, to: '/main-dashboard' },
     ],
   },
+
+  // Admin — compact
   {
     id: 'admin',
     label: 'nav.admin',
     items: [
-      { label: 'common.tags', icon: <LocalOfferIcon />, to: '/tags' },
-      { label: 'common.persons', icon: <GroupIcon />, to: '/persons' },
       { label: 'common.settings', icon: <SettingsIcon />, to: '/settings' },
-      { label: 'nav.mappingManager', icon: <LinkIcon />, to: '/mapping' },
     ],
   },
 ];
