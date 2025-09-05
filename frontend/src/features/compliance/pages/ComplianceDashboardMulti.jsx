@@ -22,6 +22,7 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import { ScopeContext } from "../../../store/scope/ScopeProvider";
 import { useContext } from "react";
+import { isDisabled } from "@testing-library/user-event/dist/cjs/utils/index.js";
 // --- toggle when you’re ready to hit backend (keeps MOCK by default)
 const ENABLE_LIVE = true;
 
@@ -67,6 +68,35 @@ async function fetchEnabledVersionIds() {
     .map((r) => toNumber(r.id ?? r.version_id))
     .filter((id) => Number.isFinite(id));
 }
+function populateKPIs(frameworks) {
+  if (!Array.isArray(frameworks) || !frameworks.length) 
+    return {};
+  const totalFrameworks = frameworks.length;
+  let enabledFrameworks = 0;
+  let totalRequirements = 0;
+  let totalEffective = 0;
+  let totalMapped = 0;
+  let sumCoverage = 0;
+  let sumFreshness = 0; 
+  console.log("populateKPIs", {frameworks});
+  frameworks.forEach((fx) => {
+    totalRequirements += fx.total_requirements || 0;
+    enabledFrameworks += (fx.enabled !== false) ? 1 : 0;
+    totalEffective += fx.applicable_requirements || 0;
+    totalMapped += fx.mapped_requirements || 0;
+    sumCoverage += fx.coverage_pct || 0;
+    sumFreshness += fx.freshness || 0;
+  });
+  return {
+    frameworks: totalFrameworks,
+    enabledFrameworks: enabledFrameworks,
+    requirements: { total: totalRequirements, effective: totalEffective, mapped: totalMapped },
+    avgCoverage: totalFrameworks ? sumCoverage / totalFrameworks : 0,
+    avgFreshness: totalFrameworks ? sumFreshness / totalFrameworks : 0,
+    deltaCoverage: 0, // TODO: compute deltas vs last 30d
+    deltaFreshness: 0, // TODO: compute deltas vs last 30d
+  };
+}
 
 async function fetchFrameworkTiles({ scope }) {
   const versionIds = await fetchEnabledVersionIds();
@@ -79,7 +109,7 @@ async function fetchFrameworkTiles({ scope }) {
       scope_id: scope?.id,
   });
   
-  return unwrap(res).map(mapSummaryItemToTile);
+  return {tiles: unwrap(res).map(mapSummaryItemToTile), kpis: populateKPIs(unwrap(res))};
 }
 
 // ---- Static mock data (investor demo) ----
@@ -294,7 +324,9 @@ export default function ComplianceDashboardMulti() {
     (async () => {
       setLoading(true);
       try {
-        const tiles = await fetchFrameworkTiles({ scope: scopeSafe });
+        const {tiles,kpis} = await fetchFrameworkTiles({ scope: scopeSafe });
+        console.log("[ComplianceDash] live fetch", {tiles,kpis});
+        setKpis(kpis);
         if (alive) setFrameworks(tiles);
       } catch (e) {
         console.log("[ComplianceDash] live fetch failed, using MOCK.", e);
@@ -312,6 +344,8 @@ export default function ComplianceDashboardMulti() {
     framework: `${f.code}`,
     name: f.name,
     version: f.version_label || "-",
+    version_id: f.version_id,
+    isDisabled: f.enabled === false,
     coveragePct: Math.round(f.coverage * 100),
     freshnessPct: Math.round(f.freshness * 100),
     effReq: f.effReq,
@@ -321,9 +355,9 @@ export default function ComplianceDashboardMulti() {
   }));
 
   const columns = [
-    { field: "framework", headerName: "Framework", flex: 0.5 },
-    { field: "name", headerName: "Name", flex: 1.2 },
-    { field: "version", headerName: "Version", flex: 0.5 },
+   // { field: "framework", headerName: "Framework", flex: 0.5 },
+    { field: "name", headerName: "Name", flex: 0.7 },
+    { field: "version", headerName: "Version", flex: 1.5 },
     {
       field: "coveragePct", headerName: "Coverage", flex: 0.6,
       renderCell: (p) => <Stack direction="row" spacing={1} alignItems="center"><Bar value={(p.value ?? 0) / 100} /><Typography variant="caption" sx={{ ml: 1 }}>{p.value}%</Typography></Stack>
@@ -337,10 +371,28 @@ export default function ComplianceDashboardMulti() {
     { field: "total", headerName: "Total", flex: 0.35 },
     {
       field: "actions", headerName: "Actions", sortable: false, flex: 0.8,
-      renderCell: () => (
+      renderCell: (p) => (
         <Stack direction="row" spacing={1}>
-          <Button size="small" variant="outlined">Open</Button>
-          <Button size="small" variant="outlined">Map</Button>
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={p?.row?.isDisabled}
+            LinkComponent={RouterLink}
+            to={`/compliance/versions/${p?.row?.version_id}`}
+            
+          >
+            Open
+          </Button>
+
+          <Button 
+            size="small" 
+            variant="outlined"
+            disabled={p?.row?.isDisabled}
+            LinkComponent={RouterLink}
+            to={`/mapping?framework=${encodeURIComponent(p?.row?.framework)}`}  
+          >
+            Map
+          </Button>
         </Stack>
       )
     },
@@ -357,8 +409,8 @@ export default function ComplianceDashboardMulti() {
            {topCard(
             {
               label: "Frameworks",
-              value: `${kpis.frameworks}`,
-              hint: "Active in scope",
+              value: `${kpis.frameworks || 0}`,
+              hint: `${kpis.enabledFrameworks} Active in scope`,
               icon: LibraryBooksIcon,
               color: "secondary",
             },
