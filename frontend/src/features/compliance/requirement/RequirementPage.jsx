@@ -21,6 +21,7 @@ import AddMappingPanel from "./panels/AddMappingPanel.jsx";
 import ExceptionActionPanel from "./panels/ExceptionActionPanel.jsx";
 import AddExceptionCommentPanel from "./panels/AddExceptionCommentPanel.jsx";
 import SoAQuickAssignPanel from "./panels/SoAQuickAssignPanel.jsx";
+import { useNavigate } from "react-router-dom";
 
 const STATUS_COLOR = { met:"#2e7d32", partial:"#ed6c02", gap:"#d32f2f", unknown:"#9e9e9e" };
 const PANEL_MAP = {
@@ -38,7 +39,7 @@ const PANEL_MAP = {
 export default function RequirementPage() {
   const { requirementId: reqIdParam } = useParams();
   const [sp, setSp] = useSearchParams();
-
+  const navigate = useNavigate();
   const requirementId = Number(reqIdParam);
   const versionId = Number(sp.get("version_id"));
   const scopeType = sp.get("scope_type") || undefined;
@@ -116,16 +117,16 @@ export default function RequirementPage() {
             scopeType={scopeType}
             scopeId={scopeId}
             onAssignOwner={() => openPanel("assign-owner", { requirementId, scopeType, scopeId }, "Assign Owner")}
-            onOpenExplorer={() => window.open(`/compliance/versions/${versionId}?scope_type=${scopeType||""}&scope_id=${scopeId||""}&hl_req=${requirementId}`, "_blank")}
+            onOpenExplorer={() => navigate(`/compliance/versions/${versionId}?scope_type=${scopeType||""}&scope_id=${scopeId||""}`)}
           />
           <Divider sx={{ my: 1 }} />
           <ScopeUsage usage={usage} active={{ scopeType, scopeId }} onPick={setScopeFilter} />
         </CardContent>
       </Card>
 
-      <Grid container spacing={2} alignItems="stretch">
+      <Grid container spacing={2} alignItems="stretch" size={12}>
         {/* Main column */}
-        <Grid item xs={12} md={8}>
+        <Grid size={6}>
           {/* Controls */}
           <Card id="controls" sx={{ mb: 2 }}>
             <CardContent>
@@ -191,7 +192,7 @@ export default function RequirementPage() {
         </Grid>
 
         {/* Actions rail */}
-        <Grid item xs={12} md={4}>
+        <Grid size={6}>
           <ActionsRail
             requirementId={requirementId}
             versionId={versionId}
@@ -258,14 +259,14 @@ function PageSkeleton() {
       <Skeleton height={32} width="60%" />
       <Skeleton height={20} width="40%" />
       <Grid container spacing={2} sx={{ mt: 1 }}>
-        <Grid item xs={12} md={8}>
+        <Grid >
           <Skeleton variant="rectangular" height={280} />
           <Box height={12} />
           <Skeleton variant="rectangular" height={280} />
           <Box height={12} />
           <Skeleton variant="rectangular" height={240} />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid >
           <Skeleton variant="rectangular" height={480} />
         </Grid>
       </Grid>
