@@ -17,7 +17,7 @@ function normalizeScopeType(t) {
   if (!t) return DEFAULT_SCOPE.type;
   const k = String(t).trim();
   // map legacy synonyms -> canonical keys used by backend (/scopes/types)
-  if (k === "org_group" || k === "orgGroup") return "org";
+  if (k === "org_group" || k === "orgGroup" || k === "org" ) return "org";
   if (k === "asset_tag" || k === "tag")      return "tag";
   return k;
 }

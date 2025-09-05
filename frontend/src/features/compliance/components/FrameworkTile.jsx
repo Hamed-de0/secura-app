@@ -55,12 +55,8 @@ export default function FrameworkTile({ fx }) {
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
           <Stack spacing={0.5}>
             <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>{fx.code}</Typography>
-              {/* <Chip
-                label={chip.label}
-                size="small"
-                sx={{ bgcolor: chip.bg, color: "#fff", fontWeight: 700 }}
-              /> */}
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{fx.name}</Typography>
+              
               {isDisabled ? (
                 <Chip label="Disabled" size="small"
                   sx={{ bgcolor: (t)=>t.palette.grey[400], color: "#fff", fontWeight: 700 }} />
@@ -69,7 +65,7 @@ export default function FrameworkTile({ fx }) {
                   sx={{ bgcolor: chip.bg, color: "#fff", fontWeight: 700 }} />
               )}
             </Stack>
-            <Typography variant="body2" color="text.secondary">{fx.name}</Typography>
+            <Typography variant="body2" color="text.secondary">{fx.version_label}</Typography>
           </Stack>
           
          <Stack direction="row" spacing={1}>

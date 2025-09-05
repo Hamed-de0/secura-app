@@ -102,6 +102,118 @@ def _compute_path(meta_by_id: Dict[int, Dict], req_id: int, _cache: Dict[int, Tu
     return ids_path, codes_path
 
 
+# --- NEW: counts-only helper (same logic as list/rollup, but for one scope_id) ---
+def compute_status_counts(
+    db: Session,
+    *,
+    version_id: int,
+    scope_type: str,
+    scope_id: int,
+) -> Dict[str, int]:
+    """
+    Returns counts using the same presence-based logic as rollup/list:
+      - unknown: no mapping at all
+      - gap: mapped but no implementation (no CCL for this scope)
+      - partial: implementation exists but no valid evidence now
+      - met: valid evidence now on a CCL under this requirement
+    """
+    # Column resolution (robust to naming differences)
+    CFM_REQ_ID = _required_col(ControlFrameworkMapping, "requirement_id", "framework_requirement_id", endswith="requirement_id")
+    CFM_CTRL_ID = _required_col(ControlFrameworkMapping, "control_id", endswith="control_id", contains=["control","id"])
+    CCL_ID       = _required_col(ControlContextLink, "id")
+    CCL_CTRL_ID  = _required_col(ControlContextLink, "control_id", endswith="control_id")
+    CCL_CTX_TYPE = _required_col(ControlContextLink, "context_type", "scope_type", endswith="context_type")
+    CCL_CTX_ID   = _required_col(ControlContextLink, "context_id", "scope_id", endswith="context_id")
+    CE_LINK_ID   = _required_col(ControlEvidence, "control_context_link_id", "context_link_id", "ccl_id", endswith="link_id")
+    CE_STATUS    = _required_col(ControlEvidence, "status", "state")
+    CE_VALID_FROM = _try_pick_col(ControlEvidence, "valid_from", "effective_from", "start_date", endswith="valid_from")
+    CE_VALID_TO   = _try_pick_col(ControlEvidence, "valid_to", "effective_to", "end_date", endswith="valid_to")
+
+    CCL_APPL = _try_pick_col(ControlContextLink, "applicability")
+    appl_filters = []
+    if CCL_APPL is not None:
+        appl_filters.append(or_(ControlContextLink.__table__.c[CCL_APPL.key].is_(None),
+                                ControlContextLink.__table__.c[CCL_APPL.key] != "na"))
+
+    # Totals
+    total = db.execute(
+        select(func.count(FrameworkRequirement.id))
+        .where(FrameworkRequirement.framework_version_id == version_id)
+    ).scalar_one() or 0
+
+    # Unknown = no mapping (independent of scope)
+    unknown = db.execute(
+        select(func.count(FrameworkRequirement.id))
+        .select_from(FrameworkRequirement)
+        .outerjoin(ControlFrameworkMapping, CFM_REQ_ID == FrameworkRequirement.id)
+        .where(FrameworkRequirement.framework_version_id == version_id, CFM_REQ_ID.is_(None))
+    ).scalar_one() or 0
+
+    # Implemented (= has a CCL for this scope)
+    impl_req_ids = {
+        r for (r,) in db.execute(
+            select(distinct(CFM_REQ_ID))
+            .join(FrameworkRequirement, FrameworkRequirement.id == CFM_REQ_ID)
+            .join(ControlContextLink, ControlContextLink.__table__.c[CCL_CTRL_ID.key] == CFM_CTRL_ID)
+            .where(
+                FrameworkRequirement.framework_version_id == version_id,
+                ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == scope_type,
+                ControlContextLink.__table__.c[CCL_CTX_ID.key] == scope_id,
+                *appl_filters
+            )
+        ).all() if r is not None
+    }
+
+    # Mapped (independent of scope) – used to derive gap
+    mapped_req_ids = {
+        r for (r,) in db.execute(
+            select(distinct(CFM_REQ_ID))
+            .join(FrameworkRequirement, FrameworkRequirement.id == CFM_REQ_ID)
+            .where(FrameworkRequirement.framework_version_id == version_id)
+        ).all() if r is not None
+    }
+
+    # Met = valid evidence now on a CCL for this scope
+    ev_filters = [CE_STATUS == "valid"]
+    if CE_VALID_FROM is not None:
+        ev_filters.append(or_(ControlEvidence.__table__.c[CE_VALID_FROM.key].is_(None),
+                              ControlEvidence.__table__.c[CE_VALID_FROM.key] <= func.now()))
+    if CE_VALID_TO is not None:
+        ev_filters.append(or_(ControlEvidence.__table__.c[CE_VALID_TO.key].is_(None),
+                              ControlEvidence.__table__.c[CE_VALID_TO.key] >= func.now()))
+
+    met_req_ids = {
+        r for (r,) in db.execute(
+            select(distinct(CFM_REQ_ID))
+            .join(FrameworkRequirement, FrameworkRequirement.id == CFM_REQ_ID)
+            .join(ControlContextLink, ControlContextLink.__table__.c[CCL_CTRL_ID.key] == CFM_CTRL_ID)
+            .join(ControlEvidence, ControlEvidence.__table__.c[CE_LINK_ID.key] == ControlContextLink.__table__.c[CCL_ID.key])
+            .where(
+                FrameworkRequirement.framework_version_id == version_id,
+                ControlContextLink.__table__.c[CCL_CTX_TYPE.key] == scope_type,
+                ControlContextLink.__table__.c[CCL_CTX_ID.key] == scope_id,
+                *ev_filters,
+                *appl_filters,
+                valid_evidence_filters(),
+            )
+        ).all() if r is not None
+    }
+
+    met = len(met_req_ids)
+    partial = max(len(impl_req_ids) - met, 0)
+    gap = max(len(mapped_req_ids) - len(impl_req_ids), 0)
+    applicable = max(total - unknown, 0)
+
+    return {
+        "total": int(total),
+        "applicable": int(applicable),
+        "met": int(met),
+        "met_by_exception": 0,  # presence-based logic does not split exceptions
+        "partial": int(partial),
+        "gap": int(gap),
+        "unknown": int(unknown),
+    }
+
 def list_requirements_status(
     db: Session,
     version_id: int,

@@ -5,14 +5,14 @@ from sqlalchemy import select, func, distinct, or_
 from sqlalchemy.inspection import inspect as sa_inspect
 from app.services.compliance.coverage_effective import compute_version_effective_coverage
 from app.schemas.compliance.coverage_summary import CoverageSummary, CoverageSummaryWithMeta
-from app.services.compliance.requirements_status import valid_evidence_filters
-
+from app.services.compliance.requirements_status import valid_evidence_filters, compute_status_counts
 
 # Models we’ll need to enrich the summary (imported lazily where possible)
 from app.models.compliance.framework_requirement import FrameworkRequirement
 from app.models.compliance.control_framework_mapping import ControlFrameworkMapping
 from app.models.controls.control_context_link import ControlContextLink
 from app.models.compliance.control_evidence import ControlEvidence
+
 
 def _try_pick_col(model, *preferred, endswith: Optional[str] = None, contains: Optional[list[str]] = None):
     cols = {c.key for c in sa_inspect(model).columns}
@@ -44,48 +44,22 @@ def compute_coverage_summary(
 ) -> CoverageSummary:
     """
     Computes KPI-style coverage summary for a framework version within a specific scope.
-    Leverages the per-requirement coverage computed by coverage_effective.
+    Status counts (met/partial/gap/unknown) use the SAME presence-based logic as rollup/list.
+    We still compute avg_score from coverage_effective for a maturity KPI.
     """
-    fcov = compute_version_effective_coverage(
-        db=db, version_id=version_id, scope_type=scope_type, scope_id=scope_id
-    )
 
-    total = len(fcov.requirements)
-    if total == 0:
-        return CoverageSummary(
-            version_id=version_id,
-            scope_type=scope_type,
-            scope_id=scope_id,
-            total_requirements=0,
-            applicable_requirements=0,
-            met=0,
-            met_by_exception=0,
-            partial=0,
-            gap=0,
-            unknown=0,
-            coverage_pct=0.0,
-            coverage_pct_excl_exceptions=0.0,
-            avg_score=0.0,
-            last_computed_at=datetime.utcnow(),
-        )
+    # 1) Presence-based status counts (aligned with rollup/list)
+    counts = compute_status_counts(db, version_id=version_id, scope_type=scope_type, scope_id=scope_id)
+    total = counts["total"]
+    applicable = counts["applicable"]
+    met = counts["met"]
+    met_by_exception = counts["met_by_exception"]
+    partial = counts["partial"]
+    gap = counts["gap"]
+    unknown = counts["unknown"]
 
-    met = partial = gap = unknown = met_by_exception = 0
-    score_sum = 0.0
+      # 2) Percentages (keep 0..100 to match existing schema)
 
-    for r in fcov.requirements:
-        score_sum += (r.score or 0.0)
-        if r.status == "met":
-            met += 1
-            if getattr(r, "exception_applied", False):
-                met_by_exception += 1
-        elif r.status == "partial":
-            partial += 1
-        elif r.status == "gap":
-            gap += 1
-        else:
-            unknown += 1
-
-    applicable = total - unknown
     if applicable <= 0:
         coverage_pct = 0.0
         coverage_pct_excl_exceptions = 0.0
@@ -93,7 +67,12 @@ def compute_coverage_summary(
         coverage_pct = round((met / applicable) * 100.0, 2)
         coverage_pct_excl_exceptions = round(((met - met_by_exception) / applicable) * 100.0, 2)
 
-    avg_score = round(score_sum / max(total, 1), 4)
+    # 3) Maturity KPI from effective coverage (unchanged)
+    fcov = compute_version_effective_coverage(db = db, version_id = version_id, scope_type = scope_type, scope_id = scope_id)
+    avg_score = round((fcov.score or 0.0), 4) if hasattr(fcov, "score") else (
+                    round(sum((r.score or 0.0) for r in getattr(fcov, "requirements", [])) / max(
+                len(getattr(fcov, "requirements", []), 1), 1), 4)
+    )
 
     return CoverageSummary(
         version_id=version_id,

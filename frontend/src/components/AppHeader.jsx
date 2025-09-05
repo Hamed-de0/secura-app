@@ -73,12 +73,12 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
     <>
       <AppBar elevation={0} color="transparent" position="sticky" sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Toolbar variant="dense" sx={{ gap: 1 }}>
-          <IconButton size="small" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+          {/* <IconButton size="small" onClick={onToggleSidebar} aria-label="Toggle sidebar">
             {sidebarCollapsed ? <MenuIcon /> : <MenuOpenIcon />}
-          </IconButton>
+          </IconButton> */}
 
           <Typography component={RLink} to="/main-dashboard" variant="subtitle1" color="inherit" sx={{ textDecoration: 'none', mr: 2 }}>
-            ISMS / GRC
+            H&H Communication Lab GmbH
           </Typography>
 
           {/* Global Search trigger */}

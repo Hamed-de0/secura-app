@@ -1,4 +1,4 @@
-import * as React from "react";
+import  * as React from "react";
 import {
   Box, Grid, Card, CardContent, Typography, Stack, Chip,
   Button, Tooltip, IconButton, LinearProgress, Divider
@@ -8,7 +8,7 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { Link as RouterLink } from "react-router-dom";
 // Icons (all MUI)
 import FrameworkTile from "../components/FrameworkTile";
-import { getJSON } from "../../../api/httpClient";
+import { getJSON, buildSearchParams } from "../../../api/httpClient";
 
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -20,9 +20,10 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
 import InsightsIcon from "@mui/icons-material/Insights";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
-
+import { ScopeContext } from "../../../store/scope/ScopeProvider";
+import { useContext } from "react";
 // --- toggle when you’re ready to hit backend (keeps MOCK by default)
-const ENABLE_LIVE = false;
+const ENABLE_LIVE = true;
 
 // --- adapters (accept different backend shapes safely)
 function toNumber(n, d = 0) {
@@ -30,42 +31,56 @@ function toNumber(n, d = 0) {
   return Number.isFinite(x) ? x : d;
 }
 
-function mapFrameworkRow(row = {}) {
-  // Accepts either framework_version list rows or rollup rows
-  const coverage = toNumber(row.coverage_pct ?? row.coverage ?? 0);
-  const fresh    = toNumber(row.evidence_fresh_pct ?? row.freshness ?? 0);
-  const effReq   = toNumber(row.effective_requirements ?? row.effReq ?? 0);
-  const totalReq = toNumber(row.requirements_total ?? row.totalReq ?? 0);
-  const ctrlImpl = toNumber(row.controls_implemented ?? row.controlsImpl ?? 0);
-  const ctrlTot  = toNumber(row.controls_total ?? row.totalControls ?? 0);
-  const enabled  = row.enabled ?? true;
-
+function mapSummaryItemToTile(item = {}) {
+  // Backend returns coverage_pct as 0..100 (per your summary), freshness_pct as 0..1
+  const covPct = toNumber(item.coverage_pct, 0);
+  const coverage = covPct > 1 ? covPct / 100 : covPct; // tolerate either form
+  const fresh = toNumber(item.freshness_pct, 0);
   return {
-    enabled,
-    version_id: row.version_id ?? row.id,
-    code: row.framework_code ?? row.code ?? row.framework ?? "",
-    name: row.framework_name ?? row.name ?? "",
-    coverage,                    // 0..1 expected by UI
-    freshness: fresh,            // 0..1 expected by UI
-    status: row.status ?? (fresh < 0.8 ? "Attention" : "Healthy"),
-    effReq: effReq,
-    totalReq: totalReq,
-    controlsImpl: ctrlImpl,
-    totalControls: ctrlTot,
-    topGaps: row.top_gaps ?? [],
+    enabled: item.enabled !== false,
+    version_id: item.version_id,
+    code: item.framework_code || `v${item.version_id}`,
+    name: item.framework_name || "",
+    version_label: item.framework_version_label || "",
+    coverage,                 // 0..1 for UI Bar
+    freshness: fresh,         // 0..1 for UI Bar
+    status: fresh < 0.8 ? "Attention" : "Healthy",
+    effReq: toNumber(item.applicable_requirements, 0),
+    totalReq: toNumber(item.total_requirements, 0),
+    controlsImpl: toNumber(item.controls_implemented, 0),
+    totalControls: toNumber(item.controls_total, 0),
+    topGaps: Array.isArray(item.top_gaps) ? item.top_gaps : [],
   };
 }
 
-async function fetchFrameworkTiles({ versionId, scope }) {
-  // STEP 1 placeholder: when you give the endpoint, fill it here.
-  // Example (commented until endpoint is confirmed):
-  // const list = await getJSON("framework_versions", { params: { offset: 0, limit: 50, sort_by: "framework_name", sort_dir: "asc" }});
-  // const rows = Array.isArray(list) ? list : (list.items || list.results || []);
-  // return rows.map(mapFrameworkRow);
-  return []; // no-op until we switch ENABLE_LIVE
+function unwrap(list) {
+  if (Array.isArray(list)) return list;
+  return list?.items || list?.results || list?.data || list?.rows || [];
 }
 
+async function fetchEnabledVersionIds() {
+  const res = await getJSON("framework_versions/", {
+    params: { offset: 0, limit: 50, sort_by: "version_id", sort_dir: "asc" },
+  });
+  return unwrap(res)
+    //.filter((r) => (r.enabled ?? true) === true)
+    .map((r) => toNumber(r.id ?? r.version_id))
+    .filter((id) => Number.isFinite(id));
+}
 
+async function fetchFrameworkTiles({ scope }) {
+  const versionIds = await fetchEnabledVersionIds();
+  if (!versionIds.length) return [];
+  const urlQuery = versionIds.map((id) => `version_ids=${id}`).join("&");
+  if (!ENABLE_LIVE) throw new Error("Live fetch disabled (ENABLE_LIVE = false)");
+  const res = await getJSON(`compliance/coverage/summary/list?scope_type=${scope?.type}&scope_id=${scope?.id}&${urlQuery}`, {
+      version_id: versionIds, // our httpClient appends repeated keys for arrays
+      scope_type: scope?.type,
+      scope_id: scope?.id,
+  });
+  
+  return unwrap(res).map(mapSummaryItemToTile);
+}
 
 // ---- Static mock data (investor demo) ----
 const MOCK = {
@@ -150,7 +165,6 @@ const MOCK = {
   },
 };
 
-
 function topCard({ label, value, hint, icon: Icon, color }, theme) {
   const main = theme.palette[color]?.main || theme.palette.primary.main;
   const dark = theme.palette[color]?.dark || main;
@@ -194,7 +208,6 @@ function topCard({ label, value, hint, icon: Icon, color }, theme) {
     </Card>
   );
 }
-
 
 // --- Header (sticky) — leaves KPI section unchanged -------------------------
 function HeaderBar({ versionLabel = "All frameworks", scopeChips = ["org#1"] }) {
@@ -253,7 +266,6 @@ function Bar({ value, threshold = 0.7, title }) {
   );
 }
 
-
 function pct(n) {
   const v = Math.max(0, Math.min(1, Number(n ?? 0)));
   return Math.round(v * 100);
@@ -266,38 +278,40 @@ function fmt(n) {
 
 export default function ComplianceDashboardMulti() {
   // const { context, kpis, frameworks, actNow } = MOCK;
-  const { context, actNow } = MOCK;
+  //const { context, actNow } = MOCK;
   const theme = useTheme();
+  const { scope } = useContext(ScopeContext);
 
   const [kpis, setKpis] = React.useState(MOCK.kpis);
   const [frameworks, setFrameworks] = React.useState(MOCK.frameworks);
   const [loading, setLoading] = React.useState(false);
 
+  const scopeSafe = scope?.type ? scope : { type: "org", id: 1 };
+
   // STEP 1: frameworks list (safe no-op until ENABLE_LIVE = true)
   React.useEffect(() => {
-    if (!ENABLE_LIVE) return;
     let alive = true;
     (async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const tiles = await fetchFrameworkTiles({ /* versionId, scope */ });
-        if (alive && tiles?.length) setFrameworks(tiles);
-        // (Optional later) setKpis(...) from another endpoint
+        const tiles = await fetchFrameworkTiles({ scope: scopeSafe });
+        if (alive) setFrameworks(tiles);
       } catch (e) {
-        console.warn("Dashboard live fetch failed, using MOCK.", e);
+        console.log("[ComplianceDash] live fetch failed, using MOCK.", e);
       } finally {
         if (alive) setLoading(false);
       }
     })();
+    //console.debug("[ComplianceDash] useEffect cleanup");
     return () => { alive = false; };
-  }, []);
+  }, [scopeSafe.type, scopeSafe.id]);
 
   // STEP 2: map frameworks to rows for summary table
   const rows = frameworks.map((f, i) => ({
     id: i + 1,
     framework: `${f.code}`,
     name: f.name,
-    version: f.code === "ISO27001" ? "2022" : f.code === "GDPR" ? "2016/679" : f.code === "DORA" ? "EU 2022/2554" : "-",
+    version: f.version_label || "-",
     coveragePct: Math.round(f.coverage * 100),
     freshnessPct: Math.round(f.freshness * 100),
     effReq: f.effReq,
