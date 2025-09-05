@@ -14,11 +14,15 @@ import {
 } from "../../../api/services/compliance";
 import { adaptSummaryToKpis, adaptStatusPage } from "../../../api/adapters/compliance";
 import { DEFAULT_SCOPE } from "../../../app/constants";
-import FrameworkTabs from "../components/FrameworkTabs";
 import CoverageHeatmap from "../components/CoverageHeatmap.jsx";
 import RightPanelDrawer from "../../../components/rightpanel/RightPanelDrawer.jsx";
 import RequirementDetailPanel from "../components/RequirementDetailPanel.jsx";
 import RequirementsTree from "../components/RequirementsTree.jsx";
+import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
+import InsightsIcon from "@mui/icons-material/Insights";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import {alpha, useTheme } from "@mui/material/styles";  
 
 // Recharts (keep as-is; we already use it)
 import {
@@ -47,12 +51,110 @@ const TOKENS = {
   grey:    "#9e9e9e",
 };
 
+
+function pct(n) {
+  const v = Math.max(0, Math.min(1, Number(n ?? 0)));
+  return Math.round(v * 100);
+}
+
 const fmtPct = (n) => (n == null ? "—" : `${Math.round(n)}%`);
+
+function fmt(n) {
+  const x = Number(n ?? 0);
+  return Number.isFinite(x) ? x.toLocaleString() : "0";
+}
+// Sticky header: shows framework id/code/version and active scope
+function HeaderBar({ versionId, scopeType, scopeId, activations, kpi }) {
+  // try to resolve friendly labels from activations list
+  const fx = React.useMemo(() => {
+    if (!Array.isArray(activations)) return null;
+    return activations.find(
+      (a) => Number(a.id ?? a.version_id) === Number(versionId)
+    );
+  }, [activations, versionId]);
+
+  const code   = fx?.code ?? fx?.framework_code ?? `v${versionId}`;
+  const label  = fx?.name ?? fx?.framework_name ?? "Framework";
+  const vlabel = fx?.version_label ?? fx?.framework_version_label ?? "";
+
+  return (
+    <Box
+      sx={{
+        position: "sticky",
+        top: 0,
+        zIndex: (t) => t.zIndex.appBar,
+        bgcolor: (t) => t.palette.background.paper,
+        borderBottom: (t) => `1px solid ${t.palette.divider}`,
+        py: 1,
+        mb: 2,
+      }}
+    >
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 1 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            Compliance — {code} {vlabel && <Typography component="span" variant="subtitle2" sx={{ ml: 0.5, color: "text.secondary" }}>{vlabel}</Typography>}
+          </Typography>
+          <Chip label={`${label}`} size="small" variant="outlined" />
+          <Chip label={`${scopeType}#${scopeId}`} size="small" />
+        </Stack>
+        <Typography variant="caption" color="text.secondary">
+          Last computed: {kpi?.lastComputedAt ? new Date(kpi.lastComputedAt).toLocaleString() : "—"}
+        </Typography>
+      </Stack>
+    </Box>
+  );
+}
+
+function topCard({ label, value, hint, icon: Icon, color }, theme) {
+  const main = theme.palette[color]?.main || theme.palette.primary.main;
+  const dark = theme.palette[color]?.dark || main;
+  const fg = theme.palette.getContrastText(main);
+  return (
+    <Card
+      sx={{
+        height: "100%",
+        background: `linear-gradient(135deg, ${main} 0%, ${dark} 100%)`,
+        color: fg,
+        overflow: "hidden",
+      }}
+    >
+      <CardContent>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box
+            sx={{
+              p: 1,
+              borderRadius: "12px",
+              bgcolor: alpha("#000", 0.15),
+              display: "inline-flex",
+            }}
+          >
+            <Icon />
+          </Box>
+          <Box>
+            <Typography variant="overline" sx={{ opacity: 0.85 }}>
+              {label}
+            </Typography>
+            <Typography variant="h5" sx={{ mt: 0.25 }}>
+              {value}
+            </Typography>
+            {hint ? (
+              <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                {hint}
+              </Typography>
+            ) : null}
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default function ComplianceDashboard() {
   const { versionId: routeVersion } = useParams();
   const [sp, setSp] = useSearchParams();
   const navigate = useNavigate();
+  const theme = useTheme();
 
   // URL state
   const versionId = Number(routeVersion || sp.get("version_id") || 1);
@@ -189,18 +291,7 @@ export default function ComplianceDashboard() {
     );
   }, [versionId, scopeType, scopeId]);
 
-  // Framework tab pick (optional; keep if you support it)
-  const handlePickFramework = (pickedVersionId) => {
-    const next = new URLSearchParams(sp);
-    next.set("version_id", String(pickedVersionId));
-    setSp(next, { replace: true });
-    if (routeVersion) {
-      navigate(
-        `/compliance/dashboard/${pickedVersionId}?scope_type=${scopeType}&scope_id=${scopeId}`,
-        { replace: true }
-      );
-    }
-  };
+  
 
   const drillToExplorer = (status) => {
 
@@ -219,54 +310,71 @@ export default function ComplianceDashboard() {
 
   return (
     <Box sx={{ p: 2 }}>
-      {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>Compliance Dashboard</Typography>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="caption" color="text.secondary">
-            Last computed: {kpi?.lastComputedAt ? new Date(kpi.lastComputedAt).toLocaleString() : "—"}
-          </Typography>
-          <Button size="small" variant="contained" color="primary" disabled>
-            Compute Now
-          </Button>
-        </Stack>
-      </Stack>
+      {/* Sticky header (framework  scope  timestamp) */}
+      <HeaderBar
+        versionId={versionId}
+        scopeType={scopeType}
+        scopeId={scopeId}
+        activations={activations}
+        kpi={kpi}
+      />
 
-      {/* Framework tabs */}
-      <FrameworkTabs onPick={handlePickFramework} />
-
-      {/* KPIs */}
-      <Grid container spacing={2} sx={{ mt: 1, mb: 1 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard label="Coverage %" hint="Includes exceptions"
-                   value={kpi ? fmtPct(kpi.coveragePct) : null}
-                   onClick={() => drillToExplorer("met,partial,gap,unknown")}
-          />
+      {/* Top colorful KPI cards */}
+       <Grid container spacing={2} sx={{ mb: 2 }} size={12}>
+         <Grid    size={3}>
+           {topCard(
+            {
+              label: "Requirements",
+              value: `${kpi?.total ?? 0}`,
+              hint: `${kpi?.applicable ?? 0} Applicable`,
+              icon: LibraryBooksIcon,
+              color: "secondary",
+            },
+            theme
+          )}
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard label="Coverage (no exceptions)"
-                   value={kpi ? fmtPct(kpi.coveragePctNoEx) : null}
-                   onClick={() => drillToExplorer("met,partial,gap,unknown")}
-          />
+        <Grid    size={3}>
+          {topCard(
+            {
+              label: "Controls",
+              value: `${kpi?.met ?? 0}`,
+              hint: `Partial: ${fmt(kpi?.partial ?? 0)} · Gap: ${fmt(kpi?.gap ?? 0)} · Unknown: ${fmt(kpi?.unknown ?? 0)}`,
+              icon: AssignmentTurnedInIcon,
+              color: "success",
+            },
+            theme
+          )}
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard label="Met" value={kpi?.met ?? null}
-                   tone="success"
-                   onClick={() => drillToExplorer("met")}
-          />
+        <Grid    size={3}>
+          {topCard(
+            {
+              label: "Coverage",
+              value: `${kpi ? fmtPct(kpi.coveragePctNoEx) : 0}`,
+              hint: `Converage (incl. exceptions): ${kpi ? fmtPct(kpi.coveragePct) : 0}`,
+              icon: InsightsIcon,
+              color: "info",
+            },
+            theme
+          )}
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard label="Gaps" value={kpi?.gap ?? null}
-                   tone="error"
-                   onClick={() => drillToExplorer("gap")}
-          />
+        <Grid    size={3}>
+          {topCard(
+            {
+              label: "Evidence",
+              value: `${pct(0)}%`,
+              hint: "Evidence within policy",
+              icon: FactCheckIcon,
+              color: "warning",
+            },
+            theme
+          )}
         </Grid>
       </Grid>
 
       {/* Main layout */}
-      {/* Main layout — Row 1: Heatmap + Requirements tree */}
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={7}>
+      {/* Main layout — Row 1: Heatmap  Requirements tree */}
+      <Grid container spacing={2} size={12}>
+        <Grid size={5}>
           <Card>
             <CardContent>
               
@@ -279,7 +387,7 @@ export default function ComplianceDashboard() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={5}>
+        <Grid size={7}>
           <Card>
             <CardContent>
               <RequirementsTree
@@ -292,8 +400,8 @@ export default function ComplianceDashboard() {
       </Grid>
 
       {/* Row 2: Slice table (from heatmap), Trend, Evidence/Exceptions */}
-      <Grid container spacing={2} sx={{ mt: 2 }}>
-        <Grid item xs={12} md={7}>
+      <Grid container spacing={2} sx={{ mt: 2 }} size={12}>
+        <Grid size={8}>
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
@@ -317,8 +425,8 @@ export default function ComplianceDashboard() {
                   density="compact"
                   disableColumnMenu
                   hideFooterSelectedRowCount
-                  pageSizeOptions={[5]}
-                  initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+                  pageSizeOptions={[10]}
+                  initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
                   getRowId={(r) => r.id ?? `${r.code}-${r.title}`}
                   onRowClick={handleRowClick}
                 />
@@ -326,7 +434,7 @@ export default function ComplianceDashboard() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={5}>
+        <Grid size={4}>
           <Card sx={{ mb: 2 }}>
             <CardContent>
               <Typography variant="overline" color="text.secondary">30/30-Day Coverage Trend</Typography>

@@ -9,8 +9,14 @@ export function statusChipMeta(status, exception = false) {
 
 export function adaptSummaryToKpis(sum) {
   if (!sum) return {
-    coveragePct: 0, coveragePctNoEx: 0,
-    met: 0, partial: 0, gap: 0, unknown: 0,
+    coveragePct: 0, 
+    coveragePctNoEx: 0,
+    met: 0, 
+    partial: 0, 
+    gap: 0, 
+    unknown: 0,
+    total: 0,
+    applicable: 0,
     lastComputedAt: null,
   };
   return {
@@ -20,6 +26,8 @@ export function adaptSummaryToKpis(sum) {
     partial: sum.partial ?? 0,
     gap: sum.gap ?? 0,
     unknown: sum.unknown ?? 0,
+    total: sum.total_requirements ?? 0,
+    applicable: sum.applicable_requirements ?? 0,
     lastComputedAt: sum.last_computed_at || null,
   };
 }

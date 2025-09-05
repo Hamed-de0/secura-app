@@ -78,7 +78,7 @@ function populateKPIs(frameworks) {
   let totalMapped = 0;
   let sumCoverage = 0;
   let sumFreshness = 0; 
-  console.log("populateKPIs", {frameworks});
+  // console.log("populateKPIs", {frameworks});
   frameworks.forEach((fx) => {
     totalRequirements += fx.total_requirements || 0;
     enabledFrameworks += (fx.enabled !== false) ? 1 : 0;
@@ -325,7 +325,7 @@ export default function ComplianceDashboardMulti() {
       setLoading(true);
       try {
         const {tiles,kpis} = await fetchFrameworkTiles({ scope: scopeSafe });
-        console.log("[ComplianceDash] live fetch", {tiles,kpis});
+        // console.log("[ComplianceDash] live fetch", {tiles,kpis});
         setKpis(kpis);
         if (alive) setFrameworks(tiles);
       } catch (e) {
