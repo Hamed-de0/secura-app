@@ -15,6 +15,7 @@ import ReportGmailerrorredIcon from "@mui/icons-material/ReportGmailerrorred";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import KpiTile from "../components/KpiTile.jsx";
+import { getJSON } from "../../../api/httpClient.js"
 
 import { DataGrid } from "@mui/x-data-grid";
 
@@ -229,8 +230,64 @@ function ActionsRail({ data }) {
 }
 
 /** ---------- Page ---------- */
+
 export default function OverviewAlt() {
-  const { kpis, donuts, frameworks, tasks, scopeChip, asOf } = MOCK;
+  const [ov, setOv] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const data = await getJSON("overview/summary");
+        if (alive) setOv(data);
+      } catch (e) {
+        console.error("overview/summary failed", e);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // Fallbacks to MOCK while loading
+  const scopeChip = ov ? `${ov.scope_type}#${ov.scope_id}` : MOCK.scopeChip;
+  const asOf = ov?.as_of?.slice(0,10) || MOCK.asOf;
+
+  // Donuts (controls / SoA / risks)
+  const donuts = ov ? {
+    controls: { title: "Controls status",
+      pass: ov.controls_status.controls_pass,
+      fail: ov.controls_status.controls_fail,
+      na:   ov.controls_status.controls_na },
+    soa: { title: "SoA applicability",
+      applicable: ov.soa_applicability.applicable_count,
+      na: ov.soa_applicability.na_count,
+      unknown: ov.soa_applicability.unknown_count },
+    risks: { title: "Risks mix",
+      low: ov.risks_mix.low,
+      medium: ov.risks_mix.medium,
+      high: ov.risks_mix.high }
+  } : MOCK.donuts;
+
+  // Coverage bars by framework (enabled only). backend returns % → UI expects 0..1
+  const frameworks = ov
+    ? ov.frameworks
+        .filter(f => f.enabled)
+        .map(f => ({ code: f.framework_code || f.framework_name, coverage: (f.coverage_pct || 0) / 100 }))
+    : MOCK.frameworks;
+
+  // KPIs for the top tiles (we’ll build them inline in render)
+  const kpiVals = ov ? {
+    openRisks: ov.kpis.open_risks,
+    high: ov.kpis.high_count,
+    med: ov.kpis.medium_count,
+    low: ov.kpis.low_count,
+    coverageAvg: (ov.kpis.avg_coverage_pct || 0) / 100, // convert %→0..1 if needed
+    evidenceDue30: ov.kpis.evidence_due_30d,
+    evidenceOverdue: ov.kpis.evidence_overdue,
+    exceptionsPending: ov.kpis.exceptions_pending,
+    assetsTotal: ov.kpis.assets_total,
+    assetsCritical: ov.kpis.assets_critical,
+  } : null;
+
+// +  const tasks = MOCK.tasks; // keep your mock lists for now
 
   const rows = MOCK.table;
   const columns = [
@@ -268,11 +325,44 @@ export default function OverviewAlt() {
           mb: 2,
         }}
       >
-        {tiles.map((t, i) => (
-          <Box key={i} sx={{ display: "flex" }}>
-            <KpiTile {...t} sx={{ flex: 1 }} />
-          </Box>
-        ))}
+              {(kpiVals ? [
+        {
+          icon: <WarningAmberIcon />,
+          title: "Open risks",
+          value: kpiVals.openRisks,
+          hint: `${kpiVals.high} high • ${kpiVals.med} medium • ${kpiVals.low} low`,
+          color: "error",
+          variant: "plain",
+        },
+        {
+          icon: <FactCheckIcon />,
+          title: "Total assets",
+          value: kpiVals.assetsTotal,
+          hint: `${kpiVals.assetsCritical} critical`,
+          color: "primary",
+          variant: "plain",
+        },
+        {
+          icon: <UploadFileIcon />,
+          title: "Evidence due (30d)",
+          value: kpiVals.evidenceDue30,
+          hint: `${kpiVals.evidenceOverdue} overdue`,
+          color: "warning",
+          variant: "plain",
+        },
+        {
+          icon: <ReportGmailerrorredIcon />,
+          title: "Action pending",
+          value: kpiVals.exceptionsPending,
+          hint: "Awaiting approval",
+          color: "warning",
+          variant: "plain",
+        },
+      ] : tiles).map((t, i) => (
+        <Box key={i} sx={{ display: "flex" }}>
+          <KpiTile {...t} sx={{ flex: 1 }} />
+        </Box>
+      ))}
       </Box>
       
 
@@ -350,7 +440,7 @@ export default function OverviewAlt() {
           </Card>
         </Grid>
         <Grid size={6}>
-          <ActionsRail data={tasks} />
+          <ActionsRail data={MOCK.tasks} />
         </Grid>
       </Grid>
 
