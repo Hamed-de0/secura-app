@@ -1,378 +1,380 @@
 import * as React from "react";
-import { Box, Grid } from "@mui/material";
-import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
-import { useTheme } from "@mui/material/styles";
-
-// Components
-import KpiTile from "../components/KpiTile.jsx";
-import DonutLegendCard from "../components/DonutLegendCard.jsx";
-import BarCard from "../components/BarCard.jsx";
-import TrendCard from "../components/TrendCard.jsx";
-import MiniListCard from "../components/MiniListCard.jsx";
-import HeatmapCard from "../components/HeatmapCard.jsx";
-import TabStrip from "../components/TabStrip.jsx";
-import DataGridCard from "../components/DataGridCard.jsx";
-import QuickActions from "../components/QuickActions.jsx";
-
-// Icons
+import {
+  Box, Grid, Card, CardContent, Typography, Stack, Chip,
+  Button, Tooltip, IconButton, LinearProgress, Divider
+} from "@mui/material";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import LinkIcon from "@mui/icons-material/Link";
+import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
+import RuleIcon from "@mui/icons-material/Rule";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import ReportGmailerrorredIcon from "@mui/icons-material/ReportGmailerrorred";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
-import ShieldIcon from "@mui/icons-material/Shield";
-import EventIcon from "@mui/icons-material/Event";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
+import KpiTile from "../components/KpiTile.jsx";
 
-// Data + aggregates
-import {
-  coverageByFramework,
-  coverageMatrix,
-  effectivenessTrend,
-  riskBurndown,
-} from "../mocks.js";
-import { computeKpis, pickTopTasks, pickDueEvidence } from "../aggregate.js";
-import { sampleEvidence } from "../../evidence/mocks";
-import { sampleTasks } from "../../mywork/mocks";
-import { sampleExceptions } from "../../exceptions/mocks";
-import { listControls, setControlsUseMocks } from '../../../api/services/controls.js';
+import { DataGrid } from "@mui/x-data-grid";
 
-export default function MainDashboard() {
-  const theme = useTheme();
-  const [params] = useSearchParams();
-  const location = useLocation();
-  const nav = useNavigate();
-  setControlsUseMocks(true); // ensure mocks
-  listControls({ limit: 5, offset: 0 }).then(console.log);
-  const scopeQuery = React.useMemo(() => {
-    const sc = params.get("scope");
-    const ver = params.get("versions");
-    const u = new URLSearchParams();
-    if (sc) u.set("scope", sc);
-    if (ver) u.set("versions", ver);
-    const s = u.toString();
-    return s ? `?${s}` : "";
-  }, [location.key]);
-
-  // KPIs
-  const kpis = computeKpis();
+/** ---------- Static MOCK (edit freely later) ---------- */
+const MOCK = {
+  scopeChip: "org#1",
+  asOf: "2025-09-05",
+  kpis: {
+    openRisks: { total: 14, detail: "5 high • 4 medium • 5 low" },
+    coverageAvg: { pct: 0.68, delta30d: +0.03 },
+    freshnessAvg: { pct: 0.66, delta30d: -0.01 },
+    evidenceDue30d: { total: 3, overdue: 0 },
+  },
+  donuts: {
+    controls: { title: "Controls status", pass: 76, fail: 14, na: 10 },
+    soa: { title: "SoA applicability", applicable: 83, na: 12, unknown: 5 },
+    risks: { title: "Risks mix", low: 45, medium: 32, high: 23 },
+  },
+  frameworks: [
+    { code: "ISO 27001", coverage: 0.78 },
+    { code: "SOC 2", coverage: 0.69 },
+    { code: "PCI", coverage: 0.61 },
+    { code: "NIST CSF", coverage: 0.57 },
+  ],
+  tasks: {
+    evidence: [
+      { id: 11, label: "Upload firewall change log (Aug)", sub: "Req A.8.8 • due 2025-09-05", status: "overdue" },
+      { id: 12, label: "Access recertification report", sub: "Control AC-02 • due 2025-09-10", status: "pending" },
+      { id: 13, label: "Key rotation logs", sub: "Control SC-12 • due 2025-09-25", status: "new" },
+    ],
+    exceptions: [
+      { id: 21, label: "VPN split-tunnel", sub: "Awaiting approval", status: "pending" },
+      { id: 22, label: "Legacy TLS allowed", sub: "Awaiting approval", status: "pending" },
+    ],
+    suggestions: 14,
+  },
+  table: [
+    { id: 1, area: "Compliance", item: "Review GDPR Art.32 mappings", owner: "Security", due: "2025-09-10", cta: "Map" },
+    { id: 2, area: "Evidence", item: "Upload SOC2 quarterly logs", owner: "Ops", due: "2025-09-12", cta: "Upload" },
+    { id: 3, area: "Risk", item: "Close 'Phishing' treatment task", owner: "IT", due: "2025-09-18", cta: "Open" },
+  ],
+};
 
   // Row 1: KPI tiles
   const tiles = [
     {
       icon: <WarningAmberIcon />,
       title: "Open risks",
-      value: kpis.openRisks,
+      value: 150, //kpis.openRisks,
       hint: "5 high • 4 medium • 5 low",
       color: "error",
       onClick: () => nav(`/risk-view${scopeQuery}`),
       variant: "plain",
     },
     {
-      icon: <WarningAmberIcon />,
-      title: "Total assets",
+      icon: <RuleIcon />,
+      title: "Avg Coverage",
       value: 180,
       hint: "Physical: 48 • Intangible: 34",
       color: "error",
-      onClick: () => nav(`/assetgroups/manage${scopeQuery}`),
+      onClick: () => nav(`/assetgroups/manage${scopeQuery ?? ''}`),
       variant: "plain",
     },
     {
       icon: <UploadFileIcon />,
       title: "Evidence due (30d)",
-      value: kpis.evidenceDue30,
-      hint: `${kpis.evidenceOverdue} overdue`,
+      value: 10, //kpis.evidenceDue30,
+      // hint: `${kpis?.evidenceOverdue} overdue`,
+      hint: `10 overdue`,
       color: "warning",
       onClick: () => nav(`/evidence${scopeQuery}`),
       variant: "plain",
     },
     {
       icon: <ReportGmailerrorredIcon />,
-      title: "Exceptions pending",
-      value: kpis.exceptionsPending,
+      title: "Action pending",
+      value: 10, // kpis.exceptionsPending,
       hint: "Awaiting approval",
       color: "warning",
-      onClick: () => nav(`/exceptions${scopeQuery}`),
+      onClick: () => nav(`/exceptions${scopeQuery ?? ''}`),
       variant: "plain",
     },
     {
       icon: <FactCheckIcon />,
-      title: "Attestations running",
-      value: kpis.attestationsRunning,
-      hint: "Avg completion 62%",
+      title: "Assets monitored",
+      value: 160, //kpis.attestationsRunning,
+      hint: "10 Critical",
       color: "primary",
-      onClick: () => nav(`/attestations${scopeQuery}`),
+      onClick: () => nav(`/attestations${scopeQuery ?? ''}`),
       variant: "plain",
     },
-    // {
-    //   icon: <ShieldIcon />,
-    //   title: 'Controls pass rate',
-    //   value: `${kpis.controlsPassRate}%`,
-    //   progress: kpis.controlsPassRate,
-    //   color: 'success',
-    //   onClick: () => nav(`/controls${scopeQuery}`),
-    //   variant: 'radial',
-    // },
-    // {
-    //   icon: <EventIcon />,
-    //   title: 'Provider reviews (30d)',
-    //   value: kpis.providerReviews30,
-    //   hint: 'Upcoming vendor reviews',
-    //   color: 'info',
-    //   onClick: () => nav(`/providers${scopeQuery}`),
-    //   variant: 'plain',
-    // },
+  
   ];
+/** ---------- Small UI helpers (no new deps) ---------- */
+const COLORS = { success: "#2e7d32", warning: "#ed6c02", error: "#d32f2f", grey: "#9e9e9e" };
+const pct = (v) => Math.round((v ?? 0) * 100);
 
-  // Donut (controls status)
-  const donutData = [
-    { name: "Pass", value: 76 },
-    { name: "Fail", value: 14 },
-    { name: "N/A", value: 10 },
-  ];
 
-  // Lists
-  const tasksList = pickTopTasks(6).map((t) => ({
-    id: t.id,
-    primary: t.title,
-    secondary: `${t.objectType} ${t.objectCode} • ${t.assignee}`,
-    metric: t.dueDate,
-  }));
-  const evidenceList = pickDueEvidence(6).map((e) => ({
-    id: e.id,
-    primary: e.title,
-    secondary: `${e.objectType} ${e.objectCode} • due ${e.dueDate}`,
-    metric: e.status,
-  }));
+/** Donut with legend (CSS conic-gradient, no libs). values is array of {label, value, color}. */
+function Donut({ title, values }) {
+  const total = values.reduce((s, v) => s + v.value, 0) || 1;
+  let acc = 0;
+  const stops = values.map((v) => {
+    const start = (acc / total) * 360;
+    acc += v.value;
+    const end = (acc / total) * 360;
+    return `${v.color} ${start}deg ${end}deg`;
+  }).join(", ");
 
-  // Bottom tabs (DataGrids)
-  const [tab, setTab] = React.useState("mywork");
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="overline" color="text.secondary">{title}</Typography>
+        <Stack direction="row" spacing={3} alignItems="center" sx={{ mt: 1 }}>
+          <Box sx={{
+            width: 140, height: 140, borderRadius: "50%",
+            backgroundImage: `conic-gradient(${stops})`,
+            position: "relative"
+          }}>
+            <Box sx={{
+              position: "absolute", inset: 12, borderRadius: "50%",
+              bgcolor: (t) => t.palette.background.paper, display: "grid", placeItems: "center"
+            }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{total}</Typography>
+              <Typography variant="caption" color="text.secondary">total</Typography>
+            </Box>
+          </Box>
+          <Stack spacing={1}>
+            {values.map((v) => (
+              <Stack key={v.label} direction="row" spacing={1} alignItems="center">
+                <Box sx={{ width: 10, height: 10, borderRadius: 1, bgcolor: v.color }} />
+                <Typography variant="body2" sx={{ minWidth: 90 }}>{v.label} </Typography>
+                {/* <Typography variant="caption" color="text.secondary">{v.value} ({pct(v.value / total)}%)</Typography> */}
+              </Stack>
+            ))}
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
 
-  const myWorkColumns = [
-    {
-      field: "title",
-      headerName: "Task",
-      flex: 1,
-      minWidth: 240,
-      renderCell: (p) => p.row?.title ?? "",
-    },
-    {
-      field: "object",
-      headerName: "Object",
-      width: 200,
-      renderCell: (p) =>
-        `${p.row?.objectType || ""} ${p.row?.objectCode || ""}`.trim(),
-    },
-    {
-      field: "assignee",
-      headerName: "Assignee",
-      width: 200,
-      renderCell: (p) => p.row?.assignee ?? "",
-    },
-    {
-      field: "dueDate",
-      headerName: "Due",
-      width: 140,
-      renderCell: (p) => p.row?.dueDate ?? "",
-    },
-    {
-      field: "status",
-      headerName: "Status",
-      width: 140,
-      renderCell: (p) => p.row?.status ?? "",
-    },
-  ];
-  const evidenceColumns = [
-    {
-      field: "title",
-      headerName: "Request",
-      flex: 1,
-      minWidth: 240,
-      renderCell: (p) => p.row?.title ?? "",
-    },
-    {
-      field: "object",
-      headerName: "Object",
-      width: 200,
-      renderCell: (p) =>
-        `${p.row?.objectType || ""} ${p.row?.objectCode || ""}`.trim(),
-    },
-    {
-      field: "requestedBy",
-      headerName: "Requested by",
-      width: 220,
-      renderCell: (p) => p.row?.requestedBy ?? "",
-    },
-    {
-      field: "dueDate",
-      headerName: "Due",
-      width: 140,
-      renderCell: (p) => p.row?.dueDate ?? "",
-    },
-    {
-      field: "status",
-      headerName: "Status",
-      width: 140,
-      renderCell: (p) => p.row?.status ?? "",
-    },
-  ];
-  const exceptionsColumns = [
-    {
-      field: "code",
-      headerName: "ID",
-      width: 120,
-      renderCell: (p) => p.row?.code ?? "",
-    },
-    {
-      field: "title",
-      headerName: "Exception",
-      flex: 1,
-      minWidth: 240,
-      renderCell: (p) => p.row?.title ?? "",
-    },
-    {
-      field: "owner",
-      headerName: "Owner",
-      width: 220,
-      renderCell: (p) => p.row?.owner ?? "",
-    },
-    {
-      field: "impact",
-      headerName: "Impact",
-      width: 120,
-      renderCell: (p) => p.row?.impact ?? "",
-    },
-    {
-      field: "expires",
-      headerName: "Expires",
-      width: 140,
-      renderCell: (p) => p.row?.expires ?? "",
-    },
-  ];
+function BarRow({ label, value }) {
+  const v = Math.max(0, Math.min(1, value));
+  return (
+    <Stack spacing={0.5}>
+      <Stack direction="row" justifyContent="space-between">
+        <Typography variant="body2">{label}</Typography>
+        <Typography variant="caption" color="text.secondary">{pct(v)}%</Typography>
+      </Stack>
+      <LinearProgress variant="determinate" value={pct(v)} sx={{ height: 10, borderRadius: 5 }} />
+    </Stack>
+  );
+}
 
-  const tabDefs = [
+function ActionsRail({ data }) {
+  return (
+    <Stack spacing={2}>
+      <Card>
+        <CardContent>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="overline">My tasks</Typography>
+            <Tooltip title="Open My Work">
+              <IconButton size="small"><OpenInNewIcon fontSize="small" /></IconButton>
+            </Tooltip>
+          </Stack>
+          <Stack spacing={1.25} sx={{ mt: 1 }}>
+            {data.evidence.map((t) => (
+              <Stack key={t.id} spacing={0.25}>
+                <Typography variant="body2">{t.label}</Typography>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="caption" color="text.secondary">{t.sub}</Typography>
+                  <Chip size="small" label={t.status} variant="outlined" />
+                </Stack>
+              </Stack>
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="overline">Exceptions to approve</Typography>
+            <IconButton size="small"><OpenInNewIcon fontSize="small" /></IconButton>
+          </Stack>
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            {MOCK.tasks.exceptions.map((e) => (
+              <Stack key={e.id} spacing={0.25}>
+                <Typography variant="body2">{e.label}</Typography>
+                <Typography variant="caption" color="text.secondary">{e.sub}</Typography>
+              </Stack>
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Typography variant="overline">Unmapped suggestions</Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <LinkIcon fontSize="small" />
+              <Typography variant="body2">Awaiting review</Typography>
+            </Stack>
+            <Button size="small" variant="outlined">Review ({MOCK.tasks.suggestions})</Button>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Stack>
+  );
+}
+
+/** ---------- Page ---------- */
+export default function OverviewAlt() {
+  const { kpis, donuts, frameworks, tasks, scopeChip, asOf } = MOCK;
+
+  const rows = MOCK.table;
+  const columns = [
+    { field: "area", headerName: "Area", flex: 0.5 },
+    { field: "item", headerName: "Item", flex: 1.4 },
+    { field: "owner", headerName: "Owner", flex: 0.6 },
+    { field: "due", headerName: "Due", flex: 0.6 },
     {
-      key: "mywork",
-      label: "My Work",
-      rows: sampleTasks,
-      columns: myWorkColumns,
-    },
-    {
-      key: "evidence",
-      label: "Evidence",
-      rows: sampleEvidence,
-      columns: evidenceColumns,
-    },
-    {
-      key: "exceptions",
-      label: "Exceptions",
-      rows: sampleExceptions,
-      columns: exceptionsColumns,
+      field: "cta", headerName: "", flex: 0.6, sortable: false,
+      renderCell: (p) => <Button size="small" variant="outlined">{p.value}</Button>
     },
   ];
 
   return (
-    <Box sx={{ p: 1 }}>
+    <Box sx={{ p: 2 }}>
+      {/* Top utility bar (thin, NOT sticky; parent layout already has header) */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Chip label={`Scope: ${scopeChip}`} size="small" />
+          <Chip label={`As of: ${asOf}`} size="small" variant="outlined" />
+        </Stack>
+        <Stack direction="row" spacing={1}>
+          <Button size="small" startIcon={<CloudDownloadIcon />}>Export</Button>
+          <Button size="small" variant="contained" startIcon={<TaskAltIcon />}>Start workflow</Button>
+        </Stack>
+      </Stack>
 
-   
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", // <- min width per tile
-        gap: 2, // same as Grid spacing={2}
-        alignItems: "stretch",
-      }}
-    >
-      {tiles.map((t, i) => (
-        <Box key={i} sx={{ display: "flex" }}>
-          <KpiTile {...t} sx={{ flex: 1 }} />
-        </Box>
-      ))}
+      {/* Top row: KPI tiles */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", // <- min width per tile
+          gap: 2, // same as Grid spacing={2}
+          alignItems: "stretch",
+          mb: 2,
+        }}
+      >
+        {tiles.map((t, i) => (
+          <Box key={i} sx={{ display: "flex" }}>
+            <KpiTile {...t} sx={{ flex: 1 }} />
+          </Box>
+        ))}
       </Box>
+      
 
-      {/* Row 2: Donut + Coverage by framework */}
-      {/* Row: Controls status (left) + Coverage by framework (right) */}
-      <Grid container spacing={2} alignItems="stretch" sx={{ mt: 0.5, pt: 2 }}>
-        <Grid item xs={12} md={6} size={6} sx={{ display: "flex" }}>
-          <DonutLegendCard
-            title="Controls status"
-            data={donutData}
-            sx={{ flex: 1 }}
-            onSliceClick={(name) => {
-              if (name === "Pass") nav(`/controls${scopeQuery}`);
-              if (name === "Fail") nav(`/controls${scopeQuery}&q=status:fail`);
-            }}
+      {/* Middle row: THREE DONUTS + Coverage bars + Actions rail */}
+    
+      <Grid container spacing={2} size={12} sx={{ mt: 0.5 }}>
+        <Grid size={3}> 
+          <Donut
+            title={donuts.controls.title}
+            values={[
+              { label: "Pass", value: donuts.controls.pass, color: COLORS.success },
+              { label: "Fail", value: donuts.controls.fail, color: COLORS.error },
+              { label: "N/A", value: donuts.controls.na, color: COLORS.grey },
+            ]}
+          />
+        </Grid>
+        <Grid  size={3}>
+          <Donut
+            title={donuts.soa.title}
+            values={[
+              { label: "Applicable", value: donuts.soa.applicable, color: COLORS.success },
+              { label: "N/A", value: donuts.soa.na, color: COLORS.grey },
+              { label: "Unknown", value: donuts.soa.unknown, color: "#bdbdbd" },
+            ]}
+          />
+        </Grid>
+        <Grid  size={3}>
+          <Donut
+            title={donuts.risks.title}
+            values={[
+              { label: "Low", value: donuts.risks.low, color: "#4caf50" },
+              { label: "Medium", value: donuts.risks.medium, color: "#ff9800" },
+              { label: "High", value: donuts.risks.high, color: "#f44336" },
+            ]}
           />
         </Grid>
 
-        <Grid item xs={12} md={6} size={6} sx={{ display: "flex" }}>
-          <BarCard
-            title="Coverage by framework"
-            series={coverageByFramework}
-            layout="vertical"
-            sx={{ flex: 1 }}
-            onBarClick={(fw) =>
-              nav(`/compliance${scopeQuery}&q=${encodeURIComponent(fw)}`)
-            }
-          />
+        <Grid  size={3}>
+          <Card>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                <Typography variant="overline" color="text.secondary">Coverage by framework</Typography>
+                <Stack direction="row" spacing={1}>
+                  <Tooltip title="Copy deep link"><IconButton size="small"><LinkIcon fontSize="small" /></IconButton></Tooltip>
+                  <Tooltip title="Open Compliance"><IconButton size="small"><OpenInNewIcon fontSize="small" /></IconButton></Tooltip>
+                </Stack>
+              </Stack>
+              <Stack spacing={1.25}>
+                {frameworks.map((f) => (
+                  <BarRow key={f.code} label={f.code} value={f.coverage} />
+                ))}
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        
+      </Grid>
+
+      <Grid container spacing={2} sx={{ mt: 0.5 }} size={12}>
+        <Grid size={6} sx={{ mt: 0.5 }}>
+          <Card>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="overline" color="text.secondary">What needs attention</Typography>
+                <Button size="small" variant="outlined" startIcon={<WarningAmberIcon />}>Risk Dashboard</Button>
+              </Stack>
+              <Divider sx={{ my: 1 }} />
+              <Stack direction="row" spacing={1}>
+                <Chip size="small" label="Evidence stale: 4" variant="outlined" />
+                <Chip size="small" label="Unmapped: 3" variant="outlined" />
+                <Chip size="small" label="Exceptions pending: 2" variant="outlined" />
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={6}>
+          <ActionsRail data={tasks} />
         </Grid>
       </Grid>
 
-      {/* Row 3: Trend + Quick actions */}
-      <Grid container spacing={2} sx={{ mt: 3, minHeight: 350 }}>
-        <Grid item xs={12} md={6} size={6} maxHeight={350}>
-          <TrendCard
-            title="Control effectiveness (stacked)"
-            series={effectivenessTrend}
-            range="90d"
-            onRangeChange={() => {
-              /* mock: no-op */
-            }}
-            sx={{ display: "flex" }}
-          />
-        </Grid>
-        <Grid item xs={12} md={6} size={6} maxHeight={350}>
-          {/* <QuickActions scopeQuery={scopeQuery} /> */}
-          <MiniListCard
-            title="Evidence due soon"
-            items={evidenceList}
-            onItemClick={(it) =>
-              nav(`/evidence${scopeQuery}&q=${encodeURIComponent(it.primary)}`)
-            }
-            sx={{ maxHeight: 300 }}
-          />
-        </Grid>
-      </Grid>
-
-      {/* Row 4: Heatmap */}
-      <Grid container spacing={2} sx={{ mt: 3 }}>
-        <Grid item xs={12}>
-          <HeatmapCard
-            title="Annex A coverage heatmap"
-            matrix={coverageMatrix}
-          />
-        </Grid>
-      </Grid>
-
-      {/* Bottom: Tabbed tables */}
-      <Box sx={{ mt: 1.5 }}>
-        <TabStrip
-          value={tab}
-          onChange={setTab}
-          tabs={tabDefs.map((t) => ({ key: t.key, label: t.label }))}
-        />
-        <Box sx={{ mt: 1 }}>
-          {tabDefs.map(
-            (t) =>
-              t.key === tab && (
-                <DataGridCard
-                  key={t.key}
-                  title={t.label}
-                  rows={t.rows}
-                  columns={t.columns}
-                />
-              )
-          )}
-        </Box>
-      </Box>
+      {/* Bottom table */}
+      <Card sx={{ mt: 2 }}>
+        <CardContent>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+            <Typography variant="overline" color="text.secondary">My work — this month</Typography>
+            <Button size="small" startIcon={<OpenInNewIcon />}>Open My Work</Button>
+          </Stack>
+          <div style={{ width: "100%" }}>
+            <DataGrid
+              autoHeight
+              rows={rows}
+              columns={columns}
+              density="compact"
+              hideFooterSelectedRowCount
+              pageSizeOptions={[5, 10]}
+              initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+            />
+          </div>
+        </CardContent>
+      </Card>
     </Box>
   );
 }
+
