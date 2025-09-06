@@ -146,7 +146,7 @@ export default function WorkflowDesigner() {
             >
               {/* Edge layer (always render; compute size on the fly) */}
               {/* Edges hidden to focus on node placement */}
-              {/* <svg width="100%" height="100%" style={{ position:"absolute", inset:0, pointerEvents:"none" }}> */}
+              <svg width="100%" height="100%" style={{ position:"absolute", inset:0, pointerEvents:"none" }}>
                 <defs>
                     <marker id="arrow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
                     <path d="M0,0 L8,4 L0,8 z" fill="#90caf9"/>
@@ -205,23 +205,24 @@ export default function WorkflowDesigner() {
                     const [Ax, Ay] = nodeCenter(A);
                     const [Bx, By] = nodeCenter(B);
 
-                    let [sx,sy] = anchorFor(A, Ax, Ay, Bx, By);
-                    let [tx,ty] = anchorFor(B, Bx, By, Ax, Ay);
-                    // Nudge endpoints 1px along the line to keep arrows outside nodes
-                    {
-                      const dx = tx - sx, dy = ty - sy;
-                      const len = Math.hypot(dx, dy) || 1;
-                      const ux = dx / len, uy = dy / len;
-                      const margin = 1; // px
-                      sx += ux * margin; sy += uy * margin;
-                      tx -= ux * margin; ty -= uy * margin;
-                    }
+                    let sx = Ax, sy = Ay;
+                    let tx = Bx, ty = By;
                     const mx = (sx+tx)/2, my = (sy+ty)/2;
+
+                    // Orthogonal centerline route (L or straight)
+                    let pts;
+                    if (Math.abs(sx - tx) < 1e-6 || Math.abs(sy - ty) < 1e-6) {
+                      pts = [sx, sy, tx, ty];
+                    } else {
+                      pts = [sx, sy, tx, sy, tx, ty];
+                    }
+                    const points = pts.join(',');
 
                     return (
                         <g key={i}>
-                        <line
-                            x1={sx} y1={sy} x2={tx} y2={ty}
+                        <polyline
+                            points={points}
+                            fill="none"
                             stroke="#90caf9" strokeWidth="2" strokeLinecap="round"
                             markerEnd="url(#arrow)"
                         />
@@ -234,7 +235,7 @@ export default function WorkflowDesigner() {
                     );
                     });
                 })()}
-              {/* </svg> */}
+              </svg>
 
               {/* Nodes */}
               {spec.nodes.map(n => {
