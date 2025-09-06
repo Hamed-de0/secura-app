@@ -37,6 +37,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import MenuIcon from '@mui/icons-material/Menu';
 import SpeedIcon from '@mui/icons-material/Speed';
+import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
 import { ScopeContext } from '../store/scope/ScopeProvider.jsx';
 import { useEffectiveCaps, useMenuCaps } from '../lib/mock/useRbac';
 import { useI18n } from '../store/i18n/I18nProvider.jsx';
@@ -79,6 +80,13 @@ const GROUPS = [
       { label: 'common.exceptions', icon: <ReportGmailerrorredIcon />, to: '/exceptions', parent: '/compliance' },
       { label: 'nav.mappingManager', icon: <LinkIcon />, to: '/mapping' },
     ],
+  },
+
+  { id: 'processes', 
+    label: 'common.processes', 
+    items: [
+      { label: 'common.processes', icon: <AccountTreeOutlinedIcon />, to: '/workflows' },
+    ]
   },
 
   // Risk — inside-out

@@ -84,7 +84,7 @@ export default function WorkflowDesigner() {
   };
 
   // Grid: 5 columns, unlimited rows. Each cell has 200px margins around max shape size.
-  const GRID_COLS = 5;
+  const GRID_COLS = 4;
   const CELL_MARGIN = 20;
   const MAX_W = Math.max(...Object.values(SHAPES).map(s => s.w));
   const MAX_H = Math.max(...Object.values(SHAPES).map(s => s.h));

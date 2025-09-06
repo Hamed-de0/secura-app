@@ -156,38 +156,38 @@ export function risk_treatment_workflow_template() {
     status: "published", 
     canvas: { w: 900, h: 2700 },
     nodes: [
-      { id:"rt_start",     type:"start",    x:3, y:1 },
-      { id:"rt_identify",  type:"task",     x:3, y:2, props:{ title:"Identify risk" } },
-      { id:"rt_assess",    type:"task",     x:3, y:3, props:{ title:"Assess (impact × likelihood)" } },
-      { id:"rt_decide",    type:"decision", x:3, y:4, props:{ title:"Treatment option?" } },
+      { id:"rt_start",     type:"start",    x:2, y:1 },
+      { id:"rt_identify",  type:"task",     x:2, y:2, props:{ title:"Identify risk" } },
+      { id:"rt_assess",    type:"task",     x:2, y:3, props:{ title:"Assess (impact × likelihood)" } },
+      { id:"rt_decide",    type:"decision", x:2, y:4, props:{ title:"Treatment option?" } },
 
       // Avoid branch (left)
-      { id:"rt_change",    type:"task",     x:2, y:5, props:{ title:"Change/stop activity" } },
-      { id:"rt_update",    type:"service",  x:2, y:6, props:{ title:"Update registers" } },
-      { id:"rt_end_avoid", type:"end",      x:2, y:7 },
+      { id:"rt_change",    type:"task",     x:1, y:5, props:{ title:"Change/stop activity" } },
+      { id:"rt_update",    type:"service",  x:1, y:6, props:{ title:"Update registers" } },
+      { id:"rt_end_avoid", type:"end",      x:1, y:7 },
 
       // Reduce branch (middle)
-      { id:"rt_plan",      type:"task",     x:3, y:5, props:{ title:"Plan mitigations" } },
-      { id:"rt_implement", type:"task",     x:3, y:6, props:{ title:"Implement controls" } },
-      { id:"rt_validate",  type:"approval", x:3, y:7, props:{ title:"Validate effectiveness" } },
-      { id:"rt_residual",  type:"decision", x:3, y:8, props:{ title:"Residual within appetite?" } },
-      { id:"rt_close",     type:"task",     x:3, y:9, props:{ title:"Close risk & update SoA" } },
-      { id:"rt_end_treat", type:"end",      x:3, y:10 },
+      { id:"rt_plan",      type:"task",     x:2, y:5, props:{ title:"Plan mitigations" } },
+      { id:"rt_implement", type:"task",     x:2, y:6, props:{ title:"Implement controls" } },
+      { id:"rt_validate",  type:"approval", x:2, y:7, props:{ title:"Validate effectiveness" } },
+      { id:"rt_residual",  type:"decision", x:2, y:8, props:{ title:"Residual within appetite?" } },
+      { id:"rt_close",     type:"task",     x:2, y:9, props:{ title:"Close risk & update SoA" } },
+      { id:"rt_end_treat", type:"end",      x:2, y:10 },
 
       // Escalation from residual "No"
-      { id:"rt_escalate",  type:"task",     x:4, y:8, props:{ title:"Escalate & re-evaluate" } },
-      { id:"rt_replan",    type:"task",     x:4, y:9, props:{ title:"Re-plan treatment" } },
-      { id:"rt_end_escal", type:"end",      x:4, y:10 },
+      { id:"rt_escalate",  type:"task",     x:3, y:8, props:{ title:"Escalate & re-evaluate" } },
+      { id:"rt_replan",    type:"task",     x:3, y:9, props:{ title:"Re-plan treatment" } },
+      { id:"rt_end_escal", type:"end",      x:3, y:10 },
 
       // Accept branch (right)
-      { id:"rt_accept_rec",type:"service",  x:4, y:5, props:{ title:"Record risk acceptance" } },
-      { id:"rt_end_acc",   type:"end",      x:4, y:6 },
+      { id:"rt_accept_rec",type:"service",  x:3, y:5, props:{ title:"Record risk acceptance" } },
+      { id:"rt_end_acc",   type:"end",      x:3, y:6 },
 
       // Transfer branch (right)
-      { id:"rt_select",    type:"task",     x:5, y:5, props:{ title:"Select transfer mechanism" } },
-      { id:"rt_contract",  type:"service",  x:5, y:6, props:{ title:"Execute contract" } },
-      { id:"rt_monitor",   type:"task",     x:5, y:7, props:{ title:"Monitor third party" } },
-      { id:"rt_end_trans", type:"end",      x:5, y:8 },
+      { id:"rt_select",    type:"task",     x:4, y:5, props:{ title:"Select transfer mechanism" } },
+      { id:"rt_contract",  type:"service",  x:4, y:6, props:{ title:"Execute contract" } },
+      { id:"rt_monitor",   type:"task",     x:4, y:7, props:{ title:"Monitor third party" } },
+      { id:"rt_end_trans", type:"end",      x:4, y:8 },
     ],
     edges: [
       { from:"rt_start",     to:"rt_identify" },
