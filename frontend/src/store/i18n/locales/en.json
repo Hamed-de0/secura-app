@@ -78,8 +78,57 @@
     "mappingManager": "Mapping Manager",
     "toggleSidebar": "Toggle sidebar"
   },
+  "appHeader": {
+    "brandName": "H&H Communication Lab GmbH",
+    "scope": "scope",
+    "versions": "versions",
+    "switchToDark": "Switch to dark mode",
+    "switchToLight": "Switch to light mode",
+    "toggleTheme": "toggle theme",
+    "requestEvidence": "Request evidence",
+    "newRisk": "New risk",
+    "newProvider": "New provider",
+    "linkCopied": "Link copied",
+    "copyFailed": "Copy failed",
+    "search": "Search"
+  },
   "entities": {
     "control": { "one": "Control", "other": "Controls" },
     "risk":    { "one": "Risk",    "other": "Risks" }
+  }
+  ,
+  "mainDashboard": {
+    "openRisks": "Open risks",
+    "riskHintSample": "5 high • 4 medium • 5 low",
+    "avgCoverage": "Avg Coverage",
+    "coverageHintSample": "Physical: 48 • Intangible: 34",
+    "evidenceDue30": "Evidence due (30d)",
+    "overdueSample": "10 overdue",
+    "actionPending": "Action pending",
+    "awaitingApproval": "Awaiting approval",
+    "assetsMonitored": "Assets monitored",
+    "criticalSample": "10 Critical",
+    "totalAssets": "Total assets",
+    "critical": "critical",
+    "overdue": "overdue",
+    "area": "Area",
+    "item": "Item",
+    "owner": "Owner",
+    "due": "Due",
+    "scope": "Scope",
+    "asOf": "As of",
+    "export": "Export",
+    "startWorkflow": "Start workflow",
+    "controlsStatus": "Controls status",
+    "soaApplicability": "SoA applicability",
+    "risksMix": "Risks mix",
+    "pass": "Pass",
+    "fail": "Fail",
+    "na": "N/A",
+    "applicable": "Applicable",
+    "unknown": "Unknown",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
   }
 }

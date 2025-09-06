@@ -18,9 +18,10 @@ import KpiTile from "../components/KpiTile.jsx";
 import { getJSON } from "../../../api/httpClient.js"
 
 import { DataGrid } from "@mui/x-data-grid";
+import { useI18n } from '../../../store/i18n/I18nProvider.jsx';
 
 /** ---------- Static MOCK (edit freely later) ---------- */
-const MOCK = {
+ const MOCK = {
   scopeChip: "org#1",
   asOf: "2025-09-05",
   kpis: {
@@ -58,57 +59,6 @@ const MOCK = {
     { id: 3, area: "Risk", item: "Close 'Phishing' treatment task", owner: "IT", due: "2025-09-18", cta: "Open" },
   ],
 };
-
-  // Row 1: KPI tiles
-  const tiles = [
-    {
-      icon: <WarningAmberIcon />,
-      title: "Open risks",
-      value: 150, //kpis.openRisks,
-      hint: "5 high • 4 medium • 5 low",
-      color: "error",
-      onClick: () => nav(`/risk-view${scopeQuery}`),
-      variant: "plain",
-    },
-    {
-      icon: <RuleIcon />,
-      title: "Avg Coverage",
-      value: 180,
-      hint: "Physical: 48 • Intangible: 34",
-      color: "error",
-      onClick: () => nav(`/assetgroups/manage${scopeQuery ?? ''}`),
-      variant: "plain",
-    },
-    {
-      icon: <UploadFileIcon />,
-      title: "Evidence due (30d)",
-      value: 10, //kpis.evidenceDue30,
-      // hint: `${kpis?.evidenceOverdue} overdue`,
-      hint: `10 overdue`,
-      color: "warning",
-      onClick: () => nav(`/evidence${scopeQuery}`),
-      variant: "plain",
-    },
-    {
-      icon: <ReportGmailerrorredIcon />,
-      title: "Action pending",
-      value: 10, // kpis.exceptionsPending,
-      hint: "Awaiting approval",
-      color: "warning",
-      onClick: () => nav(`/exceptions${scopeQuery ?? ''}`),
-      variant: "plain",
-    },
-    {
-      icon: <FactCheckIcon />,
-      title: "Assets monitored",
-      value: 160, //kpis.attestationsRunning,
-      hint: "10 Critical",
-      color: "primary",
-      onClick: () => nav(`/attestations${scopeQuery ?? ''}`),
-      variant: "plain",
-    },
-  
-  ];
 /** ---------- Small UI helpers (no new deps) ---------- */
 const COLORS = { success: "#2e7d32", warning: "#ed6c02", error: "#d32f2f", grey: "#9e9e9e" };
 const pct = (v) => Math.round((v ?? 0) * 100);
@@ -233,6 +183,61 @@ function ActionsRail({ data }) {
 
 export default function OverviewAlt() {
   const [ov, setOv] = React.useState(null);
+  const { t } = useI18n();
+
+ 
+
+  // Row 1: KPI tiles
+  const tiles = [
+    {
+      icon: <WarningAmberIcon />,
+      title: t('mainDashboard.openRisks'),
+      value: 150, //kpis.openRisks,
+      hint: t('mainDashboard.riskHintSample'),
+      color: "error",
+      onClick: () => nav(`/risk-view${scopeQuery}`),
+      variant: "plain",
+    },
+    {
+      icon: <RuleIcon />,
+      title: t('mainDashboard.avgCoverage'),
+      value: 180,
+      hint: t('mainDashboard.coverageHintSample'),
+      color: "error",
+      onClick: () => nav(`/assetgroups/manage${scopeQuery ?? ''}`),
+      variant: "plain",
+    },
+    {
+      icon: <UploadFileIcon />,
+      title: t('mainDashboard.evidenceDue30'),
+      value: 10, //kpis.evidenceDue30,
+      // hint: `${kpis?.evidenceOverdue} overdue`,
+      hint: t('mainDashboard.overdueSample'),
+      color: "warning",
+      onClick: () => nav(`/evidence${scopeQuery}`),
+      variant: "plain",
+    },
+    {
+      icon: <ReportGmailerrorredIcon />,
+      title: t('mainDashboard.actionPending'),
+      value: 10, // kpis.exceptionsPending,
+      hint: t('mainDashboard.awaitingApproval'),
+      color: "warning",
+      onClick: () => nav(`/exceptions${scopeQuery ?? ''}`),
+      variant: "plain",
+    },
+    {
+      icon: <FactCheckIcon />,
+      title: t('mainDashboard.assetsMonitored'),
+      value: 160, //kpis.attestationsRunning,
+      hint: t('mainDashboard.criticalSample'),
+      color: "primary",
+      onClick: () => nav(`/attestations${scopeQuery ?? ''}`),
+      variant: "plain",
+    },
+  
+  ];
+
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -290,11 +295,13 @@ export default function OverviewAlt() {
 // +  const tasks = MOCK.tasks; // keep your mock lists for now
 
   const rows = MOCK.table;
+  
+
   const columns = [
-    { field: "area", headerName: "Area", flex: 0.5 },
-    { field: "item", headerName: "Item", flex: 1.4 },
-    { field: "owner", headerName: "Owner", flex: 0.6 },
-    { field: "due", headerName: "Due", flex: 0.6 },
+    { field: "area", headerName: t('mainDashboard.area'), flex: 0.5 },
+    { field: "item", headerName: t('mainDashboard.item'), flex: 1.4 },
+    { field: "owner", headerName: t('mainDashboard.owner'), flex: 0.6 },
+    { field: "due", headerName: t('mainDashboard.due'), flex: 0.6 },
     {
       field: "cta", headerName: "", flex: 0.6, sortable: false,
       renderCell: (p) => <Button size="small" variant="outlined">{p.value}</Button>
@@ -306,12 +313,12 @@ export default function OverviewAlt() {
       {/* Top utility bar (thin, NOT sticky; parent layout already has header) */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Chip label={`Scope: ${scopeChip}`} size="small" />
-          <Chip label={`As of: ${asOf}`} size="small" variant="outlined" />
+          <Chip label={`${t('mainDashboard.scope')}: ${scopeChip}`} size="small" />
+          <Chip label={`${t('mainDashboard.asOf')}: ${asOf}`} size="small" variant="outlined" />
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button size="small" startIcon={<CloudDownloadIcon />}>Export</Button>
-          <Button size="small" variant="contained" startIcon={<TaskAltIcon />}>Start workflow</Button>
+          <Button size="small" startIcon={<CloudDownloadIcon />}>{t('mainDashboard.export')}</Button>
+          <Button size="small" variant="contained" startIcon={<TaskAltIcon />}>{t('mainDashboard.startWorkflow')}</Button>
         </Stack>
       </Stack>
 
@@ -328,33 +335,33 @@ export default function OverviewAlt() {
               {(kpiVals ? [
         {
           icon: <WarningAmberIcon />,
-          title: "Open risks",
+          title: t('mainDashboard.openRisks'),
           value: kpiVals.openRisks,
-          hint: `${kpiVals.high} high • ${kpiVals.med} medium • ${kpiVals.low} low`,
+          hint: `${kpiVals.high} ${t('mainDashboard.high')} • ${kpiVals.med} ${t('mainDashboard.medium')} • ${kpiVals.low} ${t('mainDashboard.low')}`,
           color: "error",
           variant: "plain",
         },
         {
           icon: <FactCheckIcon />,
-          title: "Total assets",
+          title: t('mainDashboard.totalAssets'),
           value: kpiVals.assetsTotal,
-          hint: `${kpiVals.assetsCritical} critical`,
+          hint: `${kpiVals.assetsCritical} ${t('mainDashboard.critical')}`,
           color: "primary",
           variant: "plain",
         },
         {
           icon: <UploadFileIcon />,
-          title: "Evidence due (30d)",
+          title: t('mainDashboard.evidenceDue30'),
           value: kpiVals.evidenceDue30,
-          hint: `${kpiVals.evidenceOverdue} overdue`,
+          hint: `${kpiVals.evidenceOverdue} ${t('mainDashboard.overdue')}`,
           color: "warning",
           variant: "plain",
         },
         {
           icon: <ReportGmailerrorredIcon />,
-          title: "Action pending",
+          title: t('mainDashboard.actionPending'),
           value: kpiVals.exceptionsPending,
-          hint: "Awaiting approval",
+          hint: t('mainDashboard.awaitingApproval'),
           color: "warning",
           variant: "plain",
         },
@@ -371,31 +378,31 @@ export default function OverviewAlt() {
       <Grid container spacing={2} size={12} sx={{ mt: 0.5 }}>
         <Grid size={3}> 
           <Donut
-            title={donuts.controls.title}
+            title={t('mainDashboard.controlsStatus')}
             values={[
-              { label: "Pass", value: donuts.controls.pass, color: COLORS.success },
-              { label: "Fail", value: donuts.controls.fail, color: COLORS.error },
-              { label: "N/A", value: donuts.controls.na, color: COLORS.grey },
+              { label: t('mainDashboard.pass'), value: donuts.controls.pass, color: COLORS.success },
+              { label: t('mainDashboard.fail'), value: donuts.controls.fail, color: COLORS.error },
+              { label: t('mainDashboard.na'), value: donuts.controls.na, color: COLORS.grey },
             ]}
           />
         </Grid>
         <Grid  size={3}>
           <Donut
-            title={donuts.soa.title}
+            title={t('mainDashboard.soaApplicability')}
             values={[
-              { label: "Applicable", value: donuts.soa.applicable, color: COLORS.success },
-              { label: "N/A", value: donuts.soa.na, color: COLORS.grey },
-              { label: "Unknown", value: donuts.soa.unknown, color: "#bdbdbd" },
+              { label: t('mainDashboard.applicable'), value: donuts.soa.applicable, color: COLORS.success },
+              { label: t('mainDashboard.na'), value: donuts.soa.na, color: COLORS.grey },
+              { label: t('mainDashboard.unknown'), value: donuts.soa.unknown, color: "#bdbdbd" },
             ]}
           />
         </Grid>
         <Grid  size={3}>
           <Donut
-            title={donuts.risks.title}
+            title={t('mainDashboard.risksMix')}
             values={[
-              { label: "Low", value: donuts.risks.low, color: "#4caf50" },
-              { label: "Medium", value: donuts.risks.medium, color: "#ff9800" },
-              { label: "High", value: donuts.risks.high, color: "#f44336" },
+              { label: t('mainDashboard.low'), value: donuts.risks.low, color: "#4caf50" },
+              { label: t('mainDashboard.medium'), value: donuts.risks.medium, color: "#ff9800" },
+              { label: t('mainDashboard.high'), value: donuts.risks.high, color: "#f44336" },
             ]}
           />
         </Grid>

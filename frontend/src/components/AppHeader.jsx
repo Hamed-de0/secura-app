@@ -33,7 +33,7 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
   const actions = useActions();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
   const theme = useTheme();
-  const { tr } = useI18n();
+  const { t } = useI18n();
 
   // preserve scope/version in links
   const scopeQuery = React.useMemo(() => {
@@ -78,7 +78,7 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
           </IconButton> */}
 
           <Typography component={RLink} to="/main-dashboard" variant="subtitle1" color="inherit" sx={{ textDecoration: 'none', mr: 2 }}>
-            H&H Communication Lab GmbH
+            {t('appHeader.brandName')}
           </Typography>
 
           {/* Global Search trigger */}
@@ -89,39 +89,39 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
             onClick={() => setPaletteOpen(true)}
             sx={{ minWidth: 280, justifyContent: 'flex-start', color: 'text.secondary', borderStyle: 'dashed' }}
           >
-            Search…  <Box component="span" sx={{ ml: 'auto', fontSize: 12, color: 'text.disabled' }}>Ctrl/Cmd K</Box>
+            {t('appHeader.search')}  <Box component="span" sx={{ ml: 'auto', fontSize: 12, color: 'text.disabled' }}>Ctrl/Cmd K</Box>
           </Button>
 
           <Box sx={{ flex: 1 }} />
 
           {/* Scope/version chips (optional — keep or remove if you already show them elsewhere) */}
-          {params.get('scope') && <Chip size="small" label={`scope: ${params.get('scope')}`} sx={{ mr: .5 }} />}
-          {params.get('versions') && <Chip size="small" label={`versions: ${params.get('versions')}`} sx={{ mr: 1 }} />}
+          {params.get('scope') && <Chip size="small" label={`${t('appHeader.scope')}: ${params.get('scope')}`} sx={{ mr: .5 }} />}
+          {params.get('versions') && <Chip size="small" label={`${t('appHeader.versions')}: ${params.get('versions')}`} sx={{ mr: 1 }} />}
 
           {/* Actions */}
-          <Tooltip title="Create">
-            <IconButton size="small" onClick={(e)=> setCreateEl(e.currentTarget)} aria-label="Create">
+          <Tooltip title={t('actions.create')}>
+            <IconButton size="small" onClick={(e)=> setCreateEl(e.currentTarget)} aria-label={t('actions.create')}>
               <AddIcon />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Copy shareable link">
-            <IconButton size="small" onClick={copyShare} aria-label="Copy link">
+          <Tooltip title={t('header.share')}>
+            <IconButton size="small" onClick={copyShare} aria-label={t('header.share')}>
               <LinkIcon />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Notifications">
-            <IconButton size="small" onClick={(e)=> setNotifEl(e.currentTarget)} aria-label="Notifications">
+          <Tooltip title={t('header.notifications')}>
+            <IconButton size="small" onClick={(e)=> setNotifEl(e.currentTarget)} aria-label={t('header.notifications')}>
               <NotificationsIcon />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Shortcuts (?)">
-            <IconButton size="small" onClick={()=> setPaletteOpen(true)} aria-label="Shortcuts">
+          <Tooltip title={t('header.shortcuts')}>
+            <IconButton size="small" onClick={()=> setPaletteOpen(true)} aria-label={t('header.shortcuts')}>
               <KeyboardIcon />
             </IconButton>
           </Tooltip>
           
-          <Tooltip title={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}>
-            <IconButton onClick={toggleColorMode} edge="end" aria-label="toggle theme">
+          <Tooltip title={mode === 'light' ? t('appHeader.switchToDark') : t('appHeader.switchToLight')}>
+            <IconButton onClick={toggleColorMode} edge="end" aria-label={t('appHeader.toggleTheme')}>
               {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
             </IconButton>
           </Tooltip>
@@ -132,11 +132,11 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
 
       {/* Create menu */}
       <Menu anchorEl={createEl} open={Boolean(createEl)} onClose={()=> setCreateEl(null)}>
-        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.EXCEPTION_CREATE)}}>Create exception</MenuItem>
-        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.EVIDENCE_UPLOAD, { objectType: 'Control' })}}>Request evidence</MenuItem>
-        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.MAPPING_CONTROL_TO_REQ)}}>Map a Control</MenuItem>
-        <MenuItem onClick={()=> { setCreateEl(null); nav(`/risk-view${scopeQuery}`); }}>New risk</MenuItem>
-        <MenuItem onClick={()=> { setCreateEl(null); nav(`/providers${scopeQuery}`); }}>New provider</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.EXCEPTION_CREATE)}}>{t('dialogs.createException')}</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.EVIDENCE_UPLOAD, { objectType: 'Control' })}}>{t('appHeader.requestEvidence')}</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); actions.run(ACTIONS.MAPPING_CONTROL_TO_REQ)}}>{t('dialogs.mapControl')}</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); nav(`/risk-view${scopeQuery}`); }}>{t('appHeader.newRisk')}</MenuItem>
+        <MenuItem onClick={()=> { setCreateEl(null); nav(`/providers${scopeQuery}`); }}>{t('appHeader.newProvider')}</MenuItem>
 
         {/* <MenuItem onClick={()=> { setCreateEl(null); nav(`/exceptions${scopeQuery}`); }}>Create exception</MenuItem>
         <MenuItem onClick={()=> { setCreateEl(null); nav(`/evidence${scopeQuery}`); }}>Request evidence</MenuItem>
@@ -151,7 +151,7 @@ export default function AppHeader({ sidebarCollapsed = false, onToggleSidebar })
       {/* Command Palette */}
       <CommandPalette open={paletteOpen} onClose={()=> setPaletteOpen(false)} scopeQuery={scopeQuery} />
 
-      <Snackbar open={!!snack} autoHideDuration={2000} onClose={()=> setSnack('')} message={snack} />
+      <Snackbar open={!!snack} autoHideDuration={2000} onClose={()=> setSnack('')} message={snack === 'Link copied' ? t('appHeader.linkCopied') : snack === 'Copy failed' ? t('appHeader.copyFailed') : snack} />
     </>
   );
 }

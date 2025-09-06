@@ -78,8 +78,58 @@
     "mappingManager": "Mapping-Manager",
     "toggleSidebar": "Seitenleiste umschalten"
   },
+  "appHeader": {
+    "brandName": "H&H Communication Lab GmbH",
+    "scope": "Scope",
+    "versions": "Versionen",
+    "switchToDark": "In den Dunkelmodus wechseln",
+    "switchToLight": "In den Hellmodus wechseln",
+    "toggleTheme": "Design umschalten",
+    "requestEvidence": "Nachweis anfordern",
+    "newRisk": "Neues Risiko",
+    "newProvider": "Neuer Anbieter",
+    "linkCopied": "Link kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "search": "Suchen"
+  },
   "entities": {
     "control": { "one": "Kontrolle", "other": "Kontrollen" },
     "risk":    { "one": "Risiko",    "other": "Risiken" }
   }
+  ,
+  "mainDashboard": {
+    "openRisks": "Offene Risiken",
+    "riskHintSample": "5 hoch • 4 mittel • 5 niedrig",
+    "avgCoverage": "Durchschnittliche Abdeckung",
+    "coverageHintSample": "Physisch: 48 • Immateriell: 34",
+    "evidenceDue30": "Nachweise fällig (30 Tage)",
+    "overdueSample": "10 überfällig",
+    "actionPending": "Ausstehende Aktion",
+    "awaitingApproval": "Genehmigung ausstehend",
+    "assetsMonitored": "Überwachte Assets",
+    "criticalSample": "10 kritisch",
+    "totalAssets": "Gesamtanzahl Assets",
+    "critical": "kritisch",
+    "overdue": "überfällig",
+    "area": "Bereich",
+    "item": "Element",
+    "owner": "Verantwortlich",
+    "due": "Fällig",
+    "scope": "Geltungsbereich",
+    "asOf": "Stand",
+    "export": "Exportieren",
+    "startWorkflow": "Workflow starten",
+    "controlsStatus": "Status der Kontrollen",
+    "soaApplicability": "SoA-Anwendbarkeit",
+    "risksMix": "Risikomix",
+    "pass": "Bestanden",
+    "fail": "Fehlgeschlagen",
+    "na": "Nicht anwendbar",
+    "applicable": "Anwendbar",
+    "unknown": "Unbekannt",
+    "low": "Niedrig",
+    "medium": "Mittel",
+    "high": "Hoch"
+  }
+
 }
