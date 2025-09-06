@@ -40,13 +40,16 @@ import ControlsDashboard from '../features/controls/pages/ControlsDashboard.jsx'
 import RiskRegisterPage from '../features/risks/pages/RiskRegisterPage.jsx';
 import RequirementPage from '../features/compliance/requirement/RequirementPage.jsx';
 import LoginPage from "../auth/LoginPage.jsx";
-
+import WorkflowsPage from "../features/workflows/WorkflowsPage.jsx";
+import WorkflowDesigner from "../features/workflows/WorkflowDesigner.jsx";
 // Add others progressively...
 
 function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/workflows" element={<MainView><WorkflowsPage /></MainView>} />
+      <Route path="/workflows/designer/:id" element={<MainView><WorkflowDesigner /></MainView>} />
       {/* <Route path="/" element={<MainView><Dashboard /></MainView>} /> */}
       <Route path="/" element={<MainView><Dashboard /></MainView>} />
       <Route path="/main-dashboard" element={<MainView><Dashboard /></MainView>} />

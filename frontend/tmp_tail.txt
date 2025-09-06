@@ -1,0 +1,114 @@
+            <Typography variant="overline">Canvas</Typography>
+
+            {/* Grid canvas */}
+            <Box
+              ref={canvasRef}
+              sx={{
+                position:"relative", mt:1, width:"100%", height: 1120,
+                background:
+                  "linear-gradient(#eee 1px, transparent 1px) 0 0/ calc(100%/12) calc(100%/8), linear-gradient(90deg,#eee 1px, transparent 1px) 0 0/ calc(100%/12) calc(100%/8)",
+                borderRadius:2
+              }}
+              onClick={onCanvasClick}
+            >
+              {/* Edge layer */}
+              {canvasSize.w > 0 && canvasSize.h > 0 && (
+              <svg width="100%" height="100%" style={{ position:"absolute", inset:0, pointerEvents:"none" }}>
+                <defs>
+                    <marker id="arrow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+                    <path d="M0,0 L8,4 L0,8 z" fill="#90caf9"/>
+                    </marker>
+                </defs>
+
+                {(() => {
+                    // 🔑 Absolute canvas size every render (avoids stale 0×0)
+                    const rect = canvasRef.current?.getBoundingClientRect();
+                    if (!rect) return null;
+                    const W = rect.width  || 1;
+                    const H = rect.height || 1;
+
+                    // Centers in absolute pixels from grid
+                    const cx = (n) => (n.x - 0.5) / 12 * W;
+                    const cy = (n) => (n.y - 0.5) / 8  * H;
+
+                    // Same anchor helpers you already have
+                    const EPS = 1e-6;
+                    const anchorRect = (cx0,cy0, vx,vy, w,h) => {
+                    const hw = w/2, hh = h/2;
+                    const ax = Math.max(Math.abs(vx), EPS), ay = Math.max(Math.abs(vy), EPS);
+                    if (ax*hh >= ay*hw) { // left/right
+                        const sx = Math.sign(vx);
+                        const x = cx0 + sx*hw;
+                        const y = cy0 + vy * (hw/ax);
+                        return [x,y];
+                    } else {              // top/bottom
+                        const sy = Math.sign(vy);
+                        const y = cy0 + sy*hh;
+                        const x = cx0 + vx * (hh/ay);
+                        return [x,y];
+                    }
+                    };
+                    const anchorEllipse = (cx0,cy0, vx,vy, w,h) => {
+                    const rx=w/2, ry=h/2;
+                    const denom = Math.sqrt((vx*vx)/(rx*rx)+(vy*vy)/(ry*ry)) || EPS;
+                    const t = 1/denom;
+                    return [cx0 + vx*t, cy0 + vy*t];
+                    };
+                    const anchorDiamond = (cx0,cy0, vx,vy, w,h) => {
+                    const hx=w/2, hy=h/2;
+                    const t = 1/((Math.abs(vx)/hx) + (Math.abs(vy)/hy) || EPS);
+                    return [cx0 + vx*t, cy0 + vy*t];
+                    };
+                    const anchorFor = (node, towardX, towardY) => {
+                    const s = SHAPES[node.type] || SHAPES.task;
+                    const cx0 = cx(node), cy0 = cy(node);
+                    const vx = towardX - cx0, vy = towardY - cy0;
+                    if (s.type === "ellipse") return anchorEllipse(cx0,cy0,vx,vy,s.w,s.h);
+                    if (s.type === "diamond") return anchorDiamond(cx0,cy0,vx,vy,s.w,s.h);
+                    return anchorRect(cx0,cy0,vx,vy,s.w,s.h);
+                    };
+
+                    return spec.edges.map((e,i) => {
+                    const A = spec.nodes.find(n=>n.id===e.from);
+                    const B = spec.nodes.find(n=>n.id===e.to);
+                    if (!A || !B) return null;
+
+                    const Ax = cx(A), Ay = cy(A);
+                    const Bx = cx(B), By = cy(B);
+
+                    const [sx,sy] = anchorFor(A, Bx, By);
+                    const [tx,ty] = anchorFor(B, Ax, Ay);
+                    const mx = (sx+tx)/2, my = (sy+ty)/2;
+
+                    return (
+                        <g key={i}>
+                        <line
+                            x1={sx} y1={sy} x2={tx} y2={ty}
+                            stroke="#90caf9" strokeWidth="2" strokeLinecap="round"
+                            markerEnd="url(#arrow)"
+                        />
+                        {e.label && (
+                            <text x={mx} y={my} textAnchor="middle" dominantBaseline="central" fontSize="10" fill="#607d8b">
+                            {e.label}
+                            </text>
+                        )}
+                        </g>
+                    );
+                    });
+                })()}
+                </svg>
+
+              )}
+
+              {/* Nodes */}
+              {spec.nodes.map(n => {
+                const s = SHAPES[n.type] || SHAPES.task;
+                const cxPct = (n.x - 0.5) / 12 * 100;
+                const cyPct = (n.y - 0.5) / 8  * 100;
+
+                const style = {
+                  position: "absolute",
+                  left: `calc(${cxPct}% - ${s.w / 2}px)`,
+                  top:  `calc(${cyPct}% - ${s.h / 2}px)`,
+                  width: s.w, height: s.h,
+                  transform: s.diamond ? "rotate(45deg)" : "none",
