@@ -19,10 +19,12 @@ export default function RiskContextsGrid({
   filters,
   onFiltersChange,
   onRowClick,
+  detailsMode = 'lazy', // 'eager' | 'lazy'
 }) {
   const [rows, setRows] = React.useState([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
+  // const { detailsMode = 'eager' } = props; // 'eager' | 'lazy'
 
   const [model, setModel] = React.useState({ page: 0, pageSize });
   const [sortModel, setSortModel] = React.useState([defaultSort]);
@@ -30,6 +32,8 @@ export default function RiskContextsGrid({
   // fetch
   React.useEffect(() => {
     let alive = true;
+    if (detailsMode !== 'eager') return;
+    if (!rows?.length) return;
     (async () => {
       setLoading(true);
       try {
@@ -57,7 +61,7 @@ export default function RiskContextsGrid({
       }
     })();
     return () => { alive = false; };
-  }, [filters, model.page, model.pageSize, sortModel]);
+  }, [detailsMode, rows, /* filters, model.page, model.pageSize, sortModel */]);
 
   // compact toolbar state
   const [anchorEl, setAnchorEl] = React.useState(null);

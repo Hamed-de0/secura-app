@@ -73,6 +73,7 @@ function AppRouter() {
       <Route path="/risk-scenarios/edit/:scenarioId" element={<MainView><RiskScenarioEdit /></MainView>} />
       <Route path="/risk-dashboard" element={<MainView><RiskDashboard /></MainView>} />
       <Route path="/risk-view" element={<MainView><RisksEffectiveView /></MainView>} />
+      {/* <Route path="/risk-view" element={<MainView><RiskView /></MainView>} /> */}
       {/* <Route path="/risk-dashboard2" element={<MainView><RiskView /></MainView>} /> */}
       <Route path="/risk-register" element={<MainView><RiskRegisterPage /></MainView>} />
       {/* <Route path="/controls" element={<MainView><ControlsAtScope /></MainView>} /> */}

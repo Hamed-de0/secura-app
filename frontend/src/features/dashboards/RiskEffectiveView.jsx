@@ -881,9 +881,9 @@ export default function RisksEffectiveView() {
   const theme = useTheme();
   const [searchRaw, setSearchRaw] = useState("");
   const search = useDebounce(searchRaw, 300);
-  const [owner, setOwner] = useState("All");
-  const [scope, setScope] = useState("All");
-  const [domain, setDomain] = useState("All");
+  const [owner, setOwner] = useState("all");
+  const [scope, setScope] = useState("all");
+  const [domain, setDomain] = useState("all");
   const [onlyOverAppetite, setOnlyOverAppetite] = useState(false);
   const [appetite, setAppetite] = useState(30);
   const [modalOpen, setModalOpen] = useState(false);

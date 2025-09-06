@@ -18,6 +18,6 @@ def delete(db: Session, id: int) -> bool:
 def list_active(db: Session) -> List[FrameworkActivationPolicy]:
     now = datetime.utcnow()
     return db.query(FrameworkActivationPolicy).filter(
-        FrameworkActivationPolicy.effective_from <= now,
-        (FrameworkActivationPolicy.effective_to.is_(None)) | (FrameworkActivationPolicy.effective_to >= now)
+        FrameworkActivationPolicy.start_date <= now,
+        (FrameworkActivationPolicy.end_date.is_(None)) | (FrameworkActivationPolicy.end_date >= now)
     ).order_by(FrameworkActivationPolicy.priority.desc()).all()

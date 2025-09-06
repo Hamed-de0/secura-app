@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useEffect, useRef } from 'react';
 import { Box, Grid, useTheme, Chip, Typography } from '@mui/material';
 // ---- System --------------------------------
 import { fetchRiskMetrics } from '../../../api/services/risks';
@@ -15,9 +16,11 @@ import ResidualTrendCard from '../components/ResidualTrendCard';
 import ReviewSLACard from '../components/ReviewSLACard';
 import EvidenceFreshnessCard from '../components/EvidenceFreshnessCard';
 import ScopeGrid from '../components/ScopeGrid';
+import { useMemo } from 'react';
 
 import RiskContextsGrid from '../components/RiskContextsGrid';
-import RiskOpsQueueTabs from '../../dashboard/RiskOpsQueueTabs';
+import RiskCustomGrid from '../../risks/components/RiskCustomGrid';
+import RiskOpsQueueTabs from '../../dashboards/components/RiskOpsQueueTabs';
 /* ================================
    Static mock data (tune later)
    ================================ */
@@ -44,6 +47,8 @@ const MOCK = {
 
 
 export default function RiskDashboard({ size = { width: '100%' } }) {
+  const firstDone = useRef(false);
+  useEffect(() => { if (import.meta.env.VITE_DIAG_RISK==='1') console.time('RiskDashboard.mount'); }, []);
   const widthPx = typeof size?.width === 'number' ? `${size.width}px` : size?.width || '100%';
   const [metricsData, setMetricsData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
@@ -59,7 +64,7 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
 
   // Reuse the same filters you used for metrics
   const baseFilters = React.useMemo(
-    () => ({ scope: 'all', status: 'all', domain: 'all', days: 90 }),
+    () => ({ scope: 'all', status: 'all', domain: 'all', days: 90, sort: 'residual', sort_dir: 'desc' }),
     []
   );
 
@@ -72,13 +77,13 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
           ...baseFilters,
           offset: gridModel.page * gridModel.pageSize,
           limit: gridModel.pageSize,
-          sort: 'id',
-          sort_dir: 'desc',
+          
           status: 'all',
         });
         if (!alive) return;
         setGridTotal(res?.total ?? 0);
-        setGridRows(adaptContextsToRegisterRows(res?.items || []));
+        setGridRows(res?.items || []);
+        console.log('RiskDashboard: fetched grid', { res }); // DEBUG
       } finally {
         if (alive) setGridLoading(false);
         console.log('RiskDashboard: grid loaded', { alive, gridTotal, gridRows }); // DEBUG
@@ -101,51 +106,16 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
     return () => { alive = false; };
   }, []);
 
-  // Fetch RiskOps queue slices (for small tiles counts)
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const resp = await fetchRiskOpsQueues({ limit: 10, horizon_days: 30, recent_days: 7 });
-        if (!alive) return;
-        setQueuesSummary(summarizeQueues(resp));
-      } catch (_) {
-        // keep silent; tiles will show placeholders
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
+  // End timing on first data-ready render (when metrics loaded)
+  useEffect(() => {
+    if (import.meta.env.VITE_DIAG_RISK!=='1' || firstDone.current) return;
+    const ready = !!metricsData; // treat metrics arrival as ready signal
+    if (ready) { console.timeEnd('RiskDashboard.mount'); firstDone.current = true; }
+  }, [metricsData]);
 
-  const DASH_COLUMNS =  [
-    { field: 'scenario', headerName: 'Scenario', flex: 1.4, minWidth: 200 },
-    { field: 'scope',    headerName: 'Scope',    flex: 1.0, minWidth: 160 },
-    { field: 'L',        headerName: 'L', width: 60, align:'center', headerAlign:'center' },
-    { field: 'I',        headerName: 'I', width: 60, align:'center', headerAlign:'center' },
-    {
-      field: 'residual', headerName: 'Residual', width: 96, align:'center', headerAlign:'center',
-      renderCell:(p)=>(
-        <Chip size="small" label={p.value} color={p.row.ragMui}          
-        />
-      ),
-      sortable: true,
-    },
-    { field: 'owner',  headerName: 'Owner', width: 140 },
-    {
-      field: 'status',
-      headerName: 'Status',
-      width: 120,
-      renderCell: (p) => (
-        <Chip
-          size="small"
-          label={p.row.statusLabel}  // 'Open', 'Mitigating', ...
-          color={p.row.statusColor}          // 'success' | 'warning' | ...
-          variant={p.row.statusVariant}      // 'filled' | 'outlined'
-        />
-      ),
-      sortable: false,
-    },
-    { field: 'updated', headerName: 'Updated', width: 80, sortable: true },
-  ];
+  
+
+  
 
   const m = metricsData || {};
   const kpis = React.useMemo(() => adaptRiskOpsMetrics(metricsData || {}), [metricsData]);
@@ -216,7 +186,7 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
         </Box>
 
         {/* Risk Ops KPIs (counts from queues endpoint if available) */}
-        <Box sx={{
+        {/* <Box sx={{
           p: 1,
           display: 'grid',
           gap: 1.5,
@@ -244,34 +214,43 @@ export default function RiskDashboard({ size = { width: '100%' } }) {
               </Typography>
             </Box>
           ))}
-        </Box>
+        </Box> */}
 
         {/* Action Queue tabs (scaffold) */}
-        <RiskOpsQueueTabs />
+        {/* <RiskOpsQueueTabs /> */}
 
         {/* Register */}
-        <RiskContextsGrid
+        {/* <RiskContextsGrid
           columns={DASH_COLUMNS}
           height={360}
           pageSize={10}
           compactToolbar
-          orderMenuItems={[
-            { label: 'Updated (newest)', sort: { field:'updatedAt', sort:'desc' } },
-            { label: 'Residual (high → low)', sort: { field:'residual', sort:'desc' } },
-            { label: 'Likelihood (high → low)', sort: { field:'likelihood', sort:'desc' } },
-          ]}
+          orderMenuItems={useMemo(() => ([
+            { label: 'Updated (newest)',        sort: { field:'updatedAt', sort:'desc' } },
+            { label: 'Residual (high → low)',  sort: { field:'residual',  sort:'desc' } },
+            { label: 'Likelihood (high → low)',sort: { field:'likelihood',sort:'desc' } },
+          ]), [])}
+          detailsMode="lazy"   // ⟵ prevent per-row evidence/controls eager fetch          
           filters={filters}
           onFiltersChange={setFilters}
-          onRowClick={(row)=>{/* open drawer */}}
-        />
-        {/* <RegisterGrid 
+          onRowClick={(row)=>{/* open drawer }}
+        /> */}
+        <RiskCustomGrid
           rows={gridRows}
           total={gridTotal}
           loading={gridLoading}
+          height={360}
+          pageSize={10}
+          //columns={DASH_COLUMNS}
+          sortingModel={[{ field: 'residual', sort: 'desc' }]}
+          onSortingModelChange={()=>{}}
+          onRowClick={(row)=>{/* open drawer */}}
           paginationModel={gridModel}
-          onPaginationModelChange={setGridModel} 
-          
-        /> */}
+          onPaginationModelChange={setGridModel}
+         
+        />
+
+        
 
 
       </Box>

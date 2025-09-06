@@ -2,14 +2,14 @@ import * as React from 'react';
 import { Box, Tabs, Tab, Tooltip, Typography, Chip } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { DataGrid } from '@mui/x-data-grid';
-import { fetchRiskContexts, fetchContextControls, fetchContextEvidence, fetchRiskContextDetail } from '../../api/services/risks';
-import { fetchExceptions } from '../../api/services/exceptions';
-import { mapOverAppetite, mapReviewsDue, mapExceptionsExpiring, mapRecentChanges } from '../../api/adapters/queues';
-import { adaptContextControlsResponse } from '../../api/adapters/controlsContext';
-import { adaptEvidenceResponse } from '../../api/adapters/evidence';
+import { fetchRiskContexts, fetchContextControls, fetchContextEvidence, fetchRiskContextDetail } from '../../../api/services/risks';
+import { fetchExceptions } from '../../../api/services/exceptions';
+import { mapOverAppetite, mapReviewsDue, mapExceptionsExpiring, mapRecentChanges } from '../../../api/adapters/queues';
+import { adaptContextControlsResponse } from '../../../api/adapters/controlsContext';
+import { adaptEvidenceResponse } from '../../../api/adapters/evidence';
 import { useLocation, useNavigate } from 'react-router-dom';
-import RightPanelDrawer from '../../components/rightpanel/RightPanelDrawer';
-import ContextDetail from '../risks/components/ContextDetail';
+import RightPanelDrawer from '../../../components/rightpanel/RightPanelDrawer';
+import ContextDetail from '../../risks/components/ContextDetail';
 
 function a11yProps(index) {
   return { id: `riskops-tab-${index}`, 'aria-controls': `riskops-tabpanel-${index}` };
@@ -184,32 +184,34 @@ export default function RiskOpsQueueTabs() {
     const toFetch = ids.filter((id) => !acceptedCacheRef.current.has(id) && !inflightRef.current.has(id));
     if (toFetch.length === 0) return;
     let alive = true;
-    let idx = 0;
-    const maxWorkers = Math.min(3, toFetch.length);
-    async function worker() {
-      while (idx < toFetch.length) {
-        const i = idx++;
-        const id = toFetch[i];
-        inflightRef.current.add(id);
-        try {
-          const detail = await fetchRiskContextDetail(id);
-          if (!alive) break;
+    const BATCH = 3;
+    (async () => {
+      for (let i = 0; i < toFetch.length && alive; i += BATCH) {
+        const slice = toFetch.slice(i, i + BATCH);
+        slice.forEach((id) => inflightRef.current.add(id));
+        const results = await Promise.allSettled(slice.map((id) => fetchRiskContextDetail(id)));
+        if (!alive) break;
+        const patch = new Map();
+        results.forEach((res, idx) => {
+          const id = slice[idx];
+          inflightRef.current.delete(id);
+          if (res.status !== 'fulfilled') return;
+          const detail = res.value;
           const acc = !!(detail?.acceptance?.isAccepted);
           const exp = detail?.acceptance?.expiresAt || null;
           acceptedCacheRef.current.set(id, { accepted: acc, expiresAt: exp });
-          setOaRows((prev) => prev.map((r) => {
-            const rid = r?.contextId || r?.id;
-            if (rid === id) return { ...r, accepted: acc, acceptedExpires: exp };
-            return r;
-          }));
-        } catch (_) {
-          // ignore errors to keep UI smooth
-        } finally {
-          inflightRef.current.delete(id);
+          patch.set(id, { accepted: acc, acceptedExpires: exp });
+        });
+        if (patch.size) {
+          setOaRows((prev) =>
+            prev.map((r) => {
+              const rid = r?.contextId || r?.id;
+              return patch.has(rid) ? { ...r, ...patch.get(rid) } : r;
+            })
+          );
         }
       }
-    }
-    Promise.all(Array.from({ length: maxWorkers }, () => worker()));
+    })();
     return () => { alive = false; };
   }, [value, oaRows, oaModel.page, oaModel.pageSize]);
 

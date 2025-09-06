@@ -35,7 +35,7 @@ export default function RiskView() {
   const location = useLocation();
   const [params] = useSearchParams();
   const scopeKey = React.useMemo(() => {
-    const sc = params.get("scope") || "global";
+    const sc = params.get("scope") || "org";
     const ver = params.get("versions") || "current";
     return `scope=${sc};versions=${ver}`;
   }, [location.key]);
@@ -62,6 +62,7 @@ export default function RiskView() {
   const rows = useMemo(() => {
     const items = risks || [];
     const _q = (q || "").toLowerCase();
+    console.log("Filtering risks", { items, q, status, level }); // DEBUG
     return items.filter((r) => {
       if (_q && !`${r.title ?? ""} ${r.owner ?? ""}`.toLowerCase().includes(_q))
         return false;
@@ -70,6 +71,7 @@ export default function RiskView() {
       return true;
     });
   }, [risks, q, status, level]);
+  console.log("RiskView: filtered rows", { rows }); // DEBUG
 
   if (isLoading) return <Skeleton variant="rounded" height={360} />;
   if (isError)

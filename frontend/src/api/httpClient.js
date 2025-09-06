@@ -6,6 +6,17 @@ let API_BASE =
   import.meta.env.VITE_API_BASE ||
   "http://localhost:8001/";
 
+const DIAG = import.meta.env?.VITE_DIAG_RISK === '1';
+const _calls = {};
+function _mark(label, t0) {
+  const dt = Date.now() - t0;
+  _calls[label] = (_calls[label] || { n: 0, total: 0 });
+  _calls[label].n += 1;
+  _calls[label].total += dt;
+  // eslint-disable-next-line no-console
+  if (DIAG) console.log('[HTTP]', label, `${dt}ms`);
+}
+
 export function setAuthToken(token) {
   AUTH_TOKEN = token || "";
 }
@@ -159,36 +170,68 @@ async function handleJsonResponse(res) {
 export async function getJSON(url, { searchParams, headers, ...init } = {}) {
   const full = buildUrl(url, searchParams);
   const h = authHeaders(full, headers); // pass full URL here
-  const res = await fetch(full, { method: "GET", headers: h, ...init });
-  return handleJsonResponse(res);
+  const t0 = Date.now();
+  const caller = new Error().stack?.split('\n')[2]?.trim() || '';
+  const label = `GET ${full} ← ${caller}`;
+  try {
+    const res = await fetch(full, { method: "GET", headers: h, ...init });
+    return await handleJsonResponse(res);
+  } finally {
+    if (DIAG) _mark(label, t0);
+  }
 }
 export async function postJSON(url, { json, searchParams, headers, ...init } = {}) {
   const full = buildUrl(url, searchParams);
   const h = authHeaders(full, headers);
   if (!h.has("Content-Type")) h.set("Content-Type", "application/json");
-  const res = await fetch(full, {
-    method: "POST",
-    headers: h,
-    body: json !== undefined ? JSON.stringify(json) : undefined,
-    ...init,
-  });
-  return handleJsonResponse(res);
+  const t0 = Date.now();
+  const caller = new Error().stack?.split('\n')[2]?.trim() || '';
+  const label = `POST ${full} ← ${caller}`;
+  try {
+    const res = await fetch(full, {
+      method: "POST",
+      headers: h,
+      body: json !== undefined ? JSON.stringify(json) : undefined,
+      ...init,
+    });
+    return await handleJsonResponse(res);
+  } finally {
+    if (DIAG) _mark(label, t0);
+  }
 }
 export async function putJSON(url, { json, searchParams, headers, ...init } = {}) {
   const full = buildUrl(url, searchParams);
   const h = authHeaders(full, headers);
   if (!h.has("Content-Type")) h.set("Content-Type", "application/json");
-  const res = await fetch(full, {
-    method: "PUT",
-    headers: h,
-    body: json !== undefined ? JSON.stringify(json) : undefined,
-    ...init,
-  });
-  return handleJsonResponse(res);
+  const t0 = Date.now();
+  const caller = new Error().stack?.split('\n')[2]?.trim() || '';
+  const label = `PUT ${full} ← ${caller}`;
+  try {
+    const res = await fetch(full, {
+      method: "PUT",
+      headers: h,
+      body: json !== undefined ? JSON.stringify(json) : undefined,
+      ...init,
+    });
+    return await handleJsonResponse(res);
+  } finally {
+    if (DIAG) _mark(label, t0);
+  }
 }
 export async function deleteJSON(url, { searchParams, headers, ...init } = {}) {
   const full = buildUrl(url, searchParams);
   const h = authHeaders(full, headers);
-  const res = await fetch(full, { method: "DELETE", headers: h, ...init });
-  return handleJsonResponse(res);
+  const t0 = Date.now();
+  const caller = new Error().stack?.split('\n')[2]?.trim() || '';
+  const label = `DELETE ${full} ← ${caller}`;
+  try {
+    const res = await fetch(full, { method: "DELETE", headers: h, ...init });
+    return await handleJsonResponse(res);
+  } finally {
+    if (DIAG) _mark(label, t0);
+  }
+}
+
+export function __riskDiagDump() {
+  return Object.entries(_calls).map(([k, v]) => ({ label: k, count: v.n, totalMs: v.total, avgMs: Math.round(v.total / v.n) }));
 }
